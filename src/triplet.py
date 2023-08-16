@@ -205,20 +205,25 @@ def plotter(line_data: list, conv_data: tuple, samp_data: tuple):
         samp_data (tuple): any sample data generated from .csv files
     '''
 
+    mydpi = 96
+
+    plt.figure(figsize=(1920/mydpi, 1080/mydpi), dpi=mydpi)
+
     plt.style.use(['science', 'grid'])
-    plt.stem(line_data[0][0], line_data[1][0], 'k', markerfmt='', label='R Branch')
-    plt.stem(line_data[0][1], line_data[1][1], 'r', markerfmt='', label='P Branch')
-    plt.stem(line_data[0][2], line_data[1][2], 'k', markerfmt='', label='QR Branch')
-    plt.stem(line_data[0][3], line_data[1][3], 'r', markerfmt='', label='QP Branch')
-    #plt.plot(conv_data[0], conv_data[1], label='Convolved Data')
-    #plt.plot(samp_data[0][0], samp_data[1][0], label='Harvard Data')
+    #plt.stem(line_data[0][0], line_data[1][0], 'k', markerfmt='', label='R Branch')
+    #plt.stem(line_data[0][1], line_data[1][1], 'r', markerfmt='', label='P Branch')
+    #plt.stem(line_data[0][2], line_data[1][2], 'k', markerfmt='', label='QR Branch')
+    #plt.stem(line_data[0][3], line_data[1][3], 'r', markerfmt='', label='QP Branch')
+    plt.plot(conv_data[0], conv_data[1], label='Convolved Data')
+    plt.plot(samp_data[0][0], samp_data[1][0], label='Harvard Data')
     #plt.stem(samp_data[0][1], samp_data[1][1], 'y', markerfmt='', label='HITRAN Data')
-    plt.stem(samp_data[0][2], samp_data[1][2], 'blue', markerfmt='', label='PGOPHER Data')
+    #plt.stem(samp_data[0][2], samp_data[1][2], 'blue', markerfmt='', label='PGOPHER Data')
     #plt.plot(samp_data[0][3], samp_data[1][3], 'orange', label='Cosby 1993')
     #plt.xlim([min(samp_data[0][3]), max(samp_data[0][3])])
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
     plt.legend()
+    #plt.savefig('../img/example.webp', dpi=mydpi * 2)
     plt.show()
 
 def convolved_data(total_wn: list, total_in: list, temp: float, pres: float) -> tuple:

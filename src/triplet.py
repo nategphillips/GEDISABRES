@@ -23,6 +23,8 @@ def line_initializer(k_qn: np.ndarray) -> np.ndarray:
         np.ndarray: 1-d array of SpectralLine objects with populated attributes
     '''
 
+    df = pd.read_csv('../data/predissociation.csv')
+
     # Empty list to contain all valid spectral lines
     lines = []
 
@@ -35,19 +37,27 @@ def line_initializer(k_qn: np.ndarray) -> np.ndarray:
                     main_branch = 'r'
                     satt_branch = 'qr'
                     for sb_1 in range(3):
-                        lines.append(SpectralLine(i, j, main_branch, [sb_1, sb_1]))
+                        lines.append(SpectralLine(i, j, main_branch, [sb_1, sb_1], 1))
                         for sb_2 in range(3):
                             if (sb_1 != sb_2) & (sb_1 > sb_2):
-                                lines.append(SpectralLine(i, j, satt_branch, [sb_1, sb_2]))
+                                lines.append(SpectralLine(i, j, satt_branch, [sb_1, sb_2], 1))
                 # Selection rules for the P branch
                 elif k_qn[i] - k_qn[j] == -1:
                     main_branch = 'p'
                     satt_branch = 'qp'
                     for sb_1 in range(3):
-                        lines.append(SpectralLine(i, j, main_branch, [sb_1, sb_1]))
+                        lines.append(SpectralLine(i, j, main_branch, [sb_1, sb_1], 1))
                         for sb_2 in range(3):
                             if (sb_1 != sb_2) & (sb_1 < sb_2):
-                                lines.append(SpectralLine(i, j, satt_branch, [sb_1, sb_2]))
+                                lines.append(SpectralLine(i, j, satt_branch, [sb_1, sb_2], 1))
+
+    for line in lines:
+        if line.sub_branch[0] == 0:
+            line.predissociation = df['f1'][df['rot_qn'] == line.k_1].iloc[0]
+        elif line.sub_branch[0] == 1:
+            line.predissociation = df['f2'][df['rot_qn'] == line.k_1].iloc[0]
+        else:
+            line.predissociation = df['f3'][df['rot_qn'] == line.k_1].iloc[0]
 
     return np.array(lines)
 
@@ -127,7 +137,7 @@ def normalization(ins: list) -> np.ndarray:
 
     return np.array(ins) / max_val
 
-def convolve(v_c: float, v_0: float, temp: float, pres: float) -> float:
+def convolve(i, v_c: float, v_0: float, temp: float, pres: float, lines) -> float:
     '''
     Convolves spectral data using natural, doppler, and collisional broadening.
 
@@ -148,23 +158,29 @@ def convolve(v_c: float, v_0: float, temp: float, pres: float) -> float:
     # Reduced mass [kg]
     mu_ab = (m_o2 * m_o2) / (m_o2 + m_o2)
 
-    # Natural FWHM [1/cm]
+    # Natural [1/cm]
     gamma_n = sigma_ab**2 * np.sqrt(8 / (np.pi * mu_ab * cn.BOLTZ * temp)) / 4
-    # Doppler FWHM [1/cm]
+
+    # Doppler [1/cm]
     sigma_v = v_0 * np.sqrt((cn.BOLTZ * temp) / (m_o2 * (cn.LIGHT / 1e2)**2))
-    # Collision FWHM [1/cm]
+
+    # Predissociation
+    sigma_p = lines[i].predissociation
+
+    # Collision [1/cm]
     # Convert pressure in N/m^2 to pressure in dyne/cm^2
     gamma_v = (pres * 10) * sigma_ab**2 * np.sqrt(8 / (np.pi * mu_ab * cn.BOLTZ * temp)) / 2
 
     gamma = np.sqrt(gamma_n**2 + gamma_v**2)
+    sigma = np.sqrt(sigma_v**2 + sigma_p**2)
 
     print(f'gaussian (natural + doppler): {gamma}')
-    print(f'lorentzian (collisional): {sigma_v}')
+    print(f'lorentzian (collisional): {sigma}')
 
     # Faddeeva function
-    fadd = ((v_c - v_0) + 1j * gamma) / (sigma_v * np.sqrt(2))
+    fadd = ((v_c - v_0) + 1j * gamma) / (sigma * np.sqrt(2))
 
-    return np.real(wofz(fadd)) / (sigma_v * np.sqrt(2 * np.pi))
+    return np.real(wofz(fadd)) / (sigma * np.sqrt(2 * np.pi))
 
 def sample_plotter() -> tuple:
     '''
@@ -210,23 +226,23 @@ def plotter(line_data: list, conv_data: tuple, samp_data: tuple):
     plt.figure(figsize=(1920/mydpi, 1080/mydpi), dpi=mydpi)
 
     plt.style.use(['science', 'grid'])
-    #plt.stem(line_data[0][0], line_data[1][0], 'k', markerfmt='', label='R Branch')
-    #plt.stem(line_data[0][1], line_data[1][1], 'r', markerfmt='', label='P Branch')
-    #plt.stem(line_data[0][2], line_data[1][2], 'k', markerfmt='', label='QR Branch')
-    #plt.stem(line_data[0][3], line_data[1][3], 'r', markerfmt='', label='QP Branch')
+    plt.stem(line_data[0][0], line_data[1][0], 'k', markerfmt='', label='R Branch')
+    plt.stem(line_data[0][1], line_data[1][1], 'r', markerfmt='', label='P Branch')
+    plt.stem(line_data[0][2], line_data[1][2], 'k', markerfmt='', label='QR Branch')
+    plt.stem(line_data[0][3], line_data[1][3], 'r', markerfmt='', label='QP Branch')
     plt.plot(conv_data[0], conv_data[1], label='Convolved Data')
-    plt.plot(samp_data[0][0], samp_data[1][0], label='Harvard Data')
+    #plt.plot(samp_data[0][0], samp_data[1][0], label='Harvard Data')
     #plt.stem(samp_data[0][1], samp_data[1][1], 'y', markerfmt='', label='HITRAN Data')
     #plt.stem(samp_data[0][2], samp_data[1][2], 'blue', markerfmt='', label='PGOPHER Data')
-    #plt.plot(samp_data[0][3], samp_data[1][3], 'orange', label='Cosby 1993')
-    #plt.xlim([min(samp_data[0][3]), max(samp_data[0][3])])
+    plt.plot(samp_data[0][3], samp_data[1][3], 'orange', label='Cosby 1993')
+    plt.xlim([min(samp_data[0][3]), max(samp_data[0][3])])
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
     plt.legend()
     #plt.savefig('../img/example.webp', dpi=mydpi * 2)
     plt.show()
 
-def convolved_data(total_wn: list, total_in: list, temp: float, pres: float) -> tuple:
+def convolved_data(total_wn: list[float], total_in: list, temp: float, pres: float, lines) -> tuple:
     '''
     Generates plottable convolved data using the convolution function.
 
@@ -245,8 +261,8 @@ def convolved_data(total_wn: list, total_in: list, temp: float, pres: float) -> 
     conv_in = np.zeros_like(conv_wn)
 
     # Convolve wavenumber peaks with chosen probability density function
-    for wavepeak, i in zip(total_wn, total_in):
-        conv_in += i * convolve(conv_wn, wavepeak, temp, pres)
+    for i, (wave_peaks, intn_peaks) in enumerate(zip(total_wn, total_in)):
+        conv_in += intn_peaks * convolve(i, conv_wn, wave_peaks, temp, pres, lines)
     conv_in = conv_in / max(conv_in)
 
     return conv_wn, conv_in
@@ -310,11 +326,12 @@ class SpectralLine:
     Object for containing valid spectral lines.
     '''
 
-    def __init__(self, k_1: int, k_2: int, main_branch: str, sub_branch: list[int]) -> None:
+    def __init__(self, k_1: int, k_2: int, main_branch: str, sub_branch: list[int], predissociation) -> None:
         self.k_1         = k_1
         self.k_2         = k_2
         self.main_branch = main_branch
         self.sub_branch  = sub_branch
+        self.predissociation = predissociation
 
     def wavenumber(self, v_0: float, states: list['State']) -> float:
         '''
@@ -381,18 +398,23 @@ def main():
     # Temperature in Kelvin
     temp = 300
     # Pressure in Pa
-    pres = 101325
+    # pres = 101325
+
+    # Temperature used in Cosby is 300 K
+    # Pressure used in Cosby is 20 Torr (2666.45 Pa)
+    pres = 2666.45
+
     # Range of desired rotational quantum numbers
-    k_qn = np.arange(0, 35, 1)
+    k_qn = np.arange(0, 37, 1)
 
     # Instantiate the ground and excited states
-    ground_state = State(cn.X_CONSTS, 0)
-    excite_state = State(cn.B_CONSTS, 2)
+    ground_state = State(cn.X_CONSTS, 9) # X 3Sg-
+    excite_state = State(cn.B_CONSTS, 0) # B 3Su-
     states = [ground_state, excite_state]
 
     # Calculate the band origin energy
     v_0 = band_origin(states)
-    #v_0 = 36185
+    v_0 = 36185
 
     # Initialize the list of valid spectral lines
     lines = line_initializer(k_qn)
@@ -411,7 +433,7 @@ def main():
     total_in = total_in / max(total_in)
 
     # Convolve the data
-    conv_data = convolved_data(total_wn, total_in, temp, pres)
+    conv_data = convolved_data(total_wn, total_in, temp, pres, lines)
 
     # Fetch sample data for plotting
     smp_plot = sample_plotter()

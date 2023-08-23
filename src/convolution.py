@@ -34,7 +34,7 @@ def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peaks: float, tempera
 
     return np.real(wofz(fadd)) / (sigma_v * np.sqrt(2 * np.pi))
 
-def convolved_data(wavenumbers: list[float], intensities: list, temperature: float,
+def convolved_data(wavenumbers, intensities, temperature: float,
                    pressure: float) -> tuple:
     # Generate a fine-grained x-axis for plotting
     convolved_wavenumbers = np.linspace(min(wavenumbers), max(wavenumbers), 10000)

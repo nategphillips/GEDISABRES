@@ -101,4 +101,8 @@ class LinePlot:
 
         wns, ins = self.get_line(fc_data, max_fc)
 
-        return conv.convolved_data(wns, ins, self.temp, self.pres)
+        conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres)
+
+        conv_ins *= self.get_fc(fc_data) / max_fc
+
+        return conv_wns, conv_ins

@@ -15,16 +15,16 @@ PRES: float = 101325.0
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # List of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple] = [(2, 0), (1, 0)]
+VIB_BANDS: list[tuple] = [(2, 0), (1, 0), (0, 0)]
 
 # Line data
 LINE_DATA: bool = True
 
 # Convolved data
-CONV_DATA: bool = False
+CONV_DATA: bool = True
 
 # Sample data
-SAMP_DATA: bool = True
+SAMP_DATA: bool = False
 
 # General plotting
 PLOT_SAVE:  bool  = False

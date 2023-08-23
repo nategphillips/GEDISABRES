@@ -5,6 +5,8 @@ Computes spectral lines for triplet oxygen.
 
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 import output as out
 import input as inp
 import bands
@@ -33,16 +35,18 @@ def main():
 
     out.plot_style()
 
+    color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
+
     if inp.LINE_DATA:
         line_data   = [band.get_line(fc_data, max_fc) for band in band_list]
-        line_colors = ['black', 'red']
+        line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_line(line_data, line_colors, line_labels)
 
     if inp.CONV_DATA:
         conv_data   = [band.get_conv(fc_data, max_fc) for band in band_list]
-        conv_colors = ['blue', 'green']
+        conv_colors = color_list[len(conv_data):2*len(conv_data)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_conv(conv_data, conv_colors, conv_labels)

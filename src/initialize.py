@@ -5,7 +5,7 @@ Initializes the spectral lines by applying selection rules.
 
 import numpy as np
 
-from state import State
+from energy import State
 import constants as cn
 import energy
 
@@ -78,7 +78,7 @@ class SpectralLine:
 
         # NOTE: this *seems* to be what PGOPHER is doing from what I can tell, also haven't been
         #       able to find anything in Herzberg about it yet
-        if self.grnd_branch_idx == 1 or self.grnd_branch_idx == 3:
+        if self.grnd_branch_idx in (1, 3):
             return intn / 2
 
         return intn

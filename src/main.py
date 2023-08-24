@@ -22,7 +22,7 @@ def main():
     # v_00 = 36185
 
     # Read the table of Franck-Condon factors into a 2-D numpy array
-    fc_data = np.loadtxt('../data/test.csv', delimiter=',')
+    fc_data = np.loadtxt('../data/harris_rkr_fc.csv', delimiter=' ')
 
     # Create a vibrational band line plot for each of the user-selected bands
     band_list = []
@@ -52,14 +52,10 @@ def main():
         out.plot_conv(conv_data, conv_colors, conv_labels)
 
     if inp.SAMP_DATA:
-        samp_files  = ['harvard', 'pgopher']
         samp_data   = []
-        for file in samp_files:
+        for file in inp.SAMP_FILE:
             samp_data.append(out.configure_samples(file))
-        samp_colors = ['pink', 'orange']
-        samp_labels = ['Harvard Data', 'PGOPHER Data']
-
-        out.plot_samp(samp_data, samp_colors, samp_labels)
+        out.plot_samp(samp_data, inp.SAMP_COLS, inp.SAMP_LABL)
 
     out.show_plot()
 

@@ -47,6 +47,7 @@ def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
     # Convert pressure in N/m^2 to pressure in dyne/cm^2
     gamma_v = (pres * 10) * sigma_ab**2 * np.sqrt(8 / (np.pi * mu_ab * cn.BOLTZ * temp)) / 2
 
+    # TODO: this might be wrong, not sure if the parameters just add together or what
     gamma = np.sqrt(gamma_n**2 + gamma_v**2)
 
     # Faddeeva function

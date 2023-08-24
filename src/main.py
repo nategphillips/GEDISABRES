@@ -4,6 +4,7 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
+import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -22,8 +23,11 @@ def main():
     # pres = 2666.45
     # v_00 = 36185
 
-    # Read the table of Franck-Condon factors into a 2-D numpy array
+    # Read in the table of Franck-Condon factors
     fc_data = np.loadtxt('../data/harris_rkr_fc.csv', delimiter=' ')
+
+    # Read in the table of predissociation constants from Cosby
+    pd_data = pd.read_csv('../data/predissociation.csv', delimiter=' ')
 
     # Create a vibrational band line plot for each of the user-selected bands
     band_list = []
@@ -51,7 +55,7 @@ def main():
         out.plot_line(line_data, line_colors, line_labels)
 
     if inp.CONV_DATA:
-        conv_data   = [band.get_conv(fc_data, max_fc) for band in band_list]
+        conv_data   = [band.get_conv(fc_data, max_fc, pd_data) for band in band_list]
         conv_colors = color_list[len(conv_data):2*len(conv_data)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 

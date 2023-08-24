@@ -1,6 +1,6 @@
 # module input
 '''
-User-defined control inputs.
+User-defined control inputs for quantum numbers and plotting, among others.
 '''
 
 import numpy as np
@@ -22,6 +22,8 @@ LINE_DATA: bool = True
 
 # Convolved data
 CONV_DATA: bool = True
+# Granulatity of the convolved data
+CONV_GRAN: int  = 10000
 
 # Sample data
 SAMP_DATA: bool = True

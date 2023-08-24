@@ -1,6 +1,7 @@
 # module main
 '''
-Computes spectral lines for triplet oxygen.
+Computes spectral lines for triplet oxygen. See the README for details on implementation along with
+available features.
 '''
 
 import numpy as np
@@ -35,8 +36,13 @@ def main():
 
     out.plot_style()
 
+    # Since each set of lines is plotted separately, matplotlib doesn't know to cycle colors after
+    # each one is plotted
+
+    # This generates a list of hex values that are fed to the plot generators
     color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+    # Automatic coloring and labeling is done for both line and convolved plots
     if inp.LINE_DATA:
         line_data   = [band.get_line(fc_data, max_fc) for band in band_list]
         line_colors = color_list[0:len(line_data)]
@@ -51,6 +57,7 @@ def main():
 
         out.plot_conv(conv_data, conv_colors, conv_labels)
 
+    # Colors and labels for sample data are set in the input.py file
     if inp.SAMP_DATA:
         samp_data   = []
         for file in inp.SAMP_FILE:

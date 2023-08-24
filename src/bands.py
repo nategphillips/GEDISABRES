@@ -11,22 +11,6 @@ import initialize as init
 import constants as cn
 import energy
 
-def normalization(intensity_data: list) -> list:
-    '''
-    Normalizes the intensity data by using the maximum local (within the current vibrational
-    trnsition) value.
-
-    Args:
-        intensity_data (list): list of intensity data
-
-    Returns:
-        np.ndarray: normalized intensity data
-    '''
-
-    max_val = max(intensity_data)
-
-    return [val / max_val for val in intensity_data]
-
 class LinePlot:
     '''
     Each LinePlot is a separate vibrational band.
@@ -53,7 +37,7 @@ class LinePlot:
 
         return fc_data[self.states[0]][self.states[1]]
 
-    def get_line(self, fc_data: np.ndarray, max_fc: float) -> tuple[list, list]:
+    def get_line(self, fc_data: np.ndarray, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for each line in the plot.
 
@@ -76,14 +60,20 @@ class LinePlot:
         lines = init.selection_rules(self.rot_qn_list)
 
         # Get the wavenumbers and intensities
-        wns = [line.wavenumber(band_origin, grnd_state, exct_state) for line in lines]
-        ins = [line.intensity(band_origin, grnd_state, exct_state, self.temp) for line in lines]
-        ins = normalization(ins)
+        wns = np.array([line.wavenumber(band_origin, grnd_state, exct_state)
+                        for line in lines])
+        ins = np.array([line.intensity(band_origin, grnd_state, exct_state, self.temp)
+                        for line in lines])
+
+        # Normalize the intensity data w.r.t. the largest value
+        # This is normalization of the plot with respect to itself
+        ins /= ins.max()
 
         # Find the ratio between the largest Franck-Condon factor and the current plot
         norm_fc = self.get_fc(fc_data) / max_fc
 
-        ins = [norm_fc * intensity for intensity in ins]
+        # This is normalization of the plot with respect to others
+        ins *= norm_fc
 
         return wns, ins
 

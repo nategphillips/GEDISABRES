@@ -1,6 +1,6 @@
 # module initialize
 '''
-Initializes the spectral lines by applying selection rules.
+Initializes each spectral line by applying valid selection rules.
 '''
 
 import numpy as np
@@ -10,6 +10,17 @@ import constants as cn
 import energy
 
 def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
+    '''
+    Initializes spectral lines with ground and excited state rotational quantum numbers, along with
+    their respective branch index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
+
+    Args:
+        rot_qn_list (np.ndarray): a list of rotational quantum numbers that are to be considered
+
+    Returns:
+        np.ndarray: array of SpectralLine objects
+    '''
+
     # Empty list to contain all valid spectral lines
     lines = []
 
@@ -43,6 +54,10 @@ def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
     return np.array(lines)
 
 class SpectralLine:
+    '''
+    Holds the necessary data for a single spectral line.
+    '''
+
     def __init__(self, grnd_rot_qn: int, exct_rot_qn: int, branch: str, grnd_branch_idx: int,
                  exct_branch_idx: int) -> None:
         self.grnd_rot_qn     = grnd_rot_qn
@@ -52,17 +67,49 @@ class SpectralLine:
         self.exct_branch_idx = exct_branch_idx
 
     def wavenumber(self, band_origin: float, grnd_state: 'State', exct_state: 'State') -> float:
+        '''
+        Given the electronic, vibrational, and rotational term values, caluclates the wavenumnber
+        (energy) of the resulting emission/absorption.
+
+        Args:
+            band_origin (float): electronic + vibrational term values
+            grnd_state (State): ground state
+            exct_state (State): excited state
+
+        Returns:
+            float: emitted/absorbed wavenumber
+        '''
+
         return band_origin + \
                energy.rotational_term(self.exct_rot_qn, exct_state, self.exct_branch_idx) - \
                energy.rotational_term(self.grnd_rot_qn, grnd_state, self.grnd_branch_idx)
 
-    def intensity(self, band_origin: float, grnd_state: 'State', exct_state: 'State', temp: float) -> float:
+    def intensity(self, band_origin: float, grnd_state: 'State', exct_state: 'State',
+                  temp: float) -> float:
+        '''
+        Uses the Gaussian distribution function to calculate the population density (and therefore
+        intensity) of each spectral line.
+
+        Args:
+            band_origin (float): electronic + vibrational term values
+            grnd_state (State): ground state
+            exct_state (State): excited state
+            temp (float): temperature
+
+        Returns:
+            float: intensity
+        '''
+
+        # Q_r, the total temperature-dependent partition function for the ground state
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)
 
+        # The basic intensity function if no branches are considered
         base = (self.wavenumber(band_origin, grnd_state, exct_state) / part) * \
                np.exp(- (energy.rotational_term(self.grnd_rot_qn, grnd_state, \
                self.grnd_branch_idx) * cn.PLANC * cn.LIGHT) / (cn.BOLTZ * temp))
 
+        # Intensity is dependent upon branch, with satellite branches having a much lower intensity
+        # (notice that r and p scale with N**2, while rq and rp scale with 1/N**2)
         if self.branch == 'r':
             linestr = ((self.grnd_rot_qn + 1)**2 - 0.25) / (self.grnd_rot_qn + 1)
             intn =  base * linestr

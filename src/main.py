@@ -18,11 +18,6 @@ def main():
     Runs the program.
     '''
 
-    # Temperature used in Cosby is 300 K
-    # Pressure used in Cosby is 20 Torr (2666.45 Pa)
-    # pres = 2666.45
-    # v_00 = 36185
-
     # Read in the table of Franck-Condon factors
     fc_data = np.loadtxt('../data/harris_rkr_fc.csv', delimiter=' ')
 
@@ -48,7 +43,7 @@ def main():
 
     # Automatic coloring and labeling is done for both line and convolved plots
     if inp.LINE_DATA:
-        line_data   = [band.get_line(fc_data, max_fc) for band in band_list]
+        line_data   = [band.get_line(fc_data, max_fc, pd_data) for band in band_list]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 

@@ -9,6 +9,7 @@ import numpy as np
 import convolution as conv
 import initialize as init
 import constants as cn
+import input as inp
 import energy
 
 class LinePlot:
@@ -37,7 +38,8 @@ class LinePlot:
 
         return fc_data[self.states[0]][self.states[1]]
 
-    def get_line(self, fc_data: np.ndarray, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
+    def get_line(self, fc_data: np.ndarray, max_fc: float,
+                 pd_data) -> tuple[np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for each line in the plot.
 
@@ -54,10 +56,13 @@ class LinePlot:
         grnd_state = energy.State(cn.X_CONSTS, self.states[1])
 
         # Calculate the band origin energy
-        band_origin = energy.get_band_origin(grnd_state, exct_state)
+        if inp.BAND_ORIG[0]:
+            band_origin = inp.BAND_ORIG[1]
+        else:
+            band_origin = energy.get_band_origin(grnd_state, exct_state)
 
         # Initialize the list of valid spectral lines
-        lines = init.selection_rules(self.rot_qn_list)
+        lines = init.selection_rules(self.rot_qn_list, pd_data)
 
         # Get the wavenumbers and intensities
         wns = np.array([line.wavenumber(band_origin, grnd_state, exct_state)
@@ -77,7 +82,8 @@ class LinePlot:
 
         return wns, ins
 
-    def get_conv(self, fc_data: np.ndarray, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
+    def get_conv(self, fc_data: np.ndarray, max_fc: float,
+                 pd_data) -> tuple[np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for the convolved data.
 
@@ -89,9 +95,11 @@ class LinePlot:
             tuple[np.ndarray, np.ndarray]: (wavenumbers, intensities)
         '''
 
-        wns, ins = self.get_line(fc_data, max_fc)
+        lines = init.selection_rules(self.rot_qn_list, pd_data)
 
-        conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres)
+        wns, ins = self.get_line(fc_data, max_fc, pd_data)
+
+        conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres, lines)
 
         conv_ins *= self.get_fc(fc_data) / max_fc
 

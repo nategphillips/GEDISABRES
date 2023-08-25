@@ -9,7 +9,7 @@ from energy import State
 import constants as cn
 import energy
 
-def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
+def selection_rules(rot_qn_list: np.ndarray, pd_data) -> np.ndarray:
     '''
     Initializes spectral lines with ground and excited state rotational quantum numbers, along with
     their respective branch index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
@@ -35,10 +35,10 @@ def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
                         for exct_branch_idx in range(1, 4):
                             if grnd_branch_idx == exct_branch_idx:
                                 lines.append(SpectralLine(grnd_rot_qn, exct_rot_qn, 'r',
-                                                          grnd_branch_idx, exct_branch_idx))
+                                                          grnd_branch_idx, exct_branch_idx, 0.0))
                             if grnd_branch_idx > exct_branch_idx:
                                 lines.append(SpectralLine(grnd_rot_qn, exct_rot_qn, 'rq',
-                                                          grnd_branch_idx, exct_branch_idx))
+                                                          grnd_branch_idx, exct_branch_idx, 0.0))
 
                 # Selection rules for the P branch
                 elif exct_rot_qn - grnd_rot_qn == -1:
@@ -46,10 +46,18 @@ def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
                         for exct_branch_idx in range(1, 4):
                             if grnd_branch_idx == exct_branch_idx:
                                 lines.append(SpectralLine(grnd_rot_qn, exct_rot_qn, 'p',
-                                                          grnd_branch_idx, exct_branch_idx))
+                                                          grnd_branch_idx, exct_branch_idx, 0.0))
                             if grnd_branch_idx < exct_branch_idx:
                                 lines.append(SpectralLine(grnd_rot_qn, exct_rot_qn, 'pq',
-                                                          grnd_branch_idx, exct_branch_idx))
+                                                          grnd_branch_idx, exct_branch_idx, 0.0))
+
+    for line in lines:
+        if line.grnd_branch_idx == 1:
+            line.predissociation = pd_data['f1'][pd_data['rot_qn'] == line.exct_rot_qn].iloc[0]
+        elif line.grnd_branch_idx == 2:
+            line.predissociation = pd_data['f2'][pd_data['rot_qn'] == line.exct_rot_qn].iloc[0]
+        else:
+            line.predissociation = pd_data['f3'][pd_data['rot_qn'] == line.exct_rot_qn].iloc[0]
 
     return np.array(lines)
 
@@ -59,12 +67,13 @@ class SpectralLine:
     '''
 
     def __init__(self, grnd_rot_qn: int, exct_rot_qn: int, branch: str, grnd_branch_idx: int,
-                 exct_branch_idx: int) -> None:
+                 exct_branch_idx: int, predissociation: float) -> None:
         self.grnd_rot_qn     = grnd_rot_qn
         self.exct_rot_qn     = exct_rot_qn
         self.branch          = branch
         self.grnd_branch_idx = grnd_branch_idx
         self.exct_branch_idx = exct_branch_idx
+        self.predissociation = predissociation
 
     def wavenumber(self, band_origin: float, grnd_state: 'State', exct_state: 'State') -> float:
         '''

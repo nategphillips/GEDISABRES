@@ -23,6 +23,9 @@ def show_plot():
     Sets global plot labels and saves the figure if necessary.
     '''
 
+    if inp.SET_LIMS[0]:
+        plt.xlim(inp.SET_LIMS[1][0], inp.SET_LIMS[1][1])
+
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
     plt.legend()

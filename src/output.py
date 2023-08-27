@@ -18,6 +18,8 @@ def plot_style() -> None:
     plt.style.use(['science', 'grid'])
     plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
+    plt.rcParams.update({'font.size': 20})
+
 def show_plot():
     '''
     Sets global plot labels and saves the figure if necessary.
@@ -26,6 +28,7 @@ def show_plot():
     if inp.SET_LIMS[0]:
         plt.xlim(inp.SET_LIMS[1][0], inp.SET_LIMS[1][1])
 
+    plt.title(f'Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K')
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
     plt.legend()

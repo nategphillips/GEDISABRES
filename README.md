@@ -1,6 +1,6 @@
 # spectra
 
-> *Last Updated: 16 August 2023*
+> *Last Updated: 28 August 2023*
 
 A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 

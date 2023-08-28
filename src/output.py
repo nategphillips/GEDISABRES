@@ -18,7 +18,8 @@ def plot_style() -> None:
     plt.style.use(['science', 'grid'])
     plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
-    plt.rcParams.update({'font.size': 20})
+    if inp.FONT_SIZE[0]:
+        plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
 
 def show_plot():
     '''

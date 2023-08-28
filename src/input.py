@@ -34,12 +34,12 @@ CONV_GRAN: int  = 10000
 
 # Sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['harvard']
+SAMP_FILE: list[str] = ['harvard20']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['Harvard Data']
 
 # General plotting
-PLOT_SAVE:  bool  = True
+PLOT_SAVE:  bool  = False
 PLOT_PATH:  str   = '../img/example.webp'
 DPI:        int   = 96
 SCREEN_RES: tuple = (1920, 1080)

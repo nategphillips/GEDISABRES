@@ -9,6 +9,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+import initialize as init
+import convolution as conv
 import output as out
 import input as inp
 import bands
@@ -49,12 +51,33 @@ def main():
 
         out.plot_line(line_data, line_colors, line_labels)
 
-    if inp.CONV_DATA:
+    if inp.CONV_SEP:
         conv_data   = [band.get_conv(fc_data, max_fc, pd_data) for band in band_list]
         conv_colors = color_list[len(conv_data):2*len(conv_data)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_conv(conv_data, conv_colors, conv_labels)
+
+    # TODO: yeah this is trash please fix
+    if inp.CONV_ALL:
+        line_data = [band.get_line(fc_data, max_fc, pd_data) for band in band_list]
+
+        all_wavenumbers = []
+        all_intensities = []
+
+        for wavenumbers, intensities in line_data:
+            all_wavenumbers.extend(wavenumbers)
+            all_intensities.extend(intensities)
+
+        lines = init.selection_rules(inp.ROT_LVLS, pd_data)
+
+        # TODO: basically every vibrational band needs a full lines list, meaning that just using
+        #       a single one doesn't work because it's half as long as it needs to be. Find some way
+        #       to fix this pls
+        all_conv = conv.convolved_data(np.array(all_wavenumbers), np.array(all_intensities),
+                                       inp.TEMP, inp.PRES, np.append(lines, lines))
+
+        plt.plot(all_conv[0], all_conv[1])
 
     # Colors and labels for sample data are set in the input.py file
     if inp.SAMP_DATA:

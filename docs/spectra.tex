@@ -3,7 +3,7 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{mathtools, booktabs, float, siunitx, tikz, physics}
+\usepackage{mathtools, booktabs, float, siunitx, tikz, physics, graphicx}
 \usepackage[backend=biber, style=ieee]{biblatex}
 
 % biblatex
@@ -543,6 +543,22 @@ where
 \begin{equation*}
     z = \frac{(x - x_0) + \img\gamma}{\sigma\sqrt{2}}.
 \end{equation*}
+
+\chapter{Laser-Induced Fluorescence}
+\label{c:laser-induced_flourescence}
+
+Laser-induced fluorescence is a method of spectroscopy that excites a molecule into a higher energy level via the absorption of laser radiation, after which the molecule relaxes back into lower energy levels, emitting light.
+
+A single known ro-vibrational band is isolated and excited by a laser pulse, say the (0, 4) band. The molecule is then excited into a higher state via absorption of the excess laser energy, after which it spontaneously transitions into a higher vibrational state, say (0, 6). Next, the molecule relaxes back into multiple lower vibrational states, which spread out according to the known Franck-Condon factors.
+
+Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from the ground state to the excited state via laser excitation. Subsequently, the molecule relaxes to fill multiple vibrational states at the original electronic state.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/lif_bands.jpg}
+    \caption{Laser-induced fluorescence in Iodine.}
+    \label{f:laser-induced_fluorescence_in_iodine}
+\end{figure}
 
 \appendix
 \chapter{Diatomic Constants}

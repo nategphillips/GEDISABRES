@@ -62,3 +62,6 @@ There is quite a bit of functionality I'd still like to add in the future, such 
 - [x] Predissociation linewidth broadening in the Lorentzian convolution
 - [x] Addition of Franck-Condon factors to allow for the computation of two or more vibrational transitions at once
 - [ ] Proper computation for the intensities of the triplet fine structures (right now the intensities of the fine structure levels $F_1$ and $F_3$ are set to half of the main structure $F_2$)
+- [ ] Procure and implement more accurate diatomic constants
+- [ ] Identify and fix issues with satellite bands not lining up with experimental data at high wavenumbers
+- [ ] Add support for Laser Induced Fluorescence (LIF) spectroscopy

@@ -17,7 +17,7 @@ PRES: float = 101325.0
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # List of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(4, 1), (5, 1)]
+VIB_BANDS: list[tuple[int, int]] = [(3, 1), (4, 1), (5, 1)]
 
 # Band origin override
 # Constants don't line up exactly for comparison with Cosby (0, 9) data, so the band origin can be
@@ -25,7 +25,7 @@ VIB_BANDS: list[tuple[int, int]] = [(4, 1), (5, 1)]
 BAND_ORIG: tuple[bool, int] = (False, 36185)
 
 # Line data
-LINE_DATA: bool = False
+LINE_DATA: bool = True
 
 # Convolve data separately (convolve each vibrational transition individually)
 CONV_SEP: bool = False

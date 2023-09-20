@@ -17,7 +17,7 @@ PRES: float = 101325.0
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # List of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(3, 1), (4, 1), (5, 1)]
+VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
 
 # Band origin override
 # Constants don't line up exactly for comparison with Cosby (0, 9) data, so the band origin can be
@@ -30,15 +30,15 @@ LINE_DATA: bool = True
 # Convolve data separately (convolve each vibrational transition individually)
 CONV_SEP: bool = False
 # Convolve data together (combine all quantized line positions and convolve together)
-CONV_ALL: bool = True
+CONV_ALL: bool = False
 # Granulatity of the convolved data
 CONV_GRAN: int  = 10000
 
 # Sample data
-SAMP_DATA: bool = False
-SAMP_FILE: list[str] = ['harvard20']
+SAMP_DATA: bool = True
+SAMP_FILE: list[str] = ['pgopher']
 SAMP_COLS: list[str] = ['purple']
-SAMP_LABL: list[str] = ['Harvard Data']
+SAMP_LABL: list[str] = ['PGOPHER Data']
 
 # General plotting
 PLOT_SAVE:  bool  = False

@@ -49,7 +49,6 @@ def main():
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
         line_data   = [band.get_line(fc_data, max_fc, pd_data) for band in band_list]
-        print(line_data)
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 

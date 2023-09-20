@@ -46,11 +46,8 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     else:
         sqrt_sign = 1
 
-    # NOTE: reminder that the sign in front of state.spn_const[0] was changed from a - to a + on
-    #       8/7/23. I believe that the formula stated in Herzberg is wrong, as this change makes the
-    #       results match experimental and simulated data more accurately.
     if branch_idx == 1:
-        return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] + \
+        return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] - \
                state.spn_const[0] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
                state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
                state.spn_const[0] * state.rotational_constants()[0]) + \
@@ -59,11 +56,15 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     if branch_idx == 2:
         return first_term
 
-    return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
-           state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
-           state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
-           state.spn_const[0] * state.rotational_constants()[0]) - \
-           state.spn_const[1] * rot_qn
+    # TODO: 9/20/23 changed the sign on state.spn_const[0] from a - to a +. Reset the sign on the
+    #       first index to a - again. IDK what in the world is going on with these formulae, need to
+    #       find out and fix ASAP
+    if branch_idx == 3:
+        return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] + \
+            state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
+            state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
+            state.spn_const[0] * state.rotational_constants()[0]) - \
+            state.spn_const[1] * rot_qn
 
 class State:
     '''

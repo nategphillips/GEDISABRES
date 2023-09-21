@@ -56,15 +56,14 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     if branch_idx == 2:
         return first_term
 
-    # TODO: 9/20/23 changed the sign on state.spn_const[0] from a - to a +. Reset the sign on the
-    #       first index to a - again. IDK what in the world is going on with these formulae, need to
-    #       find out and fix ASAP
-    if branch_idx == 3:
-        return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] + \
-            state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
-            state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
-            state.spn_const[0] * state.rotational_constants()[0]) - \
-            state.spn_const[1] * rot_qn
+    # TODO: the sign in front of the state.spn_const[0] should 100% be a negative. I've checked
+    #       multiple sources at this point. I need to find out why there seems to be some issues
+    #       with how the triplet branches are spaced
+    return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
+           state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
+           state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
+           state.spn_const[0] * state.rotational_constants()[0]) - \
+           state.spn_const[1] * rot_qn
 
 class State:
     '''

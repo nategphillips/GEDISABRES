@@ -21,7 +21,7 @@ def main():
     '''
 
     # Read in the table of Franck-Condon factors
-    fc_data = np.loadtxt('../data/harris_rkr_fc.csv', delimiter=' ')
+    fc_data = np.loadtxt('../data/franck-condon/harris_rkr_fc.csv', delimiter=' ')
 
     # Read in the table of predissociation constants from Cosby
     pd_data = pd.read_csv('../data/predissociation.csv', delimiter=' ')

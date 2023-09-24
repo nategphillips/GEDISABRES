@@ -17,7 +17,7 @@ PRES: float = 101325.0
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # List of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
+VIB_BANDS: list[tuple[int, int]] = [(9, 0)]
 
 # Band origin override
 # Constants don't line up exactly for comparison with Cosby (0, 9) data, so the band origin can be
@@ -35,7 +35,7 @@ CONV_ALL: bool = False
 CONV_GRAN: int  = 10000
 
 # Sample data
-SAMP_DATA: bool = True
+SAMP_DATA: bool = False
 SAMP_FILE: list[str] = ['pgopher']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['PGOPHER Data']

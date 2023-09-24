@@ -14,7 +14,7 @@ import input as inp
 import bands
 
 plt.style.use(['science', 'grid'])
-# plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
+plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
 
 def main():
@@ -23,15 +23,28 @@ def main():
     '''
 
     # Read in the table of Franck-Condon factors
-    fc_data = np.loadtxt('../data/franck-condon/harris_rkr_fc.csv', delimiter=' ')
+    fc_data = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 
     # Read in the table of predissociation constants from Cosby
     pd_data = pd.read_csv('../data/predissociation.csv', delimiter=' ')
 
     # Excited and initial ground state vibrational quantum numbers
-    excite_vib_qn = 9
+    excite_vib_qn = 7
     initial_ground_vib_qn = 0
-    max_ground_vib_qn = 10
+    max_ground_vib_qn = 18
+
+    band = bands.LinePlot(inp.TEMP, inp.PRES, inp.ROT_LVLS, (excite_vib_qn, initial_ground_vib_qn))
+    max_fc = band.get_fc(fc_data)
+    line = band.get_line(fc_data, max_fc, pd_data)
+
+    plt.stem(line[0], line[1], 'k', markerfmt='', label='Total Band')
+    plt.stem(line[0][116], line[1][116], 'r', markerfmt='', label='Selected Line')
+    plt.title(f"Initial Excitation: $(v',v'') = ({excite_vib_qn}, {initial_ground_vib_qn})$, \
+                Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K")
+    plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    plt.ylabel('Normalized Intensity')
+    plt.legend()
+    plt.show()
 
     band_list = []
     labels    = []
@@ -53,7 +66,7 @@ def main():
     fig, ax = plt.subplots(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
     for i, (wave, intn) in enumerate(line_data):
-        markerline, stemlines, baseline = ax.stem(wave[0], intn[0], colors[i], markerfmt='',
+        markerline, stemlines, baseline = ax.stem(wave[116], intn[116], colors[i], markerfmt='',
                                                   label=f"$v''={labels[i]}$")
         plt.setp(stemlines, 'linewidth', 3)
 

@@ -49,4 +49,4 @@ SCREEN_RES: tuple = (1920, 1080)
 # Custom plot limits
 SET_LIMS: tuple[bool, tuple] = (False, (36170, 36192))
 # Custom font size
-FONT_SIZE: tuple[bool, int] = (True, 20)
+FONT_SIZE: tuple[bool, int] = (True, 18)

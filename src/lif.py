@@ -74,13 +74,13 @@ def main():
     intns /= max(intns)
 
     for i, (wave, intn) in enumerate(zip(wavns, intns)):
-        markerline, stemlines, baseline = ax.stem(wave, intn, colors[i], markerfmt='',
+        markerline, stemlines, baseline = ax.stem((1 / wave) * 1e7, intn, colors[i], markerfmt='',
                                                     label=f"$v''={labels[i]}$")
         plt.setp(stemlines, 'linewidth', 3)
 
     ax.set_title(f"Initial Excitation: $(v',v'') = ({excite_vib_qn}, {initial_ground_vib_qn})$, \
                    Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K")
-    ax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    ax.set_xlabel('Wavelength $\\nu$, [nm]')
     ax.set_ylabel('Normalized Intensity')
     ax.legend()
 
@@ -90,7 +90,7 @@ def main():
 
     # Add a secondary axis for wavelength
     secax = ax.secondary_xaxis('top', functions=(wn2wl, wn2wl))
-    secax.set_xlabel('Wavelength $\\lambda$, [nm]')
+    secax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.show()
 
 if __name__ == '__main__':

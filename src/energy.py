@@ -51,8 +51,12 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
 
     sqrt_sign = 1
 
+    # TODO: 9/19/23 the sign in front of the state.spn_const[0] should 100% be a negative. I've
+    #       checked multiple sources at this point. I need to find out why there seems to be some
+    #       issues with how the triplet branches are spaced. Leaving it positive for now since it
+    #       gives better results.
     if branch_idx == 1:
-        return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] - \
+        return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] + \
                state.spn_const[0] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
                state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
                state.spn_const[0] * state.rotational_constants()[0]) + \
@@ -61,9 +65,6 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     if branch_idx == 2:
         return first_term
 
-    # TODO: 9/19/23 the sign in front of the state.spn_const[0] should 100% be a negative. I've
-    #       checked multiple sources at this point. I need to find out why there seems to be some
-    #       issues with how the triplet branches are spaced
     return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
            state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
            state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \

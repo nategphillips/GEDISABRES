@@ -31,7 +31,7 @@ def main():
     # Excited and initial ground state vibrational quantum numbers
     excite_vib_qn = 7
     initial_ground_vib_qn = 0
-    max_ground_vib_qn = 18
+    max_ground_vib_qn = 14
 
     band = bands.LinePlot(inp.TEMP, inp.PRES, inp.ROT_LVLS, (excite_vib_qn, initial_ground_vib_qn))
     max_fc = band.get_fc(fc_data)
@@ -65,9 +65,17 @@ def main():
 
     fig, ax = plt.subplots(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
+    wavns = []
+    intns = []
     for i, (wave, intn) in enumerate(line_data):
-        markerline, stemlines, baseline = ax.stem(wave[116], intn[116], colors[i], markerfmt='',
-                                                  label=f"$v''={labels[i]}$")
+        wavns.append(wave[116])
+        intns.append(intn[116])
+
+    intns /= max(intns)
+
+    for i, (wave, intn) in enumerate(zip(wavns, intns)):
+        markerline, stemlines, baseline = ax.stem(wave, intn, colors[i], markerfmt='',
+                                                    label=f"$v''={labels[i]}$")
         plt.setp(stemlines, 'linewidth', 3)
 
     ax.set_title(f"Initial Excitation: $(v',v'') = ({excite_vib_qn}, {initial_ground_vib_qn})$, \

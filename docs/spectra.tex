@@ -618,9 +618,56 @@ Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from th
         \toprule
         Symbol & Definition & Values \\
         \midrule
-        $n$ & Principal Quantum Number & $1, 2, 3, \dotsb$ \\
-        $l$ & Azimuthal Quantum Number & $0, 1, 2, \dotsb, (n - 1)$ \\
-        $m_l$ & Magnetic Quantum Number & $-l, (1 - l), (2 - l), \dotsb, -2, -1, 0, 1, 2, \dotsb, (l - 1), (l - 2), l$ \\
+        \multicolumn{3}{c}{\textit{Single Electron in Atoms}} \\
+        \cmidrule(lr){1-3}
+        $n$ & Principal & $1, 2, \dotsb$ \\
+        $l$ & Azimuthal & $0, 1, \dotsb, (n - 1)$ \\
+        $m_l$ & Magnetic & $-l, \dotsb, l$ \\
+        $m_s$ & Spin & $\pm \frac{1}{2}$ \\
+        \multicolumn{3}{c}{\textit{Single Electron in Molecules}} \\
+        \cmidrule(lr){1-3}
+        $\lambda$ & Orbital Angular Momentum & $\abs{m_l}$ \\
+        \multicolumn{3}{c}{\textit{Whole Atoms}} \\
+        \cmidrule(lr){1-3}
+        $S$ & Resultant Spin & $\sum s_i$ \\
+        $L$ & Resultant Orbital Angular Momentum & $\sum l_i$ \\
+        $J$ & Total Angular Momentum & $(L + S), (L + S - 1), \dotsb, \abs{L - S}$ \\
+        $I$ & Nuclear Spin & ? \\
+        $F$ & Total Angular Momentum w/ Spin & $(J + I), (J + I - 1), \dotsb, \abs{J - I}$ \\
+        \multicolumn{3}{c}{\textit{Whole Molecules}} \\
+        \cmidrule(lr){1-3}
+        $M_L$ & ? & $L, L - 1, \dotsb, -L$ \\
+        $\Lambda$ & Electronic Orbital Angular Momentum & $0, 1, \dotsb, L$ \\
+        $\Sigma$ & ? & $S, S - 1, \dotsb, -S$ \\
+        $\Omega$ & Resultant Electronic Angular Momentum & $\abs{\Lambda + \Sigma}$ \\
+        $K$ & Total Angular Momentum w/o Spin & $\Lambda, \Lambda + 1, \dotsb$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\chapter{States}
+\label{a:states}
+
+\begin{table}[H]
+    \centering
+    \caption{Various atomic and molecular states.}
+    \label{t:states}
+    \begin{tabular}{cc}
+        \toprule
+        Defining Quantum Number & Values \\
+        \midrule
+        \multicolumn{2}{c}{\textit{Single Electron in Atoms}} \\
+        \cmidrule(lr){1-2}
+        $l$ & s, p, d, f, $\dotsb$ \\
+        \multicolumn{2}{c}{\textit{Single Electron in Molecules}} \\
+        \cmidrule(lr){1-2}
+        $\lambda$ & $\sigma, \pi, \delta, \varphi, \dotsb$ \\
+        \multicolumn{2}{c}{\textit{Whole Atoms}} \\
+        \cmidrule(lr){1-2}
+        $L$ & S, P, D, F, $\dotsb$ \\
+        \multicolumn{2}{c}{\textit{Whole Molecules}} \\
+        \cmidrule(lr){1-2}
+        $\Lambda$ & $\Sigma, \Pi, \Delta, \Phi, \dotsb$ \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -632,7 +679,7 @@ Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from th
     \centering
     \caption{Notation \cite{herzberg:spectra,nist:sigma1,nist:sigma3}.}
     \label{t:notation}
-    \begin{tabular}{cp{30em}c}
+    \begin{tabular}{clc}
         \toprule
         Symbol        & Definition                                                                  & Units            \\
         \midrule

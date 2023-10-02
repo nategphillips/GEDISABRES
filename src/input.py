@@ -3,6 +3,7 @@
 User-defined control inputs for quantum numbers and plotting, among others.
 '''
 
+import pandas as pd
 import numpy as np
 
 # Global temperature and pressure
@@ -11,6 +12,12 @@ TEMP: float = 300.0
 PRES: float = 101325.0
 
 # Temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
+
+# Predissociation constants
+PD_DATA = pd.read_csv('../data/predissociation.csv', delimiter=' ')
+
+# Franck-Condon factors
+FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 
 # Rotational levels
 # Cosby predissociation data only goes up to N = 36
@@ -32,7 +39,7 @@ CONV_SEP: bool = True
 # Convolve data together (combine all quantized line positions and convolve together)
 CONV_ALL: bool = False
 # Granulatity of the convolved data
-CONV_GRAN: int  = 10000
+CONV_GRAN: int = 100000
 
 # Sample data
 SAMP_DATA: bool = True

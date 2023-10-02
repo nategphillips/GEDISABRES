@@ -5,7 +5,7 @@ Testing LIF simulation.
 
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+from matplotlib import cm
 import scienceplots # pylint: disable=unused-import
 import pandas as pd
 import numpy as np

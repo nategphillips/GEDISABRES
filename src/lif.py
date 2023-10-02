@@ -168,7 +168,6 @@ def main():
 
     axs[0].set_title(f"Initial Excitation: $(v',v'') = ({ext_vib_qn}, {0})$, \
                    Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K")
-    axs[0].set_xlabel('Wavelength $\\nu$, [nm]')
     axs[0].set_ylabel('Normalized Intensity')
 
     # Convert from wavenumber to wavelength
@@ -180,6 +179,7 @@ def main():
     secax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
 
     axs[1].plot((1 / conv_wns) * 1e7, conv_ins)
+    axs[1].set_xlabel('Wavelength $\\nu$, [nm]')
 
     plt.show()
 

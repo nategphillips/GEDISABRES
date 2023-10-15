@@ -21,6 +21,8 @@ plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
 
 def selection_rules(gnd_rot_qn, ext_rot_qn):
 
+    lines = []
+
     d_rot_qn = ext_rot_qn - gnd_rot_qn
 
     # For molecular oxygen, all transitions with even values of J'' are forbidden
@@ -30,30 +32,31 @@ def selection_rules(gnd_rot_qn, ext_rot_qn):
         if d_rot_qn == 1:
             for grnd_branch_idx, exct_branch_idx in itertools.product(range(1, 4), repeat=2):
                 if grnd_branch_idx == exct_branch_idx:
-                    line = init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'r',
-                                             grnd_branch_idx, exct_branch_idx, 0.0)
+                    lines.append(init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'r',
+                                                   grnd_branch_idx, exct_branch_idx, 0.0))
                 if grnd_branch_idx > exct_branch_idx:
-                    line = init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'rq',
-                                             grnd_branch_idx, exct_branch_idx, 0.0)
+                    lines.append(init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'rq',
+                                                   grnd_branch_idx, exct_branch_idx, 0.0))
 
         # Selection rules for the P branch
         elif d_rot_qn == -1:
             for grnd_branch_idx, exct_branch_idx in itertools.product(range(1, 4), repeat=2):
                 if grnd_branch_idx == exct_branch_idx:
-                    line = init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'p',
-                                             grnd_branch_idx, exct_branch_idx, 0.0)
+                    lines.append(init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'p',
+                                                   grnd_branch_idx, exct_branch_idx, 0.0))
                 if grnd_branch_idx < exct_branch_idx:
-                    line = init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'pq',
-                                             grnd_branch_idx, exct_branch_idx, 0.0)
+                    lines.append(init.SpectralLine(gnd_rot_qn, ext_rot_qn, 'pq',
+                                                   grnd_branch_idx, exct_branch_idx, 0.0))
 
-    if line.gnd_branch_idx == 1:
-        line.predissociation = inp.PD_DATA['f1'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
-    elif line.gnd_branch_idx == 2:
-        line.predissociation = inp.PD_DATA['f2'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
-    else:
-        line.predissociation = inp.PD_DATA['f3'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
+    for line in lines:
+        if line.gnd_branch_idx == 1:
+            line.predissociation = inp.PD_DATA['f1'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
+        elif line.gnd_branch_idx == 2:
+            line.predissociation = inp.PD_DATA['f2'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
+        else:
+            line.predissociation = inp.PD_DATA['f3'][inp.PD_DATA['rot_qn'] == line.ext_rot_qn].iloc[0]
 
-    return line
+    return np.array(lines)
 
 class LinePlot:
     '''
@@ -108,19 +111,21 @@ class LinePlot:
             band_origin = energy.get_band_origin(grnd_state, exct_state)
 
         # Find the valid spectral line
-        line = selection_rules(self.gnd_rot_qn, self.ext_rot_qn)
+        lines = selection_rules(self.gnd_rot_qn, self.ext_rot_qn)
 
         # Get the wavenumber and intensity
-        wvnum = line.wavenumber(band_origin, grnd_state, exct_state)
-        inten = line.intensity(band_origin, grnd_state, exct_state, self.temp)
+        wns = np.array([line.wavenumber(band_origin, grnd_state, exct_state)
+                        for line in lines])
+        ins = np.array([line.intensity(band_origin, grnd_state, exct_state, self.temp)
+                        for line in lines])
 
         # Find the ratio between the largest Franck-Condon factor and the current plot
         norm_fc = self.get_fc() / max_fc
 
         # This is normalization of the plot with respect to others
-        inten *= norm_fc
+        ins *= norm_fc
 
-        return wvnum, inten
+        return wns, ins
 
 def main():
     '''
@@ -143,17 +148,17 @@ def main():
 
     line_data = [band.get_line(max_fc) for band in band_list]
 
-    lines = [band.return_line() for band in band_list]
+    lines = np.array([band.return_line() for band in band_list]).flatten()
 
-    wvnums = np.array([line[0] for line in line_data])
-    intens = np.array([line[1] for line in line_data])
-    intens /= max(intens)
+    wvnums = np.array([line[0] for line in line_data]).flatten()
+    intens = np.array([line[1] for line in line_data]).flatten()
+    intens /= intens.max()
 
     conv_wns, conv_ins = conv.convolved_data(wvnums, intens, inp.TEMP, inp.PRES, lines)
 
     # Grab a rainbow colormap from the built-in matplotlib cmaps
     cmap = plt.get_cmap('rainbow')
-    num_lines = len(line_data)
+    num_lines = len(wvnums)
 
     # Assign each line a color, each being equally spaced within the colormap
     colors = [mcolors.to_hex(cmap(i / (num_lines - 1))) for i in range(num_lines)]
@@ -163,7 +168,7 @@ def main():
 
     for i, (wave, intn) in enumerate(zip(wvnums, intens)):
         _, stemlines, _ = axs[0].stem((1 / wave) * 1e7, intn, colors[i], markerfmt='',
-                                                    label=f"$v''={labels[i]}$")
+                                                    label=f"$v''=a$")
         plt.setp(stemlines, 'linewidth', 3)
 
     axs[0].set_title(f"Initial Excitation: $(v',v'') = ({ext_vib_qn}, {0})$, \

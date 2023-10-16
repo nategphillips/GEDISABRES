@@ -167,8 +167,7 @@ def main():
                           dpi=inp.DPI, sharex=True)
 
     for i, (wave, intn) in enumerate(zip(wvnums, intens)):
-        _, stemlines, _ = axs[0].stem((1 / wave) * 1e7, intn, colors[i], markerfmt='',
-                                                    label=f"$v''=a$")
+        _, stemlines, _ = axs[0].stem((1 / wave) * 1e7, intn, colors[i], markerfmt='')
         plt.setp(stemlines, 'linewidth', 3)
 
     axs[0].set_title(f"Initial Excitation: $(v',v'') = ({ext_vib_qn}, {0})$, \

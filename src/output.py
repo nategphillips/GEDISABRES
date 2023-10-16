@@ -32,7 +32,7 @@ def show_plot():
     plt.title(f'Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K')
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
-    plt.legend()
+    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15))
 
     if inp.PLOT_SAVE:
         plt.savefig(inp.PLOT_PATH, dpi=inp.DPI * 2)

@@ -29,10 +29,10 @@ def show_plot():
     if inp.SET_LIMS[0]:
         plt.xlim(inp.SET_LIMS[1][0], inp.SET_LIMS[1][1])
 
-    plt.title(f'Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K')
+    plt.title(f"Model Validation with Harvard Experimental Data: $(v', v'') = {inp.VIB_BANDS[0]}$, {inp.PRES} Pa, {inp.TEMP} K")
     plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
     plt.ylabel('Normalized Intensity')
-    plt.legend(loc='upper center', bbox_to_anchor=(0.5, 1.15))
+    plt.legend()
 
     if inp.PLOT_SAVE:
         plt.savefig(inp.PLOT_PATH, dpi=inp.DPI * 2)

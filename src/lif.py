@@ -139,10 +139,8 @@ def main():
     max_vib_qn = 12
 
     band_list = []
-    labels    = []
-    for gnd_vib_qn in range(max_vib_qn):
+    for gnd_vib_qn in range(max_vib_qn + 1):
         band_list.append(LinePlot(inp.TEMP, inp.PRES, gnd_rot_qn, ext_rot_qn, (ext_vib_qn, gnd_vib_qn)))
-        labels.append(gnd_vib_qn)
 
     max_fc = max((band.get_fc() for band in band_list))
 
@@ -163,29 +161,31 @@ def main():
     # Assign each line a color, each being equally spaced within the colormap
     colors = [mcolors.to_hex(cmap(i / (num_lines - 1))) for i in range(num_lines)]
 
-    _, axs = plt.subplots(2, 1, figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI),
+    _, axs = plt.subplots(1, 1, figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI),
                           dpi=inp.DPI, sharex=True)
 
     for i, (wave, intn) in enumerate(zip(wvnums, intens)):
-        _, stemlines, _ = axs[0].stem((1 / wave) * 1e7, intn, colors[i], markerfmt='')
+        _, stemlines, _ = axs.stem((1 / wave) * 1e7, intn, colors[i], markerfmt='')
         plt.setp(stemlines, 'linewidth', 3)
 
-    axs[0].set_title(f"Initial Excitation: $(v',v'') = ({ext_vib_qn}, {0})$, \
-                   Pressure: {inp.PRES} Pa, Temperature: {inp.TEMP} K")
-    axs[0].set_ylabel('Normalized Intensity')
+    axs.set_title(f"Initial Laser Excitation: $(v', v'') = ({ext_vib_qn}, {0})$, \
+                    Emission: $v''_\\mathrm{{max}} = {max_vib_qn}$, $v''_\\mathrm{{min}} = 0$, \
+                    Selected Line: $(N', N'') = ({ext_rot_qn}, {gnd_rot_qn})$")
+    axs.set_ylabel('Normalized Intensity')
 
     # Convert from wavenumber to wavelength
     def wn2wl(wns):
         return (1 / wns) * 1e7
 
     # Add a secondary axis for wavelength
-    secax = axs[0].secondary_xaxis('top', functions=(wn2wl, wn2wl))
+    secax = axs.secondary_xaxis('top', functions=(wn2wl, wn2wl))
     secax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
 
-    axs[1].plot((1 / conv_wns) * 1e7, conv_ins)
-    axs[1].set_xlabel('Wavelength $\\nu$, [nm]')
+    # axs[1].plot((1 / conv_wns) * 1e7, conv_ins)
+    axs.set_xlabel('Wavelength $\\nu$, [nm]')
 
-    plt.show()
+    plt.savefig(inp.PLOT_PATH, dpi=inp.DPI * 2)
+    # plt.show()
 
 if __name__ == '__main__':
     main()

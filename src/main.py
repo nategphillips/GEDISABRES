@@ -49,7 +49,7 @@ def main():
 
     if inp.CONV_SEP:
         conv_data   = [band.get_conv(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
-        conv_colors = color_list[0:len(inp.VIB_BANDS)]
+        conv_colors = color_list[1:len(inp.VIB_BANDS)+1]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_sep_conv(conv_data, conv_colors, conv_labels)

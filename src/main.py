@@ -49,22 +49,18 @@ def main():
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        valid_wavenumbers = []
-        valid_branches    = []
-        valid_triplets    = []
-        for _, (line, wave) in enumerate(zip(lines, wavenumbers)):
-            if (30900 <= wave <= 31000) & (line.branch in ('p', 'r')):
-                valid_wavenumbers.append(wave)
-                valid_branches.append(line.branch)
-                valid_triplets.append(line.ext_branch_idx)
-        
-        temp_dict = {'wavenumber': valid_wavenumbers, 'branch': valid_branches, 'triplet': valid_triplets}
+        # Extract valid data based on conditions
+        valid_data = [(wave, line.branch, line.ext_branch_idx, line.ext_rot_qn)
+                      for (line, wave) in zip(lines, wavenumbers)
+                      if (30910 <= wave <= 30920) and (line.branch in ('p', 'r'))]
 
-        df = pd.DataFrame(temp_dict)
-        df.sort_values(by=['wavenumber'])
+        # Create a DataFrame
+        df = pd.DataFrame(valid_data, columns=['wavenumber', 'branch', 'triplet', 'rot_qn']).sort_values(by=['wavenumber'])
+
+        # Save the DataFrame to a CSV file
         df.to_csv('../data/test.csv', index=False)
 
-        # out.plot_line([wavenumbers, intensities], line_colors, line_labels)
+        out.plot_line([(wavenumbers, intensities)], line_colors, line_labels)
 
     if inp.CONV_SEP:
         conv_data   = [band.get_conv(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
@@ -104,7 +100,7 @@ def main():
         out.plot_samp(samp_data, inp.SAMP_COLS, inp.SAMP_LABL)
 
     # Display all data on one plot
-    # out.show_plot()
+    out.show_plot()
 
 if __name__ == '__main__':
     main()

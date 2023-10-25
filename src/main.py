@@ -4,6 +4,7 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
+import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -42,10 +43,28 @@ def main():
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
         line_data   = [band.get_line(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
+        wavenumbers = line_data[0][0]
+        intensities = line_data[0][1]
+        lines       = line_data[0][2]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        out.plot_line(line_data, line_colors, line_labels)
+        valid_wavenumbers = []
+        valid_branches    = []
+        valid_triplets    = []
+        for _, (line, wave) in enumerate(zip(lines, wavenumbers)):
+            if (30900 <= wave <= 31000) & (line.branch in ('p', 'r')):
+                valid_wavenumbers.append(wave)
+                valid_branches.append(line.branch)
+                valid_triplets.append(line.ext_branch_idx)
+        
+        temp_dict = {'wavenumber': valid_wavenumbers, 'branch': valid_branches, 'triplet': valid_triplets}
+
+        df = pd.DataFrame(temp_dict)
+        df.sort_values(by=['wavenumber'])
+        df.to_csv('../data/test.csv', index=False)
+
+        # out.plot_line([wavenumbers, intensities], line_colors, line_labels)
 
     if inp.CONV_SEP:
         conv_data   = [band.get_conv(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
@@ -85,7 +104,7 @@ def main():
         out.plot_samp(samp_data, inp.SAMP_COLS, inp.SAMP_LABL)
 
     # Display all data on one plot
-    out.show_plot()
+    # out.show_plot()
 
 if __name__ == '__main__':
     main()

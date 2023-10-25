@@ -53,12 +53,8 @@ def selection_rules(rot_qn_list: np.ndarray, pd_data) -> np.ndarray:
                                                     gnd_branch_idx, ext_branch_idx, 0.0))
 
     for line in lines:
-        if line.gnd_branch_idx == 1:
-            line.predissociation = pd_data['f1'][pd_data['rot_qn'] == line.ext_rot_qn].iloc[0]
-        elif line.gnd_branch_idx == 2:
-            line.predissociation = pd_data['f2'][pd_data['rot_qn'] == line.ext_rot_qn].iloc[0]
-        else:
-            line.predissociation = pd_data['f3'][pd_data['rot_qn'] == line.ext_rot_qn].iloc[0]
+        line.predissociation = pd_data[f'f{line.gnd_branch_idx}'] \
+                                      [pd_data['rot_qn'] == line.ext_rot_qn].iloc[0]
 
     return np.array(lines)
 

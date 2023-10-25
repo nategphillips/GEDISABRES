@@ -24,8 +24,7 @@ FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # List of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(0, 8), \
-                                    (1, 8)]
+VIB_BANDS: list[tuple[int, int]] = [(0, 13), (2, 14)]
 
 # Band origin override
 # Constants don't line up exactly for comparison with Cosby (0, 9) data, so the band origin can be

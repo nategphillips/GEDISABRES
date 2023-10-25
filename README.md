@@ -1,6 +1,6 @@
 # spectra
 
-> *Last Updated: 20 September 2023*
+> *Last Updated: 25 October 2023*
 
 A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 
@@ -60,7 +60,12 @@ There is quite a bit of functionality I'd still like to add in the future, such 
 
 - [x] Predissociation linewidth broadening in the Lorentzian convolution
 - [x] Addition of Franck-Condon factors to allow for the computation of two or more vibrational transitions at once
+- [x] Add support for including the effects of laser-induced fluorescence (LIF) spectroscopy
 - [ ] Proper computation for the intensities of the triplet fine structures (right now the intensities of the fine structure levels $F_1$ and $F_3$ are set to half of the main structure $F_2$)
 - [ ] Procure and implement more accurate diatomic constants
 - [ ] Identify and fix issues with satellite bands not lining up with experimental data at high wavenumbers
-- [ ] Add support for including the effects of laser-induced fluorescence (LIF) spectroscopy
+- [ ] Allow the user to select a wavenumber range and return the valid spectral lines within that range
+  - Rotational quantum number, spectral branch, etc.
+- [ ] Add correct predissociation rates for all vibrational and rotational quantum numbers
+  - Currently using data that is only valid for $v' = 0$
+- [ ] Add the ability to convolve any data with an instrument function

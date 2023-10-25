@@ -15,7 +15,7 @@ def plot_style() -> None:
     Sets a consistent plot style and output resolution based on the input screen parameters.
     '''
 
-    plt.style.use(['science', 'grid'])
+    # plt.style.use(['science', 'grid'])
     plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
     if inp.FONT_SIZE[0]:

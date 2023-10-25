@@ -39,7 +39,7 @@ class LinePlot:
         return fc_data[self.states[0]][self.states[1]]
 
     def get_line(self, fc_data: np.ndarray, max_fc: float,
-                 pd_data) -> tuple[np.ndarray, np.ndarray]:
+                 pd_data) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for each line in the plot.
 
@@ -80,10 +80,10 @@ class LinePlot:
         # This is normalization of the plot with respect to others
         ins *= norm_fc
 
-        return wns, ins
+        return wns, ins, lines
 
     def get_conv(self, fc_data: np.ndarray, max_fc: float,
-                 pd_data) -> tuple[np.ndarray, np.ndarray]:
+                 pd_data) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for the convolved data.
 
@@ -97,10 +97,10 @@ class LinePlot:
 
         lines = init.selection_rules(self.rot_qn_list, pd_data)
 
-        wns, ins = self.get_line(fc_data, max_fc, pd_data)
+        wns, ins, lines = self.get_line(fc_data, max_fc, pd_data)
 
         conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres, lines)
 
         conv_ins *= self.get_fc(fc_data) / max_fc
 
-        return conv_wns, conv_ins
+        return conv_wns, conv_ins, lines

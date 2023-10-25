@@ -16,10 +16,10 @@ def plot_style() -> None:
     '''
 
     # plt.style.use(['science', 'grid'])
-    plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
+    # plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
-    if inp.FONT_SIZE[0]:
-        plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
+    #if inp.FONT_SIZE[0]:
+        #plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
 
 def show_plot():
     '''
@@ -29,10 +29,10 @@ def show_plot():
     if inp.SET_LIMS[0]:
         plt.xlim(inp.SET_LIMS[1][0], inp.SET_LIMS[1][1])
 
-    plt.title(f'{inp.PRES} Pa, {inp.TEMP} K')
-    plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
-    plt.ylabel('Normalized Intensity')
-    plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    #plt.title(f'{inp.PRES} Pa, {inp.TEMP} K')
+    #plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    #plt.ylabel('Normalized Intensity')
+    #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     # Convert from wavenumber to wavelength
     def wn2wl(wns):
@@ -83,7 +83,7 @@ def plot_line(data: list[tuple], colors: list[str], labels: list[str]) -> None:
     '''
 
     for i, (wave, intn) in enumerate(data):
-        if inp.VIB_BANDS[i][0] == 0:
+        if inp.VIB_BANDS[0][0] == 0:
             colr = 'b'
         else:
             colr = 'r'

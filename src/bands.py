@@ -25,6 +25,16 @@ class LinePlot:
         self.ext_vib_qn  = ext_vib_qn
         self.gnd_vib_qn  = gnd_vib_qn
 
+    def get_lines(self) -> np.ndarray:
+        '''
+        Returns the spectral lines that fall within the transition.
+
+        Returns:
+            np.ndarray: valid lines
+        '''
+
+        return init.selection_rules(self.rot_qn_list)
+
     def get_fc(self) -> float:
         '''
         From the global Franck-Condon data array, grabs the correct FC factor for the current
@@ -36,7 +46,7 @@ class LinePlot:
 
         return inp.FC_DATA[self.ext_vib_qn][self.gnd_vib_qn]
 
-    def get_line(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
+    def return_line_data(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for each line in the plot.
 
@@ -58,7 +68,7 @@ class LinePlot:
             band_origin = energy.get_band_origin(grnd_state, exct_state)
 
         # Initialize the list of valid spectral lines
-        lines = init.selection_rules(self.rot_qn_list)
+        lines = self.get_lines()
 
         # Get the wavenumbers and intensities
         wns = np.array([line.wavenumber(band_origin, grnd_state, exct_state)
@@ -78,7 +88,7 @@ class LinePlot:
 
         return wns, ins
 
-    def get_conv(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
+    def return_conv_data(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
         '''
         Finds the wavenumbers and intensities for the convolved data.
 
@@ -89,9 +99,9 @@ class LinePlot:
             tuple[np.ndarray, np.ndarray]: (wavenumbers, intensities)
         '''
 
-        lines = init.selection_rules(self.rot_qn_list)
+        lines = self.get_lines()
 
-        wns, ins = self.get_line(max_fc)
+        wns, ins = self.return_line_data(max_fc)
 
         conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres, lines)
 

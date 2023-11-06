@@ -23,11 +23,11 @@ def main():
     # Create a vibrational band line plot for each of the user-selected bands
     band_list = []
     for band in inp.VIB_BANDS:
-        band_list.append(bands.LinePlot(inp.TEMP, inp.PRES, inp.ROT_LVLS, band))
+        band_list.append(bands.LinePlot(inp.TEMP, inp.PRES, inp.ROT_LVLS, band[0], band[1]))
 
     # Find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band
-    max_fc = max((band.get_fc(inp.FC_DATA) for band in band_list))
+    max_fc = max((band.get_fc() for band in band_list))
 
     # Set the plotting style
     out.plot_style()
@@ -42,35 +42,32 @@ def main():
     if inp.LINE_DATA:
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
-        line_data   = [band.get_line(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
-        wavenumbers = line_data[0][0]
-        intensities = line_data[0][1]
-        lines       = line_data[0][2]
+        line_data   = [band.get_line(max_fc) for band in band_list]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        # Extract valid data based on conditions
-        valid_data = [(wave, line.branch, line.ext_branch_idx, line.ext_rot_qn)
-                      for (line, wave) in zip(lines, wavenumbers)
-                      if (30910 <= wave <= 30920) and (line.branch in ('p', 'r'))]
+        # # Extract valid data based on conditions
+        # valid_data = [(wave, line.branch, line.ext_branch_idx, line.ext_rot_qn)
+        #               for (line, wave) in zip(lines, wavenumbers)
+        #               if (30910 <= wave <= 30920) and (line.branch in ('p', 'r'))]
 
-        # Create a DataFrame
-        df = pd.DataFrame(valid_data, columns=['wavenumber', 'branch', 'triplet', 'rot_qn']).sort_values(by=['wavenumber'])
+        # # Create a DataFrame
+        # df = pd.DataFrame(valid_data, columns=['wavenumber', 'branch', 'triplet', 'rot_qn']).sort_values(by=['wavenumber'])
 
-        # Save the DataFrame to a CSV file
-        df.to_csv('../data/test.csv', index=False)
+        # # Save the DataFrame to a CSV file
+        # df.to_csv('../data/test.csv', index=False)
 
-        out.plot_line([(wavenumbers, intensities)], line_colors, line_labels)
+        out.plot_line(line_data, line_colors, line_labels)
 
     if inp.CONV_SEP:
-        conv_data   = [band.get_conv(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
+        conv_data   = [band.get_conv(max_fc) for band in band_list]
         conv_colors = color_list[0:len(inp.VIB_BANDS)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_sep_conv(conv_data, conv_colors, conv_labels)
 
     if inp.CONV_ALL:
-        line_data = [band.get_line(inp.FC_DATA, max_fc, inp.PD_DATA) for band in band_list]
+        line_data = [band.get_line(max_fc) for band in band_list]
 
         all_wavenumbers = []
         all_intensities = []
@@ -79,7 +76,7 @@ def main():
             all_wavenumbers.extend(wavenumbers)
             all_intensities.extend(intensities)
 
-        lines = init.selection_rules(inp.ROT_LVLS, inp.PD_DATA)
+        lines = init.selection_rules(inp.ROT_LVLS)
 
         # NOTE: every vibrational band needs a full lines list, meaning that just using a single one
         #       doesn't work because it's half as long as it needs to be

@@ -48,7 +48,7 @@ def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
     collide = (pres * 10) * cross_sec**2 * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * temp)) / 2
 
     # Predissociation (Lorentzian)
-    prediss = lines[idx].predissociation
+    prediss = lines[idx].predissociation()
 
     # TODO: this might be wrong, not sure if the parameters just add together or what
     gauss = doppler

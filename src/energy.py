@@ -5,20 +5,20 @@ Used for calculating the energy term values for each state.
 
 import numpy as np
 
-def get_band_origin(grnd_state: 'State', exct_state: 'State') -> float:
+def get_band_origin(gnd_state: 'State', ext_state: 'State') -> float:
     '''
     Computes the electronic + vibrational term values.
 
     Args:
-        grnd_state (State): ground state
-        exct_state (State): excited state
+        gnd_state (State): ground state
+        ext_state (State): excited state
 
     Returns:
-        float: electronic + vibrational term values
+        float: electronic + vibrational energy
     '''
 
-    elc_energy = exct_state.electronic_term() - grnd_state.electronic_term()
-    vib_energy = exct_state.vibrational_term() - grnd_state.vibrational_term()
+    elc_energy = ext_state.electronic_term() - gnd_state.electronic_term()
+    vib_energy = ext_state.vibrational_term() - gnd_state.vibrational_term()
 
     return elc_energy + vib_energy
 

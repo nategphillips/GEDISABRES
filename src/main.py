@@ -42,14 +42,16 @@ def main():
     if inp.LINE_DATA:
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
-        line_data   = [band.get_line(max_fc) for band in band_list]
+        line_data   = [band.return_line_data(max_fc) for band in band_list]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        # # Extract valid data based on conditions
+        # lines       = [band.get_lines() for band in band_list]
+        # wavenumbers = [item[0] for item in line_data]
+
         # valid_data = [(wave, line.branch, line.ext_branch_idx, line.ext_rot_qn)
         #               for (line, wave) in zip(lines, wavenumbers)
-        #               if (30910 <= wave <= 30920) and (line.branch in ('p', 'r'))]
+        #               if (30910 <= wave.any() <= 30920) and (line.branch in ('p', 'r'))]
 
         # # Create a DataFrame
         # df = pd.DataFrame(valid_data, columns=['wavenumber', 'branch', 'triplet', 'rot_qn']).sort_values(by=['wavenumber'])
@@ -60,7 +62,7 @@ def main():
         out.plot_line(line_data, line_colors, line_labels)
 
     if inp.CONV_SEP:
-        conv_data   = [band.get_conv(max_fc) for band in band_list]
+        conv_data   = [band.return_conv_data(max_fc) for band in band_list]
         conv_colors = color_list[0:len(inp.VIB_BANDS)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 

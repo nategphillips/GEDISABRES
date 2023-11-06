@@ -35,7 +35,7 @@ BAND_ORIG: tuple[bool, int] = (False, 36185)
 LINE_DATA: bool = True
 
 # Convolve data separately (convolve each vibrational transition individually)
-CONV_SEP: bool = False
+CONV_SEP: bool = True
 # Convolve data together (combine all quantized line positions and convolve together)
 CONV_ALL: bool = False
 # Granulatity of the convolved data

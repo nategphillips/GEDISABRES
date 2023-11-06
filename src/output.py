@@ -83,7 +83,7 @@ def plot_line(data: list[tuple], colors: list[str], labels: list[str]) -> None:
     '''
 
     for i, (wave, intn) in enumerate(data):
-        if inp.VIB_BANDS[0][0] == 0:
+        if inp.VIB_BANDS[i][0] == 0:
             colr = 'b'
         else:
             colr = 'r'

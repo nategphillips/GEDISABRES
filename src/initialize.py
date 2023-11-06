@@ -9,12 +9,13 @@ import numpy as np
 
 from energy import State
 import constants as cn
+import input as inp
 import energy
 
-def selection_rules(rot_qn_list: np.ndarray, pd_data) -> np.ndarray:
+def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
     '''
     Initializes spectral lines with ground and excited state rotational quantum numbers, along with
-    their respective branch index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
+    their respective triplet index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
 
     Args:
         rot_qn_list (np.ndarray): a list of rotational quantum numbers that are to be considered
@@ -34,27 +35,23 @@ def selection_rules(rot_qn_list: np.ndarray, pd_data) -> np.ndarray:
 
             # Selection rules for the R branch
             if d_rot_qn == 1:
-                for gnd_branch_idx, ext_branch_idx in itertools.product(range(1, 4), repeat=2):
-                    if gnd_branch_idx == ext_branch_idx:
-                        lines.append(SpectralLine(gnd_rot_qn, ext_rot_qn, 'r',
-                                                    gnd_branch_idx, ext_branch_idx, 0.0))
-                    if gnd_branch_idx > ext_branch_idx:
-                        lines.append(SpectralLine(gnd_rot_qn, ext_rot_qn, 'rq',
-                                                    gnd_branch_idx, ext_branch_idx, 0.0))
+                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
+                    if gnd_triplet_idx == ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'r'))
+                    if gnd_triplet_idx > ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'rq'))
 
             # Selection rules for the P branch
             elif d_rot_qn == -1:
-                for gnd_branch_idx, ext_branch_idx in itertools.product(range(1, 4), repeat=2):
-                    if gnd_branch_idx == ext_branch_idx:
-                        lines.append(SpectralLine(gnd_rot_qn, ext_rot_qn, 'p',
-                                                    gnd_branch_idx, ext_branch_idx, 0.0))
-                    if gnd_branch_idx < ext_branch_idx:
-                        lines.append(SpectralLine(gnd_rot_qn, ext_rot_qn, 'pq',
-                                                    gnd_branch_idx, ext_branch_idx, 0.0))
-
-    for line in lines:
-        line.predissociation = pd_data[f'f{line.gnd_branch_idx}'] \
-                                      [pd_data['rot_qn'] == line.ext_rot_qn].iloc[0]
+                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
+                    if gnd_triplet_idx == ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'p'))
+                    if gnd_triplet_idx < ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'pq'))
 
     return np.array(lines)
 
@@ -63,38 +60,44 @@ class SpectralLine:
     Holds the necessary data for a single spectral line.
     '''
 
-    def __init__(self, gnd_rot_qn: int, ext_rot_qn: int, branch: str, gnd_branch_idx: int,
-                 ext_branch_idx: int, predissociation: float) -> None:
-        self.gnd_rot_qn      = gnd_rot_qn
+    def __init__(self, ext_rot_qn: int, gnd_rot_qn: int, ext_triplet_idx: int, gnd_triplet_idx: int,
+                 branch: str) -> None:
         self.ext_rot_qn      = ext_rot_qn
+        self.gnd_rot_qn      = gnd_rot_qn
+        self.ext_triplet_idx = ext_triplet_idx
+        self.gnd_triplet_idx = gnd_triplet_idx
         self.branch          = branch
-        self.gnd_branch_idx  = gnd_branch_idx
-        self.ext_branch_idx  = ext_branch_idx
-        self.predissociation = predissociation
 
-    # TODO: combine rotational quantum numbers into a tuple (N', N'')
-    # TODO: combine triplet branch into a tuple
-    # TODO: calculate predissociation and all other broadening parameters with in-class methods
+    def predissociation(self) -> float:
+        '''
+        Gets the predissociation broadening coefficient in cm^-1 for each line.
 
-    def wavenumber(self, band_origin: float, grnd_state: 'State', exct_state: 'State') -> float:
+        Returns:
+            float: predissociation coefficient
+        '''
+
+        return inp.PD_DATA[f'f{self.gnd_triplet_idx}'] \
+                          [inp.PD_DATA['rot_qn'] == self.ext_rot_qn].iloc[0]
+
+    def wavenumber(self, band_origin: float, gnd_state: 'State', ext_state: 'State') -> float:
         '''
         Given the electronic, vibrational, and rotational term values, caluclates the wavenumnber
         (energy) of the resulting emission/absorption.
 
         Args:
             band_origin (float): electronic + vibrational term values
-            grnd_state (State): ground state
-            exct_state (State): excited state
+            gnd_state (State): ground state
+            ext_state (State): excited state
 
         Returns:
             float: emitted/absorbed wavenumber
         '''
 
         return band_origin + \
-               energy.rotational_term(self.ext_rot_qn, exct_state, self.ext_branch_idx) - \
-               energy.rotational_term(self.gnd_rot_qn, grnd_state, self.gnd_branch_idx)
+               energy.rotational_term(self.ext_rot_qn, ext_state, self.ext_triplet_idx) - \
+               energy.rotational_term(self.gnd_rot_qn, gnd_state, self.gnd_triplet_idx)
 
-    def intensity(self, band_origin: float, grnd_state: 'State', exct_state: 'State',
+    def intensity(self, band_origin: float, gnd_state: 'State', ext_state: 'State',
                   temp: float) -> float:
         '''
         Uses the Gaussian distribution function to calculate the population density (and therefore
@@ -102,8 +105,8 @@ class SpectralLine:
 
         Args:
             band_origin (float): electronic + vibrational term values
-            grnd_state (State): ground state
-            exct_state (State): excited state
+            gnd_state (State): ground state
+            ext_state (State): excited state
             temp (float): temperature
 
         Returns:
@@ -114,19 +117,19 @@ class SpectralLine:
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)
 
         # The basic intensity function if no branches are considered
-        base = (self.wavenumber(band_origin, grnd_state, exct_state) / part) * \
-               np.exp(- (energy.rotational_term(self.gnd_rot_qn, grnd_state, \
-               self.gnd_branch_idx) * cn.PLANC * cn.LIGHT) / (cn.BOLTZ * temp))
+        base = (self.wavenumber(band_origin, gnd_state, ext_state) / part) * \
+               np.exp(- (energy.rotational_term(self.gnd_rot_qn, gnd_state, \
+               self.gnd_triplet_idx) * cn.PLANC * cn.LIGHT) / (cn.BOLTZ * temp))
 
         # Intensity is dependent upon branch, with satellite branches having a much lower intensity
         # (notice that r and p scale with N**2, while rq and rp scale with 1/N**2)
         match self.branch:
             case 'r':
                 linestr = ((self.gnd_rot_qn + 1)**2 - 0.25) / (self.gnd_rot_qn + 1)
-                intn =  base * linestr
+                intn = base * linestr
             case 'p':
-                linestr  = ((self.gnd_rot_qn)**2 - 0.25) / (self.gnd_rot_qn)
-                intn =  base * linestr
+                linestr = ((self.gnd_rot_qn)**2 - 0.25) / (self.gnd_rot_qn)
+                intn = base * linestr
             case _:
                 linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.ext_rot_qn + 1))
                 intn = base * linestr
@@ -136,7 +139,7 @@ class SpectralLine:
 
         # NOTE: this *seems* to be what PGOPHER is doing from what I can tell, also haven't been
         #       able to find anything in Herzberg about it yet
-        if self.gnd_branch_idx in (1, 3):
+        if self.gnd_triplet_idx in (1, 3):
             return intn / 2
 
         return intn

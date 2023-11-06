@@ -55,21 +55,23 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     #       checked multiple sources at this point. I need to find out why there seems to be some
     #       issues with how the triplet branches are spaced. Leaving it positive for now since it
     #       gives better results.
-    if branch_idx == 1:
-        return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] + \
-               state.spn_const[0] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
-               state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
-               state.spn_const[0] * state.rotational_constants()[0]) + \
-               state.spn_const[1] * (rot_qn + 1)
+    match branch_idx:
+        case 1:
+            return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] + \
+                   state.spn_consts[0] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
+                   state.rotational_constants()[0]**2 + state.spn_consts[0]**2 - 2 * \
+                   state.spn_consts[0] * state.rotational_constants()[0]) + \
+                   state.spn_consts[1] * (rot_qn + 1)
 
-    if branch_idx == 2:
-        return first_term
+        case 3:
+            return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
+                   state.spn_consts[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
+                   state.rotational_constants()[0]**2 + state.spn_consts[0]**2 - 2 * \
+                   state.spn_consts[0] * state.rotational_constants()[0]) - \
+                   state.spn_consts[1] * rot_qn
 
-    return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
-           state.spn_const[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
-           state.rotational_constants()[0]**2 + state.spn_const[0]**2 - 2 * \
-           state.spn_const[0] * state.rotational_constants()[0]) - \
-           state.spn_const[1] * rot_qn
+        case _:
+            return first_term
 
 class State:
     '''
@@ -78,11 +80,11 @@ class State:
     '''
 
     def __init__(self, constants: list, vib_qn: int) -> None:
-        self.elc_const = constants[0]
-        self.vib_const = constants[1:5]
-        self.rot_const = constants[5:12]
-        self.spn_const = constants[12:14]
-        self.vib_qn    = vib_qn
+        self.elc_consts = constants[0]
+        self.vib_consts = constants[1:5]
+        self.rot_consts = constants[5:12]
+        self.spn_consts = constants[12:14]
+        self.vib_qn     = vib_qn
 
     def rotational_constants(self) -> list[float]:
         '''
@@ -92,14 +94,14 @@ class State:
             list[float]: [B_v, D_v, H_v]
         '''
 
-        b_v = self.rot_const[0]                          - \
-              self.rot_const[1] * (self.vib_qn + 0.5)    + \
-              self.rot_const[2] * (self.vib_qn + 0.5)**2 + \
-              self.rot_const[3] * (self.vib_qn + 0.5)**3
+        b_v = self.rot_consts[0]                          - \
+              self.rot_consts[1] * (self.vib_qn + 0.5)    + \
+              self.rot_consts[2] * (self.vib_qn + 0.5)**2 + \
+              self.rot_consts[3] * (self.vib_qn + 0.5)**3
 
-        d_v = self.rot_const[4] - self.rot_const[5] * (self.vib_qn + 0.5)
+        d_v = self.rot_consts[4] - self.rot_consts[5] * (self.vib_qn + 0.5)
 
-        h_v = self.rot_const[6]
+        h_v = self.rot_consts[6]
 
         return [b_v, d_v, h_v]
 
@@ -111,7 +113,7 @@ class State:
             float: electronic term T_e
         '''
 
-        return self.elc_const
+        return self.elc_consts
 
     def vibrational_term(self) -> float:
         '''
@@ -120,7 +122,7 @@ class State:
         Returns:
             float: vibrational term G(v)
         '''
-        return self.vib_const[0] * (self.vib_qn + 0.5)    - \
-               self.vib_const[1] * (self.vib_qn + 0.5)**2 + \
-               self.vib_const[2] * (self.vib_qn + 0.5)**3 + \
-               self.vib_const[3] * (self.vib_qn + 0.5)**4
+        return self.vib_consts[0] * (self.vib_qn + 0.5)    - \
+               self.vib_consts[1] * (self.vib_qn + 0.5)**2 + \
+               self.vib_consts[2] * (self.vib_qn + 0.5)**3 + \
+               self.vib_consts[3] * (self.vib_qn + 0.5)**4

@@ -69,3 +69,4 @@ There is quite a bit of functionality I'd still like to add in the future, such 
 - [ ] Add correct predissociation rates for all vibrational and rotational quantum numbers
   - Currently using data that is only valid for $v' = 0$
 - [ ] Add the ability to convolve any data with an instrument function
+- [ ] Compute the number of photons emitted by a given band for LIF

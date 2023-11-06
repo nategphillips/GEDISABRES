@@ -72,6 +72,10 @@ class SpectralLine:
         self.ext_branch_idx  = ext_branch_idx
         self.predissociation = predissociation
 
+    # TODO: combine rotational quantum numbers into a tuple (N', N'')
+    # TODO: combine triplet branch into a tuple
+    # TODO: calculate predissociation and all other broadening parameters with in-class methods
+
     def wavenumber(self, band_origin: float, grnd_state: 'State', exct_state: 'State') -> float:
         '''
         Given the electronic, vibrational, and rotational term values, caluclates the wavenumnber
@@ -116,15 +120,16 @@ class SpectralLine:
 
         # Intensity is dependent upon branch, with satellite branches having a much lower intensity
         # (notice that r and p scale with N**2, while rq and rp scale with 1/N**2)
-        if self.branch == 'r':
-            linestr = ((self.gnd_rot_qn + 1)**2 - 0.25) / (self.gnd_rot_qn + 1)
-            intn =  base * linestr
-        elif self.branch == 'p':
-            linestr  = ((self.gnd_rot_qn)**2 - 0.25) / (self.gnd_rot_qn)
-            intn =  base * linestr
-        else:
-            linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.ext_rot_qn + 1))
-            intn = base * linestr
+        match self.branch:
+            case 'r':
+                linestr = ((self.gnd_rot_qn + 1)**2 - 0.25) / (self.gnd_rot_qn + 1)
+                intn =  base * linestr
+            case 'p':
+                linestr  = ((self.gnd_rot_qn)**2 - 0.25) / (self.gnd_rot_qn)
+                intn =  base * linestr
+            case _:
+                linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.ext_rot_qn + 1))
+                intn = base * linestr
 
         # Naive approach of applying 1:2:1 line intensity ratio to each band, this way the two peaks
         # on either side of the main peak have 1/2 the intensity

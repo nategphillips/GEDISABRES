@@ -4,15 +4,7 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
-
-# TODO: 11/19/23 add the ability to convolve already convolved data with an instrument function, it
-#                should be implemented for both individual bands and an overall convolution
-
-# TODO: 11/19/23 for major bands within a selected range, optionally add text on the final plot to
-#                show various information (branch, index, etc.)
-
-# TODO: 11/19/23 make that same information available to the user via an output .csv
-
+import pandas as pd
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -36,7 +28,7 @@ def main():
 
     # Find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band
-    max_fc = max((band.get_fc() for band in vibrational_bands))
+    max_fc = max((band.fc_data for band in vibrational_bands))
 
     # Set the plotting style
     out.plot_style()
@@ -51,44 +43,63 @@ def main():
     if inp.LINE_DATA:
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
+        wns_line    = [band.wavenumbers_line() for band in vibrational_bands]
+        ins_line    = [band.intensities_line(max_fc) for band in vibrational_bands]
+        colors_line = color_list[0:len(inp.VIB_BANDS)]
+        lables_line = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        line_data   = [band.return_line_data(max_fc) for band in vibrational_bands]
-        line_colors = color_list[0:len(line_data)]
-        line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
-        print(line_data)
+        out.plot_line(wns_line, ins_line, colors_line, lables_line)
 
-        # TODO: 11/19/23 add back ability to output line data within a range
+        if inp.PRINT_INFO:
+            # TODO: 11/19/23 still not happy with now this is being performed. converting the list
+            #                comprehensions directly to numpy arrays is somewhat inefficient and I
+            #                feel like there's a better way to do this
 
-        # lines       = [band.get_lines() for band in band_list]
-        # wavenumbers = [item[0] for item in line_data]
+            # One thing to look at would be making wavelenth and intensity direct attributes of each
+            # SpectralLine, but this looks more complicated than it's worth
 
-        # valid_data = [(wave, line.branch, line.ext_branch_idx, line.ext_rot_qn)
-        #               for (line, wave) in zip(lines, wavenumbers)
-        #               if (30910 <= wave.any() <= 30920) and (line.branch in ('p', 'r'))]
+            # flatten the data so we can directly access attributes for each line
+            lines = np.array([band.lines for band in vibrational_bands]).ravel()
+            wns   = np.array(wns_line).ravel()
+            ins   = np.array(ins_line).ravel()
 
-        # # Create a DataFrame
-        # df = pd.DataFrame(valid_data, columns=['wavenumber', 'branch', 'triplet', 'rot_qn']).sort_values(by=['wavenumber'])
+            df = pd.DataFrame({
+                'wavenumber': wns,
+                'intensity': ins,
+                'branch': [line.branch for line in lines],
+                'triplet': [line.ext_triplet_idx for line in lines],
+                'rot_qn': [line.ext_rot_qn for line in lines]
+            })
 
-        # # Save the DataFrame to a CSV file
-        # df.to_csv('../data/test.csv', index=False)
+            df = df[(df['wavenumber'].between(inp.INFO_LIMS[0], inp.INFO_LIMS[1])) & 
+                    (df['branch'].isin(['p', 'r']))].sort_values(by=['wavenumber'])
 
-        out.plot_line(line_data, line_colors, line_labels)
+            df.to_csv('../data/test.csv', index=False)
+
+            out.print_info(df)
 
     if inp.CONV_SEP:
-        conv_data   = [band.return_conv_data(max_fc) for band in vibrational_bands]
-        conv_colors = color_list[0:len(inp.VIB_BANDS)]
-        conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
+        wns_conv    = [band.wavenumbers_conv() for band in vibrational_bands]
+        ins_conv    = [band.intensities_conv(max_fc) for band in vibrational_bands]
+        colors_conv = color_list[0:len(inp.VIB_BANDS)]
+        labels_conv = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
-        out.plot_sep_conv(conv_data, conv_colors, conv_labels)
+        if inp.INST_SEP:
+            instr = [band.instrument_conv(max_fc, 5) for band in vibrational_bands]
+            out.plot_sep_conv(wns_conv, instr, colors_conv, labels_conv)
 
-    # FIXME: 11/19/23 don't use this if possible, it's horribly inefficient and needs to be fixed
+        out.plot_sep_conv(wns_conv, ins_conv, colors_conv, labels_conv)
+
+    # FIXME: 11/19/23 don't use this if possible, it's horribly inefficient and needs to be fixed.
+    #                 broken with the refactor of bands.py
     if inp.CONV_ALL:
-        line_data = [band.return_line_data(max_fc) for band in vibrational_bands]
+        line_wns = [band.wavenumbers_line() for band in vibrational_bands]
+        line_ins = [band.intensities_line(max_fc) for band in vibrational_bands]
 
         all_wavenumbers = []
         all_intensities = []
 
-        for wavenumbers, intensities in line_data:
+        for wavenumbers, intensities in zip(line_wns, line_ins):
             all_wavenumbers.extend(wavenumbers)
             all_intensities.extend(intensities)
 
@@ -100,10 +111,21 @@ def main():
         for _ in inp.VIB_BANDS:
             total_lines = np.append(total_lines, lines)
 
-        all_conv = conv.convolved_data(np.array(all_wavenumbers), np.array(all_intensities),
-                                       inp.TEMP, inp.PRES, total_lines)
+        wns_all_conv, ins_all_conv = conv.convolve(np.array(all_wavenumbers),
+                                                   np.array(all_intensities), inp.TEMP,
+                                                   inp.PRES, total_lines)
 
-        out.plot_all_conv(all_conv)
+        # FIXME: 11/19/23 been working on this for 5 hours please for the love of code fix this at
+        #                 some point
+
+        print(1)
+        if inp.INST_ALL:
+            print(2)
+            instr = conv.placeholder(wns_all_conv, ins_all_conv, 5)
+            print(3)
+            out.plot_all_conv(wns_all_conv, instr)
+
+        out.plot_all_conv(wns_all_conv, ins_all_conv)
 
     # Colors and labels for sample data are set in the input.py file
     if inp.SAMP_DATA:

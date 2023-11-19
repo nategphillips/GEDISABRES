@@ -30,14 +30,24 @@ VIB_BANDS: list[tuple[int, int]] = [(0, 13), (2, 14)]
 BAND_ORIG: tuple[bool, int] = (False, 36185)
 
 # line data
-LINE_DATA: bool = True
+LINE_DATA: bool = False
+
+# printing line info
+PRINT_INFO: bool  = False
+INFO_LIMS:  tuple = (30910, 30920)
 
 # convolve data separately (convolve each vibrational transition individually)
-CONV_SEP:  bool = True
+CONV_SEP:  bool = False
+
+# instrument function
+INST_SEP: bool = False
+INST_ALL: bool = True
+
 # convolve data together (combine all quantized line positions and convolve together)
-CONV_ALL:  bool = False
+CONV_ALL:  bool = True
+
 # granulatity of the convolved data
-CONV_GRAN: int  = 100000
+CONV_GRAN: int  = 1000
 
 # sample data
 SAMP_DATA: bool = False

@@ -10,23 +10,31 @@ import numpy as np
 import constants as cn
 import input as inp
 
-def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
-             temp: float, pres: float, idx, lines) -> float:
-    '''
-    Each step of the convolution involves the calculation of several broadening parameters, which
-    depend on several factors. After these are calculated, this returns the Voigt probability
-    distribution function.
+def convolve(wavenumbers, intensities, temp, pres, lines):
+    new_wavenumbers = np.linspace(wavenumbers.min(), wavenumbers.max(), inp.CONV_GRAN)
+    new_intensities = np.zeros_like(new_wavenumbers)
 
-    Args:
-        convolved_wavenumbers (np.ndarray): array of all valid wavenumbers in the current plot
-        wavenumber_peak (float): current quantized wavenumber
-        temp (float): temperature
-        pres (float): pressure
+    for idx, (wave, intn) in enumerate(zip(wavenumbers, intensities)):
+        new_intensities += intn * broadening_fn(new_wavenumbers, wave, temp, pres, idx, lines)
 
-    Returns:
-        float: Voigt probability distribution function
-    '''
+    new_intensities /= new_intensities.max()
 
+    return new_wavenumbers, new_intensities
+
+def placeholder(wavenumbers, intensities, broadening):
+    new_intensities = np.zeros_like(wavenumbers)
+
+    for wave, intn in zip(wavenumbers, intensities):
+        new_intensities += intn * instrument_fn(wavenumbers, wave, broadening)
+
+    return new_intensities
+
+def instrument_fn(convolved_wavenumbers, wavenumber_peak, broadening):
+    return np.exp(- 0.5 * (convolved_wavenumbers - wavenumber_peak)**2 / broadening**2) / \
+           (broadening * np.sqrt(2 * np.pi))
+
+def broadening_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float, temp: float, pres: float,
+             idx, lines) -> float:
     # TODO: 11/19/23 this function needs to be reworked since I also want to include the ability to
     #                convolve with an instrument function - ideally it takes in a convolution type
     #                and broadening parameters
@@ -62,30 +70,3 @@ def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
     fadd = ((convolved_wavenumbers - wavenumber_peak) + 1j * loren) / (gauss * np.sqrt(2))
 
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
-
-def convolved_data(wavenumbers: np.ndarray, intensities: np.ndarray,
-                   temp: float, pres: float, lines) -> tuple[np.ndarray, np.ndarray]:
-    '''
-    Generates the final convolved data.
-
-    Args:
-        wavenumbers (np.ndarray): all quantized wavenumbers
-        intensities (np.ndarray): matching intensities
-        temp (float): temperature
-        pres (float): pressure
-
-    Returns:
-        tuple[np.ndarray, np.ndarray]: convolved wavenumbers and intensities (both continuous)
-    '''
-
-    # Generate a fine-grained x-axis for plotting
-    convolved_wavenumbers = np.linspace(wavenumbers.min(), wavenumbers.max(), inp.CONV_GRAN)
-    convolved_intensities = np.zeros_like(convolved_wavenumbers)
-
-    # Convolve wavenumber peaks with chosen probability density function
-    for idx, (wavenumber_peak, intensity_peak) in enumerate(zip(wavenumbers, intensities)):
-        convolved_intensities += intensity_peak * convolve(convolved_wavenumbers, wavenumber_peak,
-                                                            temp, pres, idx, lines)
-    convolved_intensities /= convolved_intensities.max()
-
-    return convolved_wavenumbers, convolved_intensities

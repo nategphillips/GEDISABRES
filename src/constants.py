@@ -3,6 +3,12 @@
 Physical and diatomic constants for the X3Σg- to B3Σu- transition of oxygen.
 '''
 
+# TODO: 11/19/23 this needs to be entirely reworked - ideally we just add all of this data to a csv
+#       and then extract it with a pandas dataframe. this would make it a lot easier to add new
+#       molecules in the future. it also would address the issue of passing around a random list of
+#       constants to the State class, if the order of the constants ever changes, it would screw
+#       with everything
+
 # Global Constants
 ## Physical Constants
 BOLTZ = 1.380649e-23   # Boltzmann Constant [J/K]

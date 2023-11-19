@@ -3,6 +3,7 @@
 Initializes each spectral line by applying valid selection rules.
 '''
 
+from dataclasses import dataclass
 import itertools
 
 import numpy as np
@@ -12,61 +13,17 @@ import constants as cn
 import input as inp
 import energy
 
-def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
-    '''
-    Initializes spectral lines with ground and excited state rotational quantum numbers, along with
-    their respective triplet index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
-
-    Args:
-        rot_qn_list (np.ndarray): a list of rotational quantum numbers that are to be considered
-
-    Returns:
-        np.ndarray: array of SpectralLine objects
-    '''
-
-    # Empty list to contain all valid spectral lines
-    lines = []
-
-    for gnd_rot_qn, ext_rot_qn in itertools.product(rot_qn_list, repeat=2):
-        d_rot_qn = ext_rot_qn - gnd_rot_qn
-
-        # For molecular oxygen, all transitions with even values of J'' are forbidden
-        if gnd_rot_qn % 2 == 1:
-
-            # Selection rules for the R branch
-            if d_rot_qn == 1:
-                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
-                    if gnd_triplet_idx == ext_triplet_idx:
-                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                  ext_triplet_idx, gnd_triplet_idx, 'r'))
-                    if gnd_triplet_idx > ext_triplet_idx:
-                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                  ext_triplet_idx, gnd_triplet_idx, 'rq'))
-
-            # Selection rules for the P branch
-            elif d_rot_qn == -1:
-                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
-                    if gnd_triplet_idx == ext_triplet_idx:
-                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                  ext_triplet_idx, gnd_triplet_idx, 'p'))
-                    if gnd_triplet_idx < ext_triplet_idx:
-                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                  ext_triplet_idx, gnd_triplet_idx, 'pq'))
-
-    return np.array(lines)
-
+@dataclass
 class SpectralLine:
     '''
     Holds the necessary data for a single spectral line.
     '''
 
-    def __init__(self, ext_rot_qn: int, gnd_rot_qn: int, ext_triplet_idx: int, gnd_triplet_idx: int,
-                 branch: str) -> None:
-        self.ext_rot_qn      = ext_rot_qn
-        self.gnd_rot_qn      = gnd_rot_qn
-        self.ext_triplet_idx = ext_triplet_idx
-        self.gnd_triplet_idx = gnd_triplet_idx
-        self.branch          = branch
+    ext_rot_qn:      int
+    gnd_rot_qn:      int
+    ext_triplet_idx: int
+    gnd_triplet_idx: int
+    branch:          str
 
     def predissociation(self) -> float:
         '''
@@ -113,6 +70,9 @@ class SpectralLine:
             float: intensity
         '''
 
+        # TODO: 11/19/23 implement electronic, vibrational, rotational, etc. temperatures instead of
+        #       just a single temperature. i.e. add separate partition functions for each
+
         # Q_r, the total temperature-dependent partition function for the ground state
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)
 
@@ -143,3 +103,46 @@ class SpectralLine:
             return intn / 2
 
         return intn
+
+def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
+    '''
+    Initializes spectral lines with ground and excited state rotational quantum numbers, along with
+    their respective triplet index given the valid selection rules for triplet oxygen, i.e. ΔN = ±1.
+
+    Args:
+        rot_qn_list (np.ndarray): a list of rotational quantum numbers that are to be considered
+
+    Returns:
+        np.ndarray: array of SpectralLine objects
+    '''
+
+    # Empty list to contain all valid spectral lines
+    lines = []
+
+    for gnd_rot_qn, ext_rot_qn in itertools.product(rot_qn_list, repeat=2):
+        d_rot_qn = ext_rot_qn - gnd_rot_qn
+
+        # For molecular oxygen, all transitions with even values of J'' are forbidden
+        if gnd_rot_qn % 2 == 1:
+
+            # Selection rules for the R branch
+            if d_rot_qn == 1:
+                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
+                    if gnd_triplet_idx == ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'r'))
+                    if gnd_triplet_idx > ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'rq'))
+
+            # Selection rules for the P branch
+            elif d_rot_qn == -1:
+                for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
+                    if gnd_triplet_idx == ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'p'))
+                    if gnd_triplet_idx < ext_triplet_idx:
+                        lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
+                                                  ext_triplet_idx, gnd_triplet_idx, 'pq'))
+
+    return np.array(lines)

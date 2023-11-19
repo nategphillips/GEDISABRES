@@ -34,6 +34,10 @@ def show_plot():
     #plt.ylabel('Normalized Intensity')
     #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
+    # FIXME: 11/19/23 this conversion results in a divide by zero error obviously. there must be a
+    #        way to constrain the minimum and maximum wavenumebers considered since we're never
+    #        dealing with wavenumbers of 0
+
     # Convert from wavenumber to wavelength
     def wn2wl(wns):
         return (1 / wns) * 1e7

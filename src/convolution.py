@@ -27,6 +27,10 @@ def convolve(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
         float: Voigt probability distribution function
     '''
 
+    # TODO: 11/19/23 this function needs to be reworked since I also want to include the ability to
+    #       convolve with an instrument function - ideally it takes in a convolution type and the
+    #       broadening parameters
+
     # TODO: these calculations should be removed from the function considering that the mass and
     # such don't change for each iteration of the convolution.
 

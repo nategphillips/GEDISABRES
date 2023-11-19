@@ -23,7 +23,7 @@ def main():
     # Create a vibrational band line plot for each of the user-selected bands
     band_list = []
     for band in inp.VIB_BANDS:
-        band_list.append(bands.LinePlot(inp.TEMP, inp.PRES, inp.ROT_LVLS, band[0], band[1]))
+        band_list.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS, band[0], band[1]))
 
     # Find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band
@@ -42,10 +42,14 @@ def main():
     if inp.LINE_DATA:
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
+
+        # TODO: do we really want to return both wavenumbers and intensities from the same function?
+        #       seems like there should be something like band.wavenumbers() and band.intensities()
         line_data   = [band.return_line_data(max_fc) for band in band_list]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
 
+        # TODO: add back ability to output line data within a range
         # lines       = [band.get_lines() for band in band_list]
         # wavenumbers = [item[0] for item in line_data]
 
@@ -68,8 +72,9 @@ def main():
 
         out.plot_sep_conv(conv_data, conv_colors, conv_labels)
 
+    # FIXME: don't use this if possible, it's horribly inefficient and needs to be fixed
     if inp.CONV_ALL:
-        line_data = [band.get_line(max_fc) for band in band_list]
+        line_data = [band.return_line_data(max_fc) for band in band_list]
 
         all_wavenumbers = []
         all_intensities = []

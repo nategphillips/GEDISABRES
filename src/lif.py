@@ -3,6 +3,11 @@
 Testing a better implementation of LIF simulation.
 '''
 
+# NOTE: don't use this right now - seriously it's busted
+
+# FIXME: 11/19/23 this is completely busted. why is there even a separate implementation of
+#        selection_rules() and LinePlot? many other issues here as well...
+
 import itertools
 
 import scienceplots # pylint: disable=unused-import
@@ -154,6 +159,8 @@ def main():
 
     conv_wns, conv_ins = conv.convolved_data(wvnums, intens, inp.TEMP, inp.PRES, lines)
 
+    # TODO: 11/19/23 relistically, we don't want to assign rainbow colors to this
+
     # Grab a rainbow colormap from the built-in matplotlib cmaps
     cmap = plt.get_cmap('rainbow')
     num_lines = len(wvnums)
@@ -172,6 +179,8 @@ def main():
                     Emission: $v''_\\mathrm{{max}} = {max_vib_qn}$, $v''_\\mathrm{{min}} = 0$, \
                     Selected Line: $(N', N'') = ({ext_rot_qn}, {gnd_rot_qn})$")
     axs.set_ylabel('Normalized Intensity')
+
+    # TODO: 11/19/23 another divide by zero error, see the note in output.py for more details
 
     # Convert from wavenumber to wavelength
     def wn2wl(wns):

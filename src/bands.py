@@ -4,6 +4,8 @@ Holds the LinePlot class, which is different for each vibrational transition con
 Franck-Condon factor is computed for each spectral plot and influences the final intensity data.
 '''
 
+from dataclasses import dataclass
+
 import numpy as np
 
 import convolution as conv
@@ -12,18 +14,17 @@ import constants as cn
 import input as inp
 import energy
 
-class LinePlot:
+@dataclass
+class VibrationalBand:
     '''
-    Each LinePlot is a separate vibrational band.
+    Each is a separate vibrational band.
     '''
 
-    def __init__(self, temp: float, pres: float, rot_qn_list: np.ndarray, ext_vib_qn: int,
-                 gnd_vib_qn: int) -> None:
-        self.temp        = temp
-        self.pres        = pres
-        self.rot_qn_list = rot_qn_list
-        self.ext_vib_qn  = ext_vib_qn
-        self.gnd_vib_qn  = gnd_vib_qn
+    temp:        float
+    pres:        float
+    rot_qn_list: np.ndarray
+    ext_vib_qn:  int 
+    gnd_vib_qn:  int
 
     def get_lines(self) -> np.ndarray:
         '''
@@ -99,6 +100,8 @@ class LinePlot:
             tuple[np.ndarray, np.ndarray]: (wavenumbers, intensities)
         '''
 
+        # FIXME: calling get_lines() a second time here, even though it was already called within
+        #        return_line_data(), which is also called here - need to optimize this
         lines = self.get_lines()
 
         wns, ins = self.return_line_data(max_fc)

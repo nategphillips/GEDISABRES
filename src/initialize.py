@@ -71,7 +71,7 @@ class SpectralLine:
         '''
 
         # TODO: 11/19/23 implement electronic, vibrational, rotational, etc. temperatures instead of
-        #       just a single temperature. i.e. add separate partition functions for each
+        #                just a single temperature. i.e. add separate partition functions for each
 
         # Q_r, the total temperature-dependent partition function for the ground state
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)

@@ -23,7 +23,7 @@ class VibrationalBand:
     temp:        float
     pres:        float
     rot_qn_list: np.ndarray
-    ext_vib_qn:  int 
+    ext_vib_qn:  int
     gnd_vib_qn:  int
 
     def get_lines(self) -> np.ndarray:
@@ -100,8 +100,8 @@ class VibrationalBand:
             tuple[np.ndarray, np.ndarray]: (wavenumbers, intensities)
         '''
 
-        # FIXME: calling get_lines() a second time here, even though it was already called within
-        #        return_line_data(), which is also called here - need to optimize this
+        # FIXME: 11/19/23 calling get_lines() a second time here, even though it was already called
+        #                 within return_line_data(), which is also called here - need to optimize
         lines = self.get_lines()
 
         wns, ins = self.return_line_data(max_fc)

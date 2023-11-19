@@ -16,98 +16,76 @@ import energy
 
 @dataclass
 class VibrationalBand:
-    '''
-    Each is a separate vibrational band.
-    '''
-
     temp:        float
     pres:        float
     rot_qn_list: np.ndarray
     ext_vib_qn:  int
     gnd_vib_qn:  int
 
-    def get_lines(self) -> np.ndarray:
-        '''
-        Returns the spectral lines that fall within the transition.
+    def __post_init__(self):
+        self.lines      = init.selection_rules(self.rot_qn_list)
+        self.fc_data    = inp.FC_DATA[self.ext_vib_qn][self.gnd_vib_qn]
+        self.exct_state = energy.State(cn.B_CONSTS, self.ext_vib_qn)
+        self.grnd_state = energy.State(cn.X_CONSTS, self.gnd_vib_qn)
 
-        Returns:
-            np.ndarray: valid lines
-        '''
-
-        return init.selection_rules(self.rot_qn_list)
-
-    def get_fc(self) -> float:
-        '''
-        From the global Franck-Condon data array, grabs the correct FC factor for the current
-        vibrational transition.
-
-        Returns:
-            float: Franck-Condon factor for the current vibrational transition
-        '''
-
-        return inp.FC_DATA[self.ext_vib_qn][self.gnd_vib_qn]
-
-    def return_line_data(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
-        '''
-        Finds the wavenumbers and intensities for each line in the plot.
-
-        Args:
-            max_fc (float): maximum Franck-Condon factor from all vibrational transitions considered
-
-        Returns:
-            tuple[list, list]: (wavenumbers, intensities)
-        '''
-
-        # Initialize ground and excited states
-        exct_state = energy.State(cn.B_CONSTS, self.ext_vib_qn)
-        grnd_state = energy.State(cn.X_CONSTS, self.gnd_vib_qn)
-
-        # Calculate the band origin energy
         if inp.BAND_ORIG[0]:
-            band_origin = inp.BAND_ORIG[1]
+            self.band_origin = inp.BAND_ORIG[1]
         else:
-            band_origin = energy.get_band_origin(grnd_state, exct_state)
+            self.band_origin = energy.get_band_origin(self.grnd_state, self.exct_state)
 
-        # Initialize the list of valid spectral lines
-        lines = self.get_lines()
+    def wavenumbers_line(self):
+        return np.array([line.wavenumber(self.band_origin, self.grnd_state, self.exct_state)
+                        for line in self.lines])
 
-        # Get the wavenumbers and intensities
-        wns = np.array([line.wavenumber(band_origin, grnd_state, exct_state)
-                        for line in lines])
-        ins = np.array([line.intensity(band_origin, grnd_state, exct_state, self.temp)
-                        for line in lines])
+    def wavenumbers_conv(self):
+        wns = self.wavenumbers_line()
 
-        # Normalize the intensity data w.r.t. the largest value
-        # This is normalization of the plot with respect to itself
+        return np.linspace(wns.min(), wns.max(), inp.CONV_GRAN)
+
+    def intensities_line(self, max_fc):
+        ins = np.array([line.intensity(self.band_origin, self.grnd_state,
+                                       self.exct_state, self.temp) for line in self.lines])
+
+        # normalize the plot with respect to itself
         ins /= ins.max()
 
-        # Find the ratio between the largest Franck-Condon factor and the current plot
-        norm_fc = self.get_fc() / max_fc
+        # find the ratio between the largest Franck-Condon factor and the current plot
+        norm_fc = self.fc_data / max_fc
 
-        # This is normalization of the plot with respect to others
+        # normalization of the plot with respect to others
         ins *= norm_fc
 
-        return wns, ins
+        return ins
 
-    def return_conv_data(self, max_fc: float) -> tuple[np.ndarray, np.ndarray]:
-        '''
-        Finds the wavenumbers and intensities for the convolved data.
+    def intensities_conv(self, max_fc):
+        wns_line = self.wavenumbers_line()
+        wns_conv = self.wavenumbers_conv()
 
-        Args:
-            max_fc (float): maximum Franck-Condon factor from all vibrational transitions considered
+        ins_line = self.intensities_line(max_fc)
+        ins_conv = np.zeros_like(wns_conv)
 
-        Returns:
-            tuple[np.ndarray, np.ndarray]: (wavenumbers, intensities)
-        '''
+        for idx, (wavenumber_peak, intensity_peak) in enumerate(zip(wns_line, ins_line)):
+            ins_conv += intensity_peak * conv.broadening_fn(wns_conv, wavenumber_peak, self.temp,
+                                                       self.pres, idx, self.lines)
 
-        # FIXME: 11/19/23 calling get_lines() a second time here, even though it was already called
-        #                 within return_line_data(), which is also called here - need to optimize
-        lines = self.get_lines()
+        ins_conv /= ins_conv.max()
 
-        wns, ins = self.return_line_data(max_fc)
+        ins_conv *= self.fc_data / max_fc
 
-        conv_wns, conv_ins = conv.convolved_data(wns, ins, self.temp, self.pres, lines)
+        return ins_conv
 
-        conv_ins *= self.get_fc() / max_fc
+    def instrument_conv(self, max_fc, broadening):
+        # start with the already convolved data and do the instrument function on top of that
+        wns_conv = self.wavenumbers_conv()
 
-        return conv_wns, conv_ins
+        ins_conv = self.intensities_conv(max_fc)
+        ins_inst = np.zeros_like(wns_conv)
+
+        for wavenumber_peak, intensity_peak in zip(wns_conv, ins_conv):
+            ins_inst += intensity_peak * conv.instrument_fn(wns_conv, wavenumber_peak, broadening)
+
+        ins_inst /= ins_inst.max()
+
+        ins_conv *= self.fc_data / max_fc
+
+        return ins_inst

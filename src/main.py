@@ -4,7 +4,15 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
-import pandas as pd
+
+# TODO: 11/19/23 add the ability to convolve already convolved data with an instrument function, it
+#                should be implemented for both individual bands and an overall convolution
+
+# TODO: 11/19/23 for major bands within a selected range, optionally add text on the final plot to
+#                show various information (branch, index, etc.)
+
+# TODO: 11/19/23 make that same information available to the user via an output .csv
+
 import numpy as np
 
 import matplotlib.pyplot as plt
@@ -21,13 +29,14 @@ def main():
     '''
 
     # Create a vibrational band line plot for each of the user-selected bands
-    band_list = []
+    vibrational_bands = []
     for band in inp.VIB_BANDS:
-        band_list.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS, band[0], band[1]))
+        vibrational_bands.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS,
+                                                       band[0], band[1]))
 
     # Find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band
-    max_fc = max((band.get_fc() for band in band_list))
+    max_fc = max((band.get_fc() for band in vibrational_bands))
 
     # Set the plotting style
     out.plot_style()
@@ -43,13 +52,13 @@ def main():
         # Wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
 
-        # TODO: do we really want to return both wavenumbers and intensities from the same function?
-        #       seems like there should be something like band.wavenumbers() and band.intensities()
-        line_data   = [band.return_line_data(max_fc) for band in band_list]
+        line_data   = [band.return_line_data(max_fc) for band in vibrational_bands]
         line_colors = color_list[0:len(line_data)]
         line_labels = [str(band) + ' Band' for band in inp.VIB_BANDS]
+        print(line_data)
 
-        # TODO: add back ability to output line data within a range
+        # TODO: 11/19/23 add back ability to output line data within a range
+
         # lines       = [band.get_lines() for band in band_list]
         # wavenumbers = [item[0] for item in line_data]
 
@@ -66,15 +75,15 @@ def main():
         out.plot_line(line_data, line_colors, line_labels)
 
     if inp.CONV_SEP:
-        conv_data   = [band.return_conv_data(max_fc) for band in band_list]
+        conv_data   = [band.return_conv_data(max_fc) for band in vibrational_bands]
         conv_colors = color_list[0:len(inp.VIB_BANDS)]
         conv_labels = ['Convolved ' + str(band) + ' Band' for band in inp.VIB_BANDS]
 
         out.plot_sep_conv(conv_data, conv_colors, conv_labels)
 
-    # FIXME: don't use this if possible, it's horribly inefficient and needs to be fixed
+    # FIXME: 11/19/23 don't use this if possible, it's horribly inefficient and needs to be fixed
     if inp.CONV_ALL:
-        line_data = [band.return_line_data(max_fc) for band in band_list]
+        line_data = [band.return_line_data(max_fc) for band in vibrational_bands]
 
         all_wavenumbers = []
         all_intensities = []

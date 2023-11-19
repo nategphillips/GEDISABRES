@@ -6,7 +6,7 @@ Testing a better implementation of LIF simulation.
 # NOTE: don't use this right now - seriously it's busted
 
 # FIXME: 11/19/23 this is completely busted. why is there even a separate implementation of
-#        selection_rules() and LinePlot? many other issues here as well...
+#                 selection_rules() and LinePlot? many other issues here as well
 
 import itertools
 

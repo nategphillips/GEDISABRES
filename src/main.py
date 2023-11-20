@@ -4,6 +4,23 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
+# TODO: 11/20/23 try to automate the process of identifying potential vibrational overlaps for lif:
+#                1) identify a range of wavenumbers / wavelengths to probe
+#                2) iterate over the quantized lines in the range for each vibrational band
+#                3) subtract the wavenumbers of one band from the other, those smaller than a
+#                   a set value are marked as potential transition candidates
+#                4) we probably want to exclude satellite bands from the computation to reduce the
+#                   number of steps
+
+# TODO: 11/20/23 make the lif module work again and make it actually good this time
+
+# TODO: 11/20/23 look into potential functions for CO, need to identify a reasonable electronic
+#                transition that has bands around the 350 nm range without requiring crazy high
+#                vibrational quantum numbers
+
+# FIXME: 11/20/23 the function for convolution needs to be moved out of the VibrationalBand class
+#                 again, that was a mistake of the highest order
+
 import pandas as pd
 import numpy as np
 
@@ -72,7 +89,8 @@ def main():
                 'predissociation': [line.predissociation() for line in lines]
             })
 
-            df = df[(df['wavenumber'].between(inp.INFO_LIMS[0], inp.INFO_LIMS[1])) & 
+            # doing all data lookup with pandas, not sure if this is even a good idea
+            df = df[(df['wavenumber'].between(inp.INFO_LIMS[0], inp.INFO_LIMS[1])) &
                     (df['branch'].isin(['p', 'r']))].sort_values(by=['wavenumber'])
 
             df.to_csv('../data/test.csv', index=False)
@@ -91,8 +109,6 @@ def main():
 
         out.plot_sep_conv(wns_conv, ins_conv, colors_conv, labels_conv)
 
-    # FIXME: 11/19/23 don't use this if possible, it's horribly inefficient and needs to be fixed.
-    #                 broken with the refactor of bands.py
     if inp.CONV_ALL:
         line_wns = [band.wavenumbers_line() for band in vibrational_bands]
         line_ins = [band.intensities_line(max_fc) for band in vibrational_bands]
@@ -117,8 +133,7 @@ def main():
                                                    inp.PRES, total_lines)
 
         # FIXME: 11/19/23 been working on this for 5 hours please for the love of code fix this at
-        #                 some point
-
+        #                 some point. works decently when the number of data points isn't too high
         print(1)
         if inp.INST_ALL:
             print(2)

@@ -57,6 +57,9 @@ class VibrationalBand:
 
         return ins
 
+    # FIXME: 11/20/23 move convolution back to a separate module, the function needs to be
+    #                 consolidated, separate implementation of instrument vs. normal broadening is
+    #                 not ideal
     def intensities_conv(self, max_fc):
         wns_line = self.wavenumbers_line()
         wns_conv = self.wavenumbers_conv()

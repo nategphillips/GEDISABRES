@@ -37,14 +37,15 @@ PRINT_INFO: bool  = False
 INFO_LIMS:  tuple = (30910, 30920)
 
 # convolve data separately (convolve each vibrational transition individually)
-CONV_SEP:  bool = False
+CONV_SEP:  bool = True
 
 # instrument function
-INST_SEP: bool = False
-INST_ALL: bool = True
+INST_SEP: bool = True
+INST_ALL: bool = False
 
-# convolve data together (combine all quantized line positions and convolve together)
-CONV_ALL:  bool = True
+# convolve data togeth
+# er (combine all quantized line positions and convolve together)
+CONV_ALL:  bool = False
 
 # granulatity of the convolved data
 CONV_GRAN: int  = 1000

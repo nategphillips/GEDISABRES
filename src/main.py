@@ -68,7 +68,8 @@ def main():
                 'intensity': ins,
                 'branch': [line.branch for line in lines],
                 'triplet': [line.ext_triplet_idx for line in lines],
-                'rot_qn': [line.ext_rot_qn for line in lines]
+                'rot_qn': [line.ext_rot_qn for line in lines],
+                'predissociation': [line.predissociation() for line in lines]
             })
 
             df = df[(df['wavenumber'].between(inp.INFO_LIMS[0], inp.INFO_LIMS[1])) & 
@@ -122,6 +123,7 @@ def main():
         if inp.INST_ALL:
             print(2)
             instr = conv.placeholder(wns_all_conv, ins_all_conv, 5)
+            instr /= instr.max()
             print(3)
             out.plot_all_conv(wns_all_conv, instr)
 

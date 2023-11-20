@@ -86,6 +86,6 @@ class VibrationalBand:
 
         ins_inst /= ins_inst.max()
 
-        ins_conv *= self.fc_data / max_fc
+        ins_inst *= self.fc_data / max_fc
 
         return ins_inst

@@ -14,8 +14,8 @@ def plot_style():
     # plt.style.use(['science', 'grid'])
     # plt.figure(figsize=(inp.SCREEN_RES[0]/inp.DPI, inp.SCREEN_RES[1]/inp.DPI), dpi=inp.DPI)
 
-    #if inp.FONT_SIZE[0]:
-        #plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
+    # if inp.FONT_SIZE[0]:
+        # plt.rcParams.update({'font.size': inp.FONT_SIZE[1]})
 
     pass
 
@@ -23,22 +23,22 @@ def show_plot():
     if inp.SET_LIMS[0]:
         plt.xlim(inp.SET_LIMS[1][0], inp.SET_LIMS[1][1])
 
-    #plt.title(f'{inp.PRES} Pa, {inp.TEMP} K')
-    #plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
-    #plt.ylabel('Normalized Intensity')
-    #plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    # plt.title(f'{inp.PRES} Pa, {inp.TEMP} K')
+    # plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    # plt.ylabel('Normalized Intensity')
+    # plt.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 
     # FIXME: 11/19/23 this conversion results in a divide by zero error obviously. there must be a
     #        way to constrain the minimum and maximum wavenumebers considered since we're never
     #        dealing with wavenumbers of 0
 
-    # Convert from wavenumber to wavelength
+    # convert from wavenumber to wavelength
     def wn2wl(wns):
         return (1 / wns) * 1e7
 
     ax = plt.gca()
 
-    # Add a secondary axis for wavelength
+    # add a secondary axis for wavelength
     secax = ax.secondary_xaxis('top', functions=(wn2wl, wn2wl))
     secax.set_xlabel('Wavelength $\\lambda$, [nm]')
 

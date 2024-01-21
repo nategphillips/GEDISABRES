@@ -37,28 +37,28 @@ def main():
     Runs the program.
     '''
 
-    # Create a vibrational band line plot for each of the user-selected bands
+    # create a vibrational band line plot for each of the user-selected bands
     vibrational_bands = []
     for band in inp.VIB_BANDS:
         vibrational_bands.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS,
                                                        band[0], band[1]))
 
-    # Find the maximum Franck-Condon factor of all the bands, this is used to normalize the
+    # find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band
     max_fc = max((band.fc_data for band in vibrational_bands))
 
-    # Set the plotting style
+    # set the plotting style
     out.plot_style()
 
-    # Since each set of lines is plotted separately, matplotlib doesn't know to cycle colors after
+    # since each set of lines is plotted separately, matplotlib doesn't know to cycle colors after
     # each one is plotted
 
-    # This generates a list of hex values that are fed to the plot generators
+    # this generates a list of hex values that are fed to the plot generators
     color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-    # Automatic coloring and labeling is done for both line and convolved plots
+    # automatic coloring and labeling is done for both line and convolved plots
     if inp.LINE_DATA:
-        # Wavenumber and intensity data for each line contained within a tuple for each vibrational
+        # wavenumber and intensity data for each line contained within a tuple for each vibrational
         # transition
         wns_line    = [band.wavenumbers_line() for band in vibrational_bands]
         ins_line    = [band.intensities_line(max_fc) for band in vibrational_bands]
@@ -72,7 +72,7 @@ def main():
             #                comprehensions directly to numpy arrays is somewhat inefficient and I
             #                feel like there's a better way to do this
 
-            # One thing to look at would be making wavelenth and intensity direct attributes of each
+            # one thing to look at would be making wavelenth and intensity direct attributes of each
             # SpectralLine, but this looks more complicated than it's worth
 
             # flatten the data so we can directly access attributes for each line
@@ -144,14 +144,14 @@ def main():
 
         out.plot_all_conv(wns_all_conv, ins_all_conv)
 
-    # Colors and labels for sample data are set in the input.py file
+    # colors and labels for sample data are set in the input.py file
     if inp.SAMP_DATA:
         samp_data   = []
         for file in inp.SAMP_FILE:
             samp_data.append(out.configure_samples(file))
         out.plot_samp(samp_data, inp.SAMP_COLS, inp.SAMP_LABL)
 
-    # Display all data on one plot
+    # display all data on one plot
     out.show_plot()
 
 if __name__ == '__main__':

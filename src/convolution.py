@@ -40,26 +40,26 @@ def broadening_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float, tem
     #                and broadening parameters
 
     # TODO: these calculations should be removed from the function considering that the mass and
-    # such don't change for each iteration of the convolution.
+    # such don't change for each iteration of the convolution
 
-    # Mass of molecular oxygen [kg]
+    # mass of molecular oxygen [kg]
     mass_o2 = (2 * 15.999) / cn.AVOGD / 1e3
-    # Collisional cross section of O2 with O2 (ground state radius) [cm]
+    # collisional cross section of O2 with O2 (ground state radius) [cm]
     cross_sec = np.pi * (cn.X_RAD + cn.X_RAD)**2
-    # Reduced mass [kg]
+    # reduced mass [kg]
     reduced_mass = (mass_o2 * mass_o2) / (mass_o2 + mass_o2)
 
-    # Natural (Lorentzian)
+    # natural (Lorentzian)
     natural = cross_sec**2 * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * temp)) / 4
 
-    # Doppler (Gaussian)
+    # doppler (Gaussian)
     doppler = wavenumber_peak * np.sqrt((cn.BOLTZ * temp) / (mass_o2 * (cn.LIGHT / 1e2)**2))
 
-    # Collision (Lorentzian)
-    # Convert pressure in N/m^2 to pressure in dyne/cm^2
+    # collisional (Lorentzian)
+    # convert pressure in [N/m^2] to pressure in [dyne/cm^2]
     collide = (pres * 10) * cross_sec**2 * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * temp)) / 2
 
-    # Predissociation (Lorentzian)
+    # predissociation (Lorentzian)
     prediss = lines[idx].predissociation()
 
     # TODO: this might be wrong, not sure if the parameters just add together or what

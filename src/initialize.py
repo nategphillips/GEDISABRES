@@ -73,15 +73,15 @@ class SpectralLine:
         # TODO: 11/19/23 implement electronic, vibrational, rotational, etc. temperatures instead of
         #                just a single temperature. i.e. add separate partition functions for each
 
-        # Q_r, the total temperature-dependent partition function for the ground state
+        # q_r, the total temperature-dependent partition function for the ground state
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)
 
-        # The basic intensity function if no branches are considered
+        # the basic intensity function if no branches are considered
         base = (self.wavenumber(band_origin, gnd_state, ext_state) / part) * \
                np.exp(- (energy.rotational_term(self.gnd_rot_qn, gnd_state, \
                self.gnd_triplet_idx) * cn.PLANC * cn.LIGHT) / (cn.BOLTZ * temp))
 
-        # Intensity is dependent upon branch, with satellite branches having a much lower intensity
+        # intensity is dependent upon branch, with satellite branches having a much lower intensity
         # (notice that r and p scale with N**2, while rq and rp scale with 1/N**2)
         match self.branch:
             case 'r':
@@ -94,7 +94,7 @@ class SpectralLine:
                 linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.ext_rot_qn + 1))
                 intn = base * linestr
 
-        # Naive approach of applying 1:2:1 line intensity ratio to each band, this way the two peaks
+        # naive approach of applying 1:2:1 line intensity ratio to each band, this way the two peaks
         # on either side of the main peak have 1/2 the intensity
 
         # NOTE: this *seems* to be what PGOPHER is doing from what I can tell, also haven't been
@@ -116,16 +116,16 @@ def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
         np.ndarray: array of SpectralLine objects
     '''
 
-    # Empty list to contain all valid spectral lines
+    # empty list to contain all valid spectral lines
     lines = []
 
     for gnd_rot_qn, ext_rot_qn in itertools.product(rot_qn_list, repeat=2):
         d_rot_qn = ext_rot_qn - gnd_rot_qn
 
-        # For molecular oxygen, all transitions with even values of J'' are forbidden
+        # for molecular oxygen, all transitions with even values of J'' are forbidden
         if gnd_rot_qn % 2 == 1:
 
-            # Selection rules for the R branch
+            # selection rules for the R branch
             if d_rot_qn == 1:
                 for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
                     if gnd_triplet_idx == ext_triplet_idx:
@@ -135,7 +135,7 @@ def selection_rules(rot_qn_list: np.ndarray) -> np.ndarray:
                         lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
                                                   ext_triplet_idx, gnd_triplet_idx, 'rq'))
 
-            # Selection rules for the P branch
+            # selection rules for the P branch
             elif d_rot_qn == -1:
                 for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
                     if gnd_triplet_idx == ext_triplet_idx:

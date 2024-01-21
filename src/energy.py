@@ -99,8 +99,8 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     #               fixed the issue of random lines at high wavenumbers. Matches data much better &
     #               not sure why it's in the book if it's wrong, I probably misunderstood it
 
-    # NOTE: See footnote 2 on pg. 223 of Herzberg
-    #       For N = 1, the sign in front of the square root must be inverted
+    # NOTE: see footnote 2 on pg. 223 of Herzberg
+    #       for N = 1, the sign in front of the square root must be inverted
     # if rot_qn == 1:
     #     sqrt_sign = -1
     # else:
@@ -110,7 +110,7 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
 
     # TODO: 9/19/23 the sign in front of the state.spn_const[0] should 100% be a negative. I've
     #               checked multiple sources at this point. I need to find out why there seems to be
-    #               issues with how the triplet branches are spaced. Leaving it positive for now
+    #               issues with how the triplet branches are spaced. leaving it positive for now
     #               since it seems to give better results
     match branch_idx:
         case 1:

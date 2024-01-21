@@ -6,9 +6,9 @@ User-defined control inputs for quantum numbers and plotting, among others.
 import pandas as pd
 import numpy as np
 
-# global temperature, Kelvin
+# global temperature [K]
 TEMP: float = 300.0
-# global pressure, Pa
+# global pressure    [Pa]
 PRES: float = 101325.0
 
 # NOTE: temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
@@ -43,8 +43,7 @@ CONV_SEP:  bool = True
 INST_SEP: bool = True
 INST_ALL: bool = False
 
-# convolve data togeth
-# er (combine all quantized line positions and convolve together)
+# convolve data together (combine all quantized line positions and convolve together)
 CONV_ALL:  bool = False
 
 # granulatity of the convolved data

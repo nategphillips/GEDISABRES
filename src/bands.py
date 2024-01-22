@@ -25,16 +25,16 @@ class VibrationalBand:
     def __post_init__(self):
         self.lines      = init.selection_rules(self.rot_qn_list)
         self.fc_data    = inp.FC_DATA[self.ext_vib_qn][self.gnd_vib_qn]
-        self.exct_state = energy.State(cn.B_CONSTS, self.ext_vib_qn)
-        self.grnd_state = energy.State(cn.X_CONSTS, self.gnd_vib_qn)
+        self.ext_state = energy.State(cn.B_CONSTS, self.ext_vib_qn)
+        self.gnd_state = energy.State(cn.X_CONSTS, self.gnd_vib_qn)
 
         if inp.BAND_ORIG[0]:
             self.band_origin = inp.BAND_ORIG[1]
         else:
-            self.band_origin = energy.get_band_origin(self.grnd_state, self.exct_state)
+            self.band_origin = energy.get_band_origin(self.gnd_state, self.ext_state)
 
     def wavenumbers_line(self):
-        return np.array([line.wavenumber(self.band_origin, self.grnd_state, self.exct_state)
+        return np.array([line.wavenumber(self.band_origin, self.gnd_state, self.ext_state)
                         for line in self.lines])
 
     def wavenumbers_conv(self):
@@ -43,8 +43,8 @@ class VibrationalBand:
         return np.linspace(wns.min(), wns.max(), inp.CONV_GRAN)
 
     def intensities_line(self, max_fc):
-        ins = np.array([line.intensity(self.band_origin, self.grnd_state,
-                                       self.exct_state, self.temp) for line in self.lines])
+        ins = np.array([line.intensity(self.band_origin, self.gnd_state,
+                                       self.ext_state, self.temp) for line in self.lines])
 
         # normalize the plot with respect to itself
         ins /= ins.max()

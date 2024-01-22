@@ -22,6 +22,10 @@ available features.
 #                d3Δi -  a3Πr system has a band origin around 820 nm, so it's a bit less ideal. CO+
 #                also has some preeminent bands in the 350 nm region, might be of interest
 
+# TODO: 01/22/24 according to Hezberg, the line intensities in a ro-vibrational spectra are only
+#                functions of the rotational partition function. See about including electronic,
+#                vibrational, and electronic temperatures though
+
 # FIXME: 11/20/23 the function for convolution needs to be moved out of the VibrationalBand class
 #                 again, that was a mistake of the highest order
 

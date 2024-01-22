@@ -73,7 +73,12 @@ class SpectralLine:
         # TODO: 11/19/23 implement electronic, vibrational, rotational, etc. temperatures instead of
         #                just a single temperature. i.e. add separate partition functions for each
 
-        # q_r, the total temperature-dependent partition function for the ground state
+        # NOTE: 01/22/24 the partition function calculations are based on Herzberg pp. 126-127, but
+        #                the equations in the book are for IR and Raman spectra, so I'm not sure if
+        #                if they're applicable to what I'm doing
+
+        # calculate Q_r, the rotational temperature-dependent partition function for the ground
+        # state
         part = (cn.BOLTZ * temp) / (cn.PLANC * cn.LIGHT * cn.X_BE)
 
         # the basic intensity function if no branches are considered
@@ -91,7 +96,7 @@ class SpectralLine:
                 linestr = ((self.gnd_rot_qn)**2 - 0.25) / (self.gnd_rot_qn)
                 intn = base * linestr
             case _:
-                linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.ext_rot_qn + 1))
+                linestr = (2 * self.gnd_rot_qn + 1) / (4 * self.gnd_rot_qn * (self.gnd_rot_qn + 1))
                 intn = base * linestr
 
         # naive approach of applying 1:2:1 line intensity ratio to each band, this way the two peaks

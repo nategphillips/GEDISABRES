@@ -24,13 +24,13 @@ FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
 
 # list of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(0, 13), (2, 14)]
+VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
 
 # band origin override
 BAND_ORIG: tuple[bool, int] = (False, 36185)
 
 # line data
-LINE_DATA: bool = False
+LINE_DATA: bool = True
 
 # printing line info
 PRINT_INFO: bool  = False
@@ -40,17 +40,17 @@ INFO_LIMS:  tuple = (30910, 30920)
 CONV_SEP:  bool = True
 
 # instrument function
-INST_SEP: bool = True
+INST_SEP: bool = False
 INST_ALL: bool = False
 
 # convolve data together (combine all quantized line positions and convolve together)
 CONV_ALL:  bool = False
 
 # granulatity of the convolved data
-CONV_GRAN: int  = 1000
+CONV_GRAN: int  = 10000
 
 # sample data
-SAMP_DATA: bool = False
+SAMP_DATA: bool = True
 SAMP_FILE: list[str] = ['harvard/harvard20']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['Harvard Data']

@@ -17,6 +17,10 @@ available features.
 # TODO: 11/20/23 look into potential functions for CO, need to identify a reasonable electronic
 #                transition that has bands around the 350 nm range without requiring crazy high
 #                vibrational quantum numbers
+# NOTE: 01/21/24 the Ångstrom bands (B1Σ+ - A1Π electronic transition) have a band origin around
+#                451 nm, so getting to 350 nm shouldn't require high vibrational qns. the
+#                d3Δi -  a3Πr system has a band origin around 820 nm, so it's a bit less ideal. CO+
+#                also has some preeminent bands in the 350 nm region, might be of interest
 
 # FIXME: 11/20/23 the function for convolution needs to be moved out of the VibrationalBand class
 #                 again, that was a mistake of the highest order

@@ -15,3 +15,5 @@
   - this problem is also seen when comparing against the PGOPHER data, but I think PGOPHER combines two of the triplet lines together since their wavenumber positions are too close to resolve without using higher-order corrections to the rotational term
 - [ ] 01/24/24 add support for simulating any homonuclear diatomic molecules
   - allowing selection of the two state term symbols or Hund's case would change the selection rules automatically
+- [ ] 01/24/24 properly implement the quantum numbers J and N (which is K in Herzberg)
+  - I think this is one of the things causing issues with triplet splitting calculations

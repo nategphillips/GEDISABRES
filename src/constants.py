@@ -72,7 +72,7 @@ B_LAMD   = 1.5      # spin-spin constant                                  [1/cm]
 
 # FIXME: 01/24/24 not sure if this is supposed to be negative or not. leaving it positive gives better
 #                 results though
-B_GAMM   = 0.04     # spin-rotation constant                              [1/cm] (v <= 12)
+B_GAMM   = -0.04    # spin-rotation constant                              [1/cm] (v <= 12)
 
 B_RAD    = 1.60426e-8 # internuclear distance                             [cm]
 

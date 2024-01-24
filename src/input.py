@@ -47,11 +47,11 @@ INST_ALL: bool = False
 CONV_ALL:  bool = False
 
 # granulatity of the convolved data
-CONV_GRAN: int  = 10000
+CONV_GRAN: int  = 50000
 
 # sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['harvard/harvard20']
+SAMP_FILE: list[str] = ['hitran']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['Harvard Data']
 

@@ -17,3 +17,5 @@
   - allowing selection of the two state term symbols or Hund's case would change the selection rules automatically
 - [ ] 01/24/24 properly implement the quantum numbers J and N (which is K in Herzberg)
   - I think this is one of the things causing issues with triplet splitting calculations
+- [ ] 01/24/24 add types of convolution for the instrument function
+  - only supports Gaussian currently

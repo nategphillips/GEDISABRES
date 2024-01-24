@@ -135,7 +135,10 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     #                out the Hamiltonian matrix elements given since they give a second term for the
     #                two triplets (and I'm not sure how to implement it correctly)
 
-    # FIXME: 01/24/24 work in progress (see note)
+    # FIXME: 01/24/24 work in progress (see note), also I had to subtract a factor of 2 * lambda / 3
+    #                 from the elements given in Bergeman; I think this is due to different authors
+    #                 using different definitions of the Hamiltonian amtrix elements like Bergeman
+    #                 mentions in his paper
 
     x = rot_qn * (rot_qn + 1)
     b = state.rotational_constants()[0]

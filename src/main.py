@@ -4,28 +4,6 @@ Computes spectral lines for triplet oxygen. See the README for details on implem
 available features.
 '''
 
-# TODO: 11/20/23 try to automate the process of identifying potential vibrational overlaps for lif:
-#                1) identify a range of wavenumbers / wavelengths to probe
-#                2) iterate over the quantized lines in the range for each vibrational band
-#                3) subtract the wavenumbers of one band from the other, those smaller than a
-#                   a set value are marked as potential transition candidates
-#                4) we probably want to exclude satellite bands from the computation to reduce the
-#                   number of steps
-
-# TODO: 11/20/23 make the lif module work again and make it actually good this time
-
-# TODO: 11/20/23 look into potential functions for CO, need to identify a reasonable electronic
-#                transition that has bands around the 350 nm range without requiring crazy high
-#                vibrational quantum numbers
-# NOTE: 01/21/24 the Ångstrom bands (B1Σ+ - A1Π electronic transition) have a band origin around
-#                451 nm, so getting to 350 nm shouldn't require high vibrational qns. the
-#                d3Δi -  a3Πr system has a band origin around 820 nm, so it's a bit less ideal. CO+
-#                also has some preeminent bands in the 350 nm region, might be of interest
-
-# TODO: 01/22/24 according to Hezberg, the line intensities in a ro-vibrational spectra are only
-#                functions of the rotational partition function. See about including electronic,
-#                vibrational, and electronic temperatures though
-
 # FIXME: 11/20/23 the function for convolution needs to be moved out of the VibrationalBand class
 #                 again, that was a mistake of the highest order
 

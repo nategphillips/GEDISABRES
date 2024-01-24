@@ -11,8 +11,6 @@ class State:
     electronic transition.
     '''
 
-    # TODO: 11/19/23 see the note in constants.py, passing around a list with randomly ordered
-    #                constants is bad practice
     def __init__(self, constants: list, vib_qn: int) -> None:
         self.elc_consts = constants[0]
         self.vib_consts = constants[1:5]
@@ -108,10 +106,10 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
 
     sqrt_sign = 1
 
-    # TODO: 9/19/23 the sign in front of the state.spn_const[0] should 100% be a negative. I've
-    #               checked multiple sources at this point. I need to find out why there seems to be
-    #               issues with how the triplet branches are spaced. leaving it positive for now
-    #               since it seems to give better results
+    # FIXME: 9/19/23 the sign in front of the state.spn_const[0] should 100% be a negative. I've
+    #                checked multiple sources at this point. I need to find out why there seems to
+    #                be issues with how the triplet branches are spaced. leaving it positive for now
+    #                since it seems to give better results
     match branch_idx:
         case 1:
             return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] + \

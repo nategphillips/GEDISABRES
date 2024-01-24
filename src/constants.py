@@ -3,11 +3,6 @@
 Physical and diatomic constants for the X3Σg- to B3Σu- transition of oxygen.
 '''
 
-# TODO: 11/19/23 this needs to be entirely reworked - ideally we just add all of this data to a csv
-#                and then extract it with a pandas dataframe. this would make it a lot easier to add
-#                molecules in the future. it also would address the issue of passing around random
-#                constants to the State class, if the order of the constants ever changes, it breaks
-
 # global constants
 ## physical constants
 BOLTZ = 1.380649e-23   # Boltzmann constant [J/K]
@@ -75,8 +70,8 @@ B_V00    = 49358.15 # position of 0-0 band
 
 B_LAMD   = 1.5      # spin-spin constant                                  [1/cm] (v <= 12)
 
-# TODO: not sure if this is supposed to be negative or not. leaving it positive gives better
-#       results though
+# FIXME: 01/24/24 not sure if this is supposed to be negative or not. leaving it positive gives better
+#                 results though
 B_GAMM   = 0.04     # spin-rotation constant                              [1/cm] (v <= 12)
 
 B_RAD    = 1.60426e-8 # internuclear distance                             [cm]

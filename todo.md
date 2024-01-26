@@ -1,6 +1,6 @@
 # todo
 
-- [ ] 11/19/23 fix how the molecular constants are passed to the State class
+- [x] 11/19/23 fix how the molecular constants are passed to the State class
   - ideally just add all of this data to a csv and then extract it with a pandas dataframe, which would make it a lot easier to add molecules in the future
 - [ ] 11/20/23 try to automate the process of identifying potential vibrational overlaps for lif
   1) identify a range of wavenumbers / wavelengths to probe

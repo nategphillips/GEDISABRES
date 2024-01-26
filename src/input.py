@@ -58,9 +58,9 @@ CONV_GRAN: int  = 50000
 
 # sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['pgopher']
-SAMP_COLS: list[str] = ['purple']
-SAMP_LABL: list[str] = ['Harvard Data']
+SAMP_FILE: list[str] = ['pgopher', 'harvard/harvard20']
+SAMP_COLS: list[str] = ['purple', 'green']
+SAMP_LABL: list[str] = ['pgopher', 'harvard']
 
 # general plotting
 PLOT_SAVE:  bool  = False

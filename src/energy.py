@@ -63,17 +63,17 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     # match branch_idx:
     #     case 1:
     #         return first_term + (2 * rot_qn + 3) * state.rotational_constants()[0] - \
-    #                state.spn_consts[0] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
-    #                state.rotational_constants()[0]**2 + state.spn_consts[0]**2 - 2 * \
-    #                state.spn_consts[0] * state.rotational_constants()[0]) + \
-    #                state.spn_consts[1] * (rot_qn + 1)
+    #                state.consts['lamd'] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
+    #                state.rotational_constants()[0]**2 + state.consts['lamd']**2 - 2 * \
+    #                state.consts['lamd'] * state.rotational_constants()[0]) + \
+    #                state.consts['gamm'] * (rot_qn + 1)
 
     #     case 3:
     #         return first_term - (2 * rot_qn - 1) * state.rotational_constants()[0] - \
-    #                state.spn_consts[0] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
-    #                state.rotational_constants()[0]**2 + state.spn_consts[0]**2 - 2 * \
-    #                state.spn_consts[0] * state.rotational_constants()[0]) - \
-    #                state.spn_consts[1] * rot_qn
+    #                state.consts['lamd'] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
+    #                state.rotational_constants()[0]**2 + state.consts['lamd']**2 - 2 * \
+    #                state.consts['lamd'] * state.rotational_constants()[0]) - \
+    #                state.consts['gamm'] * rot_qn
 
     #     case _:
     #         return first_term

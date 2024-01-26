@@ -39,25 +39,15 @@ def broadening_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float, tem
     #                convolve with an instrument function - ideally it takes in a convolution type
     #                and broadening parameters
 
-    # TODO: these calculations should be removed from the function considering that the mass and
-    # such don't change for each iteration of the convolution
-
-    # mass of molecular oxygen [kg]
-    mass_o2 = (2 * 15.999) / cn.AVOGD / 1e3
-    # collisional cross section of O2 with O2 (ground state radius) [cm]
-    cross_sec = np.pi * (cn.CONSTS_LO['rad'] + cn.CONSTS_LO['rad'])**2
-    # reduced mass [kg]
-    reduced_mass = (mass_o2 * mass_o2) / (mass_o2 + mass_o2)
-
     # natural (Lorentzian)
-    natural = cross_sec**2 * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * temp)) / 4
+    natural = cn.CROSS_SEC**2 * np.sqrt(8 / (np.pi * cn.MASS_REDUCED * cn.BOLTZ * temp)) / 4
 
     # doppler (Gaussian)
-    doppler = wavenumber_peak * np.sqrt((cn.BOLTZ * temp) / (mass_o2 * (cn.LIGHT / 1e2)**2))
+    doppler = wavenumber_peak * np.sqrt((cn.BOLTZ * temp) / (cn.MASS_MOLECULE * (cn.LIGHT / 1e2)**2))
 
     # collisional (Lorentzian)
     # convert pressure in [N/m^2] to pressure in [dyne/cm^2]
-    collide = (pres * 10) * cross_sec**2 * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * temp)) / 2
+    collide = (pres * 10) * cn.CROSS_SEC**2 * np.sqrt(8 / (np.pi * cn.MASS_REDUCED * cn.BOLTZ * temp)) / 2
 
     # predissociation (Lorentzian)
     prediss = lines[idx].predissociation()

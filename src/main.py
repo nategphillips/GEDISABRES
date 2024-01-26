@@ -22,10 +22,10 @@ import bands
 def main():
     # create a vibrational band line plot for each of the user-selected bands
     vibrational_bands = []
-    for (ext_vib_qn, gnd_vib_qn) in inp.VIB_BANDS:
-        vibrational_bands.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS,
-                                                       ext_vib_qn, gnd_vib_qn,
-                                                       cn.CONSTS_LO, cn.CONSTS_UP))
+    for (vib_qn_up, vib_qn_lo) in inp.VIB_BANDS:
+        vibrational_bands.append(bands.VibrationalBand(vib_qn_up, vib_qn_lo,
+                                                       cn.CONSTS_UP, cn.CONSTS_LO,
+                                                       inp.TEMP, inp.PRES, inp.ROT_LVLS))
 
     # find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band

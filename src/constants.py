@@ -7,8 +7,7 @@ import pandas as pd
 
 import input as inp
 
-# global constants
-## physical constants
+# physical constants
 BOLTZ = 1.380649e-23   # Boltzmann constant [J/K]
 PLANC = 6.62607015e-34 # Planck constant    [J*s]
 LIGHT = 2.99792458e10  # speed of light     [cm/s]

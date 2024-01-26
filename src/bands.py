@@ -15,13 +15,13 @@ import energy
 
 @dataclass
 class VibrationalBand:
+    vib_qn_up:   int
+    vib_qn_lo:   int
+    consts_up:   dict
+    consts_lo:   dict
     temp:        float
     pres:        float
     rot_qn_list: np.ndarray
-    vib_qn_up:   int
-    vib_qn_lo:   int
-    consts_lo:   dict
-    consts_up:   dict
 
     def __post_init__(self):
         self.lines    = init.selection_rules(self.rot_qn_list)

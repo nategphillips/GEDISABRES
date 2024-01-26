@@ -64,10 +64,6 @@ def selection_rules(gnd_rot_qn, ext_rot_qn):
     return np.array(lines)
 
 class LinePlot:
-    '''
-    Each LinePlot is a separate vibrational band.
-    '''
-
     def __init__(self, temp: float, pres: float, gnd_rot_qn: int, ext_rot_qn: int,
                  states: tuple[int, int]) -> None:
         self.temp         = temp
@@ -77,34 +73,12 @@ class LinePlot:
         self.states       = states
 
     def get_fc(self) -> float:
-        '''
-        From the global Franck-Condon data array, grabs the correct FC factor for the current
-        vibrational transition.
-
-        Args:
-            fc_data (np.ndarray): global Franck-Condon array
-
-        Returns:
-            float: Franck-Condon factor for the current vibrational transition
-        '''
-
         return inp.FC_DATA[self.states[0]][self.states[1]]
 
     def return_line(self):
         return selection_rules(self.gnd_rot_qn, self.ext_rot_qn)
 
     def get_line(self, max_fc: float) -> tuple[float, float]:
-        '''
-        Finds the wavenumbers and intensities for each line in the plot.
-
-        Args:
-            fc_data (np.ndarray): global Franck-Condon array
-            max_fc (float): maximum Franck-Condon factor from all vibrational transitions considered
-
-        Returns:
-            tuple[list, list]: (wavenumbers, intensities)
-        '''
-
         # Initialize ground and excited states
         exct_state = energy.State(cn.B_CONSTS, self.states[0])
         grnd_state = energy.State(cn.X_CONSTS, self.states[1])
@@ -133,10 +107,6 @@ class LinePlot:
         return wns, ins
 
 def main():
-    '''
-    Runs the program.
-    '''
-
     gnd_rot_qn = 21
     ext_rot_qn = 22
 

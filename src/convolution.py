@@ -45,7 +45,7 @@ def broadening_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float, tem
     # mass of molecular oxygen [kg]
     mass_o2 = (2 * 15.999) / cn.AVOGD / 1e3
     # collisional cross section of O2 with O2 (ground state radius) [cm]
-    cross_sec = np.pi * (cn.X_RAD + cn.X_RAD)**2
+    cross_sec = np.pi * (cn.CONSTS_LO['rad'] + cn.CONSTS_LO['rad'])**2
     # reduced mass [kg]
     reduced_mass = (mass_o2 * mass_o2) / (mass_o2 + mass_o2)
 

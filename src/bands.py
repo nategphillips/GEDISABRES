@@ -10,7 +10,6 @@ import numpy as np
 
 import convolution as conv
 import initialize as init
-import constants as cn
 import input as inp
 import energy
 
@@ -19,22 +18,24 @@ class VibrationalBand:
     temp:        float
     pres:        float
     rot_qn_list: np.ndarray
-    ext_vib_qn:  int
-    gnd_vib_qn:  int
+    vib_qn_up:   int
+    vib_qn_lo:   int
+    consts_lo:   dict
+    consts_up:   dict
 
     def __post_init__(self):
-        self.lines      = init.selection_rules(self.rot_qn_list)
-        self.fc_data    = inp.FC_DATA[self.ext_vib_qn][self.gnd_vib_qn]
-        self.ext_state = energy.State(cn.B_CONSTS, self.ext_vib_qn)
-        self.gnd_state = energy.State(cn.X_CONSTS, self.gnd_vib_qn)
+        self.lines    = init.selection_rules(self.rot_qn_list)
+        self.fc_data  = inp.FC_DATA[self.vib_qn_up][self.vib_qn_lo]
+        self.state_up = energy.State(self.consts_up, self.vib_qn_up)
+        self.state_lo = energy.State(self.consts_lo, self.vib_qn_lo)
 
         if inp.BAND_ORIG[0]:
             self.band_origin = inp.BAND_ORIG[1]
         else:
-            self.band_origin = energy.get_band_origin(self.gnd_state, self.ext_state)
+            self.band_origin = energy.get_band_origin(self.state_lo, self.state_up)
 
     def wavenumbers_line(self):
-        return np.array([line.wavenumber(self.band_origin, self.gnd_state, self.ext_state)
+        return np.array([line.wavenumber(self.band_origin, self.state_lo, self.state_up)
                         for line in self.lines])
 
     def wavenumbers_conv(self):
@@ -43,8 +44,8 @@ class VibrationalBand:
         return np.linspace(wns.min(), wns.max(), inp.CONV_GRAN)
 
     def intensities_line(self, max_fc):
-        ins = np.array([line.intensity(self.band_origin, self.gnd_state,
-                                       self.ext_state, self.temp) for line in self.lines])
+        ins = np.array([line.intensity(self.band_origin, self.state_lo,
+                                       self.state_up, self.temp) for line in self.lines])
 
         # normalize the plot with respect to itself
         ins /= ins.max()

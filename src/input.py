@@ -11,6 +11,13 @@ TEMP: float = 300.0
 # global pressure    [Pa]
 PRES: float = 101325.0
 
+# molecule to simulate
+MOLECULE: str = 'o2'
+
+# upper and lower electronic states
+STATE_UP: str = 'b3su'
+STATE_LO: str = 'x3sg'
+
 # NOTE: temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
 
 # predissociation constants
@@ -51,7 +58,7 @@ CONV_GRAN: int  = 50000
 
 # sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['hitran']
+SAMP_FILE: list[str] = ['pgopher']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['Harvard Data']
 

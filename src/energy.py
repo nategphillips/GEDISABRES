@@ -6,90 +6,38 @@ Used for calculating the energy term values for each state.
 import numpy as np
 
 class State:
-    '''
-    Stores the necessary constants for either the ground state or the excited state of the current
-    electronic transition.
-    '''
-
-    def __init__(self, constants: list, vib_qn: int) -> None:
-        self.elc_consts = constants[0]
-        self.vib_consts = constants[1:5]
-        self.rot_consts = constants[5:12]
-        self.spn_consts = constants[12:14]
-        self.vib_qn     = vib_qn
+    def __init__(self, constants: dict, vib_qn: int):
+        self.consts = constants
+        self.vib_qn = vib_qn
 
     def rotational_constants(self) -> list[float]:
-        '''
-        Calculates the rotational constants B_v, D_v, and H_v.
+        b_v = self.consts['b_e']                             - \
+              self.consts['alph_e'] * (self.vib_qn + 0.5)    + \
+              self.consts['gamm_e'] * (self.vib_qn + 0.5)**2 + \
+              self.consts['delt_e'] * (self.vib_qn + 0.5)**3
 
-        Returns:
-            list[float]: [B_v, D_v, H_v]
-        '''
+        d_v = self.consts['d_e'] - self.consts['beta_e'] * (self.vib_qn + 0.5)
 
-        b_v = self.rot_consts[0]                          - \
-              self.rot_consts[1] * (self.vib_qn + 0.5)    + \
-              self.rot_consts[2] * (self.vib_qn + 0.5)**2 + \
-              self.rot_consts[3] * (self.vib_qn + 0.5)**3
-
-        d_v = self.rot_consts[4] - self.rot_consts[5] * (self.vib_qn + 0.5)
-
-        h_v = self.rot_consts[6]
+        h_v = self.consts['h_e']
 
         return [b_v, d_v, h_v]
 
     def electronic_term(self) -> float:
-        '''
-        Calculates the electronic term T_e.
-
-        Returns:
-            float: electronic term T_e
-        '''
-
-        return self.elc_consts
+        return self.consts['t_e']
 
     def vibrational_term(self) -> float:
-        '''
-        Calculates the vibrational term G(v).
-
-        Returns:
-            float: vibrational term G(v)
-        '''
-        return self.vib_consts[0] * (self.vib_qn + 0.5)    - \
-               self.vib_consts[1] * (self.vib_qn + 0.5)**2 + \
-               self.vib_consts[2] * (self.vib_qn + 0.5)**3 + \
-               self.vib_consts[3] * (self.vib_qn + 0.5)**4
+        return self.consts['w_e']   * (self.vib_qn + 0.5)    - \
+               self.consts['we_xe'] * (self.vib_qn + 0.5)**2 + \
+               self.consts['we_ye'] * (self.vib_qn + 0.5)**3 + \
+               self.consts['we_ze'] * (self.vib_qn + 0.5)**4
 
 def get_band_origin(gnd_state: 'State', ext_state: 'State') -> float:
-    '''
-    Computes the electronic + vibrational term values.
-
-    Args:
-        gnd_state (State): ground state
-        ext_state (State): excited state
-
-    Returns:
-        float: electronic + vibrational energy
-    '''
-
     elc_energy = ext_state.electronic_term() - gnd_state.electronic_term()
     vib_energy = ext_state.vibrational_term() - gnd_state.vibrational_term()
 
     return elc_energy + vib_energy
 
 def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
-    '''
-    Calculates the rotational term value F(N).
-
-    Args:
-        rot_qn (int): current rotational quantum number
-        state (State): current state
-        branch_idx (int): branch index: r, p, or a satellite variation
-
-    Returns:
-        float: rotational term F(N)
-    '''
-
-
     # TODO: 9/24/23 this was causing the weird lines appearing where they shouldn't be, removing it
     #               fixed the issue of random lines at high wavenumbers. Matches data much better &
     #               not sure why it's in the book if it's wrong, I probably misunderstood it
@@ -144,8 +92,8 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     b = state.rotational_constants()[0]
     d = state.rotational_constants()[1]
     h = state.rotational_constants()[2]
-    l = state.spn_consts[0]
-    g = state.spn_consts[1]
+    l = state.consts['lamd']
+    g = state.consts['gamm']
 
     e0 = x * b - x**2 * d + x**3 * h
     e1 = x * b - (x**2 + 4 * x) * d

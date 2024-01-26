@@ -14,20 +14,18 @@ import matplotlib.pyplot as plt
 
 import initialize as init
 import convolution as conv
+import constants as cn
 import output as out
 import input as inp
 import bands
 
 def main():
-    '''
-    Runs the program.
-    '''
-
     # create a vibrational band line plot for each of the user-selected bands
     vibrational_bands = []
-    for band in inp.VIB_BANDS:
+    for (ext_vib_qn, gnd_vib_qn) in inp.VIB_BANDS:
         vibrational_bands.append(bands.VibrationalBand(inp.TEMP, inp.PRES, inp.ROT_LVLS,
-                                                       band[0], band[1]))
+                                                       ext_vib_qn, gnd_vib_qn,
+                                                       cn.CONSTS_LO, cn.CONSTS_UP))
 
     # find the maximum Franck-Condon factor of all the bands, this is used to normalize the
     # intensities of each band with respect to the largest band

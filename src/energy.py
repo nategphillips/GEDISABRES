@@ -10,6 +10,8 @@ class State:
         self.consts = constants
         self.vib_qn = vib_qn
 
+    # TODO: 01/27/24 think about doing this differently so I'm not calling a function three separate
+    #                times just to access each of the three constants
     def rotational_constants(self) -> list[float]:
         b_v = self.consts['b_e']                             - \
               self.consts['alph_e'] * (self.vib_qn + 0.5)    + \
@@ -85,7 +87,7 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
 
     # FIXME: 01/24/24 work in progress (see note), also I had to subtract a factor of 2 * lambda / 3
     #                 from the elements given in Bergeman; I think this is due to different authors
-    #                 using different definitions of the Hamiltonian amtrix elements like Bergeman
+    #                 using different definitions of the Hamiltonian matrix elements like Bergeman
     #                 mentions in his paper
 
     x = rot_qn * (rot_qn + 1)

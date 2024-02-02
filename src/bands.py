@@ -25,7 +25,8 @@ class VibrationalBand:
 
     def __post_init__(self):
         self.lines    = init.selection_rules(self.rot_qn_list)
-        self.fc_data  = inp.FC_DATA[self.vib_qn_up][self.vib_qn_lo]
+        # FIXME: 02/02/24 make this where fc data is only used when convolutions are on
+        self.fc_data  = 1 # inp.FC_DATA[self.vib_qn_up][self.vib_qn_lo]
         self.state_up = energy.State(self.consts_up, self.vib_qn_up)
         self.state_lo = energy.State(self.consts_lo, self.vib_qn_lo)
 

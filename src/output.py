@@ -76,4 +76,4 @@ def plot_all_conv(wavenumbers, intensities) -> None:
 
 def plot_samp(data: list[tuple], colors: list[str], labels: list[str]) -> None:
     for i, (wave, intn) in enumerate(data):
-        plt.plot(wave, intn, colors[i], label=f'{labels[i]}')
+        plt.stem(wave, intn, colors[i], markerfmt='', label=f'{labels[i]}')

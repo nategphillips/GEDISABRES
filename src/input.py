@@ -12,11 +12,11 @@ TEMP: float = 300.0
 PRES: float = 101325.0
 
 # molecule to simulate
-MOLECULE: str = 'o2'
+MOLECULE: str = 'o2+'
 
 # upper and lower electronic states
-STATE_UP: str = 'b3su'
-STATE_LO: str = 'x3sg'
+STATE_UP: str = 'a2pu'
+STATE_LO: str = 'x2pg'
 
 # NOTE: temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
 
@@ -28,10 +28,10 @@ FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 
 # rotational levels
 # Cosby predissociation data only goes up to N = 36
-ROT_LVLS: np.ndarray = np.arange(0, 37, 1)
+ROT_LVLS: np.ndarray = np.arange(0, 25, 1)
 
 # list of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
+VIB_BANDS: list[tuple[int, int]] = [(4, 20)]
 
 # band origin override
 BAND_ORIG: tuple[bool, int] = (False, 36185)
@@ -40,11 +40,11 @@ BAND_ORIG: tuple[bool, int] = (False, 36185)
 LINE_DATA: bool = True
 
 # printing line info
-PRINT_INFO: bool  = False
-INFO_LIMS:  tuple = (30910, 30920)
+PRINT_INFO: bool  = True
+INFO_LIMS:  tuple = (11950, 12250)
 
 # convolve data separately (convolve each vibrational transition individually)
-CONV_SEP:  bool = True
+CONV_SEP:  bool = False
 
 # instrument function
 INST_SEP: bool = False
@@ -58,9 +58,9 @@ CONV_GRAN: int  = 50000
 
 # sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['pgopher', 'harvard/harvard20']
-SAMP_COLS: list[str] = ['purple', 'green']
-SAMP_LABL: list[str] = ['pgopher', 'harvard']
+SAMP_FILE: list[str] = ['o2+/chen']
+SAMP_COLS: list[str] = ['purple']
+SAMP_LABL: list[str] = ['pgopher']
 
 # general plotting
 PLOT_SAVE:  bool  = False

@@ -68,8 +68,8 @@ def main():
                 'wavenumber': wns,
                 'intensity': ins,
                 'branch': [line.branch for line in lines],
-                'triplet': [line.ext_triplet_idx for line in lines],
-                'rot_qn': [line.ext_rot_qn for line in lines],
+                'triplet': [line.triplet_idx_up for line in lines],
+                'rot_qn': [line.rot_qn_up for line in lines],
                 'predissociation': [line.predissociation() for line in lines]
             })
 
@@ -77,7 +77,7 @@ def main():
             df = df[(df['wavenumber'].between(inp.INFO_LIMS[0], inp.INFO_LIMS[1])) &
                     (df['branch'].isin(['p', 'r']))].sort_values(by=['wavenumber'])
 
-            df.to_csv('../data/test.csv', index=False)
+            # df.to_csv('../data/test.csv', index=False)
 
             out.print_info(df)
 

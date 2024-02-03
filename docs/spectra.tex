@@ -4,28 +4,15 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{booktabs, float, graphicx, mathtools, physics, siunitx, tikz}
+\usepackage{booktabs, deriv, float, graphicx, natex, siunitx, tikz}
 
 % biblatex
 \addbibresource{refs.bib}
 
-% subscript for upright text
-\newcommand*\subtxt[1]{_{\mathrm{#1}}}
-\DeclareRobustCommand\_{\ifmmode\expandafter\subtxt\else\textunderscore\fi}
-
-% mathtools
-\DeclarePairedDelimiter\p{\lparen}{\rparen}
-\DeclarePairedDelimiter\bk{\lbrack}{\rbrack}
-
 % hyperref
 \urlstyle{same}
 
-% physics
-\newcommand{\odv}{\dv}
-
 % custom
-\newcommand{\eul}{e}
-\newcommand{\img}{i}
 \newcommand{\dash}{\text{--}}
 
 \title{Simulation of the Schumann-Runge Bands of Molecular Oxygen via Diatomic Constants}
@@ -107,7 +94,7 @@ is the reduced mass of the molecule.
 
 The appropriate Schr\"odinger Equation for the rigid rotator has $m = \mu$ and $V = 0$ since the model is regarded as perfectly rigid. Solving
 \begin{equation*}
-    \pdv[2]{\psi}{x} + \pdv[2]{\psi}{y} + \pdv[2]{\psi}{z} + \frac{8\pi^2\mu}{h^2}E\psi = 0
+    \odv[2]{\psi}{x} + \pdv[2]{\psi}{y} + \pdv[2]{\psi}{z} + \frac{8\pi^2\mu}{h^2}E\psi = 0
 \end{equation*}
 leads to the energy eigenvalues given by
 \begin{equation*}
@@ -212,15 +199,15 @@ since $r_e$ is constant. From direct comparison with the classical equation of m
 
 The Schr\"odinger equation for the harmonic oscillator is
 \begin{equation*}
-    \odv[2]{\psi}{x} + \frac{8\pi^2\mu}{h^2}\p*{E - \tfrac{1}{2}kx^2}\psi = 0.
+    \odv[2]{\psi}{x} + \frac{8\pi^2\mu}{h^2}\pr*{E - \tfrac{1}{2}kx^2}\psi = 0.
 \end{equation*}
 Solving this equation leads to the energy eigenvalues given by
 \begin{equation*}
-    E(v) = \frac{h}{2\pi}\sqrt{\frac{k}{\mu}}\p*{v + \tfrac{1}{2}} = h\nu\_{vib}\p*{v + \tfrac{1}{2}} \quad\text{for}\quad v = 0, 1, 2, \dotsb.
+    E(v) = \frac{h}{2\pi}\sqrt{\frac{k}{\mu}}\pr*{v + \tfrac{1}{2}} = h\nu\_{vib}\pr*{v + \tfrac{1}{2}} \quad\text{for}\quad v = 0, 1, 2, \dotsb.
 \end{equation*}
 Rewriting the energy as the vibrational term value $G(v)$ gives
 \begin{equation*}
-    G(v) = \frac{E(v)}{hc} = \frac{\nu\_{vib}}{c}\p*{v + \tfrac{1}{2}} = \omega\p*{v + \tfrac{1}{2}},
+    G(v) = \frac{E(v)}{hc} = \frac{\nu\_{vib}}{c}\pr*{v + \tfrac{1}{2}} = \omega\pr*{v + \tfrac{1}{2}},
 \end{equation*}
 where the quantity $\nu\_{vib}/c$ is designated $\omega$ and measured in \unit{cm^{-1}}.
 
@@ -274,11 +261,11 @@ for very small amplitudes only. This factor decreases slowly as the amplitude $x
 
 Substituting the anharmonic potential energy function into the Schr\"odinger equation and solving for the energy eigenvalues gives
 \begin{equation*}
-    E_v = hc\omega_e\p*{v + \tfrac{1}{2}} - hc\omega_ex_e\p*{v + \tfrac{1}{2}}^2 + hc\omega_ey_e\p*{v + \tfrac{1}{2}}^3 + \dotsb.
+    E_v = hc\omega_e\pr*{v + \tfrac{1}{2}} - hc\omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + hc\omega_ey_e\pr*{v + \tfrac{1}{2}}^3 + \dotsb.
 \end{equation*}
 Written as the vibrational term $G(v)$, this becomes
 \begin{equation*}
-    G(v) = \omega_e\p*{v + \tfrac{1}{2}} - \omega_ex_e\p*{v + \tfrac{1}{2}}^2 + \omega_ey_e\p*{v + \tfrac{1}{2}}^3 + \dotsb,
+    G(v) = \omega_e\pr*{v + \tfrac{1}{2}} - \omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + \omega_ey_e\pr*{v + \tfrac{1}{2}}^3 + \dotsb,
 \end{equation*}
 where $v$ is the vibrational quantum number, $\omega_ex_e \ll \omega_e$, and $\omega_ey_e \ll \omega_ex_e$. This equation directly shows that the energy levels of the anharmonic oscillator are not equidistant like those of the harmonic oscillator.
 
@@ -348,13 +335,13 @@ where $\overline{1/r^2}$ is the mean value of $1/r^2$ during the vibration. The 
 \end{equation*}
 To a first approximation, the rotational constant $B_v$ in the vibrational state $v$ is given as
 \begin{equation*}
-    B_v = B_e - \alpha_e\p*{v + \tfrac{1}{2}} + \dotsb,
+    B_v = B_e - \alpha_e\pr*{v + \tfrac{1}{2}} + \dotsb,
 \end{equation*}
 where $\alpha_e$ is a constant which is small compared to $B_e$. The ratio $\alpha_e/B_e$ is only slightly larger than $\omega_ex_e/\omega_e$.
 
 A mean rotational constant $D_v$ representing the contribution of centrifugal force can be found as
 \begin{equation*}
-    D_v = D_e + \beta_e\p*{v + \tfrac{1}{2}} + \dotsb.
+    D_v = D_e + \beta_e\pr*{v + \tfrac{1}{2}} + \dotsb.
 \end{equation*}
 In this equation, $\beta_e$ is small compared to
 \begin{equation*}
@@ -367,13 +354,13 @@ The rotational terms in a given vibrational level are therefore given by
 \end{equation*}
 Taking into account the interaction between vibration and rotation, the term values for the vibrating rotator are
 \begin{equation*}
-    T = G(v) + F_v(J) = \omega_e\p*{v + \tfrac{1}{2}} - \omega_ex_e\p*{v + \tfrac{1}{2}}^2 + \dotsb + B_vJ(J + 1) - D_vJ^2(J + 1)^2 + \dotsb.
+    T = G(v) + F_v(J) = \omega_e\pr*{v + \tfrac{1}{2}} - \omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + \dotsb + B_vJ(J + 1) - D_vJ^2(J + 1)^2 + \dotsb.
 \end{equation*}
 For the lowest vibrational state $v = 0$, the rotational constant $B_0$ must be used in this equation.
 
-If very precise measurements are available, higher powers of $\p*{v + \tfrac{1}{2}}$ can be taken into account using
+If very precise measurements are available, higher powers of $\pr*{v + \tfrac{1}{2}}$ can be taken into account using
 \begin{equation*}
-    B_v = B_e - \alpha_e\p*{v + \tfrac{1}{2}} + \gamma_e\p*{v + \tfrac{1}{2}}^2 + \dotsb.
+    B_v = B_e - \alpha_e\pr*{v + \tfrac{1}{2}} + \gamma_e\pr*{v + \tfrac{1}{2}}^2 + \dotsb.
 \end{equation*}
 In higher powers of $J(J + 1)$, the rotational term can be expressed as
 \begin{equation*}
@@ -402,7 +389,7 @@ that is, the sum of the electronic, vibrational, and rotational energy terms. Th
 
 For the vibrational and rotational states of the molecule in different electronic states, the vibrating rotator model is used as in Herzberg \cite{herzberg:spectra}. The vibrational term $G(v)$ to a fourth-order approximation is therefore
 \begin{equation}
-    G(v) = \omega_e\p*{v + \tfrac{1}{2}} - \omega_ex_e\p*{v + \tfrac{1}{2}}^2 + \omega_ey_e\p*{v + \tfrac{1}{2}}^3 + \omega_ez_e\p*{v + \tfrac{1}{2}}^4 + \dotsb.
+    G(v) = \omega_e\pr*{v + \tfrac{1}{2}} - \omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + \omega_ey_e\pr*{v + \tfrac{1}{2}}^3 + \omega_ez_e\pr*{v + \tfrac{1}{2}}^4 + \dotsb.
 \end{equation}
 
 \section{Rotational Term}
@@ -414,11 +401,11 @@ The rotational term $F_v(J)$ approximated to the third order is given as
 \end{equation}
 The rotational constant $B_v$ can be approximated to the third order as
 \begin{equation*}
-    B_v = B_e - \alpha_e\p*{v + \tfrac{1}{2}} + \gamma_e\p*{v + \tfrac{1}{2}}^2 + \delta_e\p*{v + \tfrac{1}{2}}^3 + \dotsb.
+    B_v = B_e - \alpha_e\pr*{v + \tfrac{1}{2}} + \gamma_e\pr*{v + \tfrac{1}{2}}^2 + \delta_e\pr*{v + \tfrac{1}{2}}^3 + \dotsb.
 \end{equation*}
 The centrifugal distortion constant $D_v$ can be approximated to the first order as
 \begin{equation}
-    D_v = D_e + \beta_e\p*{v + \tfrac{1}{2}} + \dotsb.
+    D_v = D_e + \beta_e\pr*{v + \tfrac{1}{2}} + \dotsb.
 \end{equation}
 Finally, the third-order constant $H_v$ can be found as the first approximation
 \begin{equation}
@@ -522,7 +509,7 @@ In emission, they are
 
 The probability density function (PDF) for the Gaussian profile is
 \begin{equation*}
-    G(x; x_0, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp(-\frac{(x - x_0)^2}{2\sigma^2}),
+    G(x; x_0, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp\pr*{-\frac{(x - x_0)^2}{2\sigma^2}},
 \end{equation*}
 where $x$ is the desired wavenumber, $x_0$ is the intensity at a wavenumber peak, and $\sigma$ is the broadening parameter.
 
@@ -560,6 +547,32 @@ Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from th
     \caption{Laser-induced fluorescence in Iodine.}
     \label{f:laser-induced_fluorescence_in_iodine}
 \end{figure}
+
+\chapter{Placeholder}
+
+\begin{align*}
+    P_{11}(J) &= \nu_0^{(1)} + F_1'(J - 1) - F_1''(J) \\
+    Q_{11}(J) &= \nu_0^{(1)} + F_1'(J) - F_1''(J) \\
+    R_{11}(J) &= \nu_0^{(1)} + F_1'(J + 1) - F_1''(J)
+\end{align*}
+
+\begin{align*}
+    P_{12}(J) &= \nu_0^{(1)} + F_1'(J - 1) - F_2''(J) \\
+    Q_{12}(J) &= \nu_0^{(1)} + F_1'(J) - F_2''(J) \\
+    R_{12}(J) &= \nu_0^{(1)} + F_1'(J + 1) - F_2''(J)
+\end{align*}
+
+\begin{align*}
+    P_{22}(J) &= \nu_0^{(2)} + F_2'(J - 1) - F_2''(J) \\
+    Q_{22}(J) &= \nu_0^{(2)} + F_2'(J) - F_2''(J) \\
+    R_{22}(J) &= \nu_0^{(2)} + F_2'(J + 1) - F_2''(J)
+\end{align*}
+
+\begin{align*}
+    P_{21}(J) &= \nu_0^{(2)} + F_2'(J - 1) - F_1''(J) \\
+    Q_{21}(J) &= \nu_0^{(2)} + F_2'(J) - F_1''(J) \\
+    R_{21}(J) &= \nu_0^{(2)} + F_2'(J + 1) - F_1''(J)
+\end{align*}
 
 \appendix
 \chapter{Diatomic Constants}

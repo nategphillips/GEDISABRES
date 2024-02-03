@@ -4,7 +4,7 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{booktabs, deriv, float, graphicx, natex, siunitx, tikz}
+\usepackage{booktabs, deriv, float, graphicx, natex, pgfplots, siunitx, tikz}
 
 % biblatex
 \addbibresource{refs.bib}
@@ -14,6 +14,9 @@
 
 % custom
 \newcommand{\dash}{\text{--}}
+
+% pgfplots
+\pgfplotsset{compat = newest}
 
 \title{Simulation of the Schumann-Runge Bands of Molecular Oxygen via Diatomic Constants}
 \author{Nathan Phillips}
@@ -531,8 +534,30 @@ The Voigt profile is a convolution of the Gaussian and Lorentzian profiles. The 
 \end{equation*}
 where
 \begin{equation*}
+    w(z) \defn \eul^{-z^2}\erfc(-\img z) = \eul^{-z^2}\pr*{1 + 
+    \frac{2\img}{\sqrt{\pi}}\int_0^z \eul^{t^2} \odif{t}},
+\end{equation*}
+and
+\begin{equation*}
     z = \frac{(x - x_0) + \img\gamma}{\sigma\sqrt{2}}.
 \end{equation*}
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[axis lines = left]
+            \addplot[smooth]
+            {1/(1*sqrt(2*pi))*exp(-((x-0)^2)/(2*1^2))};
+            \addlegendentry{Gaussian}
+            \addplot[color = red, smooth]
+            {1/pi*(1/((x-0)^2+1^2))};
+            \addlegendentry{Lorentzian}
+            \addplot gnuplot[color = blue, smooth, no marks]
+            {VP(x,1,1)};
+            \addlegendentry{Voigt}
+        \end{axis}
+    \end{tikzpicture}
+\end{figure}
 
 \chapter{Laser-Induced Fluorescence}
 \label{c:laser-induced_flourescence}

@@ -4,32 +4,68 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{booktabs, deriv, float, graphicx, natex, pgfplots, siunitx, tikz}
+\usepackage{booktabs, deriv, fancyhdr, float, graphicx, natex, pgfplots, siunitx, tikz}
 
 % biblatex
 \addbibresource{refs.bib}
 
+% fancyhdr
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter\ #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\renewcommand{\footrulewidth}{0.4pt}
+
+\fancypagestyle{mystyle}{
+    \fancyfoot{}
+    \fancyfoot[C]{\thepage}
+}
+
 % hyperref
 \urlstyle{same}
-
-% custom
-\newcommand{\dash}{\text{--}}
 
 % pgfplots
 \pgfplotsset{compat = newest}
 
-\title{Simulation of the Schumann-Runge Bands of Molecular Oxygen via Diatomic Constants}
-\author{Nathan Phillips}
+% custom
+\newcommand{\dash}{\text{---}}
+\newcommand{\state}[2]{\prescript{#1}{}{#2}}
 
 \begin{document}
 
-\maketitle
+\pagestyle{empty}
+
+\begin{titlepage}
+    \null
+    \vspace{\fill}
+    \begin{center}
+    \let \footnote \thanks
+      {\LARGE \textbf{Simulation of Molecular Spectra} \par}
+      {\large Homonuclear and Heteronuclear Diatomics}
+      \vskip 1.5em
+      {\large
+        \lineskip .5em
+        \begin{tabular}[t]{c}
+          Nathan Phillips
+        \end{tabular}\par}
+      \vskip 1em
+      {\large \today}
+      \vskip 2em
+    \end{center}
+    \vspace{\fill}
+
+    \begin{center}
+        {\large{\textbf{Texas A\&M University}} \par}
+        {\large{Department of Aerospace Engineering}}
+    \end{center}
+\end{titlepage}
+
 \tableofcontents
 \newpage
 \listoffigures
 \newpage
 \listoftables
 \newpage
+
+\pagestyle{mystyle}
 
 \chapter{The Rigid Rotator}
 \label{c:the_rigid_rotator}

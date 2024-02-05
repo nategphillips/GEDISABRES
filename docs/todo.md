@@ -14,13 +14,13 @@
 - Vibrating Rotator
 - Symmetric Top
 
-### General Structure of Electronic Transitions
+### Structure of Electronic Transitions
 
+- Total
 - Electronic
 - Vibrational
 - Rotational
   - Branches
-- Total
 
 ### Intensities
 
@@ -68,3 +68,13 @@
 - Σ-Π
 - Π-Σ
 - Π-Π
+
+## Individual Treatment
+
+### O2
+
+### O2+
+
+### NO
+
+### CO

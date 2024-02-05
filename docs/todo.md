@@ -5,9 +5,9 @@
 ### Molecular Approximations
 
 - Rigid Rotator
-  - Theory
-  - Energy levels
-  - Spectrum
+    - Theory
+    - Energy levels
+    - Spectrum
 - Harmonic Oscillator
 - Anharmonic Oscillator
 - Nonrigid Rotator
@@ -20,40 +20,42 @@
 - Electronic
 - Vibrational
 - Rotational
-  - Branches
+    - Branches
 
 ### Intensities
 
 - Vibrational
-  - Partition function
-  - Intensity formulae
-  - Franck-Condon factors
+    - Partition function
+    - Intensity formulae
+    - Franck-Condon factors
 - Rotational
-  - Partition function
-  - Intensity formulae
-  - Hönl-London factors
+    - Partition function
+    - Intensity formulae
+    - Hönl-London factors
 
 ### Quantum Numbers
 
 - Atoms
-  - Single electron
-  - Multi electron
+    - Single electron
+    - Multi electron
+    - Term symbols
 - Molecules
-  - Single electron
-  - Multi electron
+    - Single electron
+    - Multi electron
+    - Term symbols
 
 ## Detailed Theory
 
-### Hund's Cases
+### Hund's Coupling Cases
 
 - Case (a)
-  - Good quantum numbers
-  - Selection rules
-  - Term values
+    - Good quantum numbers
+    - Selection rules
+    - Term values
 - Case (b)
-  - Good quantum numbers
-  - Selection rules
-  - Term values
+    - Good quantum numbers
+    - Selection rules
+    - Term values
 
 ### Uncoupling
 
@@ -64,7 +66,7 @@
 ### Electronic Transitions
 
 - Σ-Σ
-  - Branches
+    - Branches
 - Σ-Π
 - Π-Σ
 - Π-Π

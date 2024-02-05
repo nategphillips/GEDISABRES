@@ -4,6 +4,8 @@
 \section{Vibration}
 \label{s:vibration}
 
+\subsection{Partition Function}
+
 The quantities given by
 \begin{equation*}
     \eul^{-G_0(v)hc/kT}
@@ -17,8 +19,14 @@ Here, $Q_v$ is the vibrational partition function and is given by
     Q_v = \sum_{v=0}^{\infty}\eul^{-G_0(v)hc/kT} = 1 + \eul^{-G_0(1)hc/kT} + \eul^{-G_0(2)hc/kT} + \dotsb.
 \end{equation*}
 
+\subsection{Intensities}
+
+\subsection{Franck-Condon Factors}
+
 \section{Rotation}
 \label{s:rotation}
+
+\subsection{Partition Function}
 
 The number of molecules $N_J$ in the rotational level $J$ of the lowest vibrational state at the temperature $T$ is proportional to
 \begin{equation*}
@@ -47,6 +55,45 @@ For higher vibrational levels,
     N_J \propto (2J + 1)\eul^{-(G + F)hc/kT}.
 \end{equation}
 However, the factor $\eul^{-Ghc/kT}$ can be separated off since the distribution over the rotational levels is the same but the absolute population of all the levels is considerably smaller than for the lowest vibrational level.
+
+\subsection{Intensities}
+
+\subsection{H\"onl-London Factors}
+
+\begin{table}[H]
+    \centering
+    \caption{H\"onl-London factors \cite{herzberg:diatomic}.}
+    \label{t:honl-london_factors}
+    \begin{tabular}{ccc}
+        \toprule
+        Branch & Absorption & Emission \\
+        \midrule
+        \multicolumn{3}{c}{$\adif{\Lambda} = 0$ \textit{Transitions}} \\
+        \cmidrule(lr){1-3}
+        $S_J^R$ & $\dfrac{(J'' + 1 + \Lambda'')(J'' + 1 - \Lambda'')}{J'' + 1}$ & $\dfrac{(J' + \Lambda')(J' - \Lambda')}{J'}$ \\
+        \addlinespace[0.5em]
+        $S_J^Q$ & $\dfrac{(2J'' + 1)\Lambda''^2}{J''(J'' + 1)}$ & $\dfrac{(2J' + 1)\Lambda'^2}{J'(J' + 1)}$ \\
+        \addlinespace[0.5em]
+        $S_J^P$ & $\dfrac{(J'' + \Lambda'')(J'' - \Lambda'')}{J''}$ & $\dfrac{(J' + 1 + \Lambda')(J' + 1 - \Lambda')}{J' + 1}$ \\
+        \addlinespace[0.5em]
+        \multicolumn{3}{c}{$\adif{\Lambda} = +1$ \textit{Transitions}} \\
+        \cmidrule(lr){1-3}
+        $S_J^R$ & $\dfrac{(J'' + 2 + \Lambda'')(J'' + 1 + \Lambda'')}{4(J'' + 1)}$ & $\dfrac{(J' + \Lambda')(J' - 1 + \Lambda')}{4J'}$ \\
+        \addlinespace[0.5em]
+        $S_J^Q$ & $\dfrac{(J'' + 1 + \Lambda'')(J'' - \Lambda'')(2J'' + 1)}{4J''(J'' + 1)}$ & $\dfrac{(J' + \Lambda')(J' + 1 - \Lambda')(2J' + 1)}{4J'(J' + 1)}$ \\
+        \addlinespace[0.5em]
+        $S_J^P$ & $\dfrac{(J'' - 1 - \Lambda'')(J'' - \Lambda'')}{4J''}$ & $\dfrac{(J' + 1 - \Lambda')(J' + 2 - \Lambda')}{4(J' + 1)}$ \\
+        \addlinespace[0.5em]
+        \multicolumn{3}{c}{$\adif{\Lambda} = -1$ \textit{Transitions}} \\
+        \cmidrule(lr){1-3}
+        $S_J^R$ & $\dfrac{(J'' + 2 - \Lambda'')(J'' + 1 - \Lambda'')}{4(J'' + 1)}$ & $\dfrac{(J' - \Lambda')(J' - 1 - \Lambda')}{4J'}$ \\
+        \addlinespace[0.5em]
+        $S_J^Q$ & $\dfrac{(J'' + 1 - \Lambda'')(J'' + \Lambda'')(2J'' + 1)}{4J''(J'' + 1)}$ & $\dfrac{(J' - \Lambda')(J' + 1 + \Lambda')(2J' + 1)}{4J'(J' + 1)}$ \\
+        \addlinespace[0.5em]
+        $S_J^P$ & $\dfrac{(J'' - 1 + \Lambda'')(J'' + \Lambda'')}{4J''}$ & $\dfrac{(J' + 1 + \Lambda')(J' + 2 + \Lambda')}{4(J' + 1)}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \section{Band Intensity}
 \label{s:band_intensity}

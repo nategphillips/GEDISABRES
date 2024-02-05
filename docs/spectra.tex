@@ -4,7 +4,7 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{booktabs, deriv, fancyhdr, float, graphicx, natex, pgfplots, siunitx, tikz}
+\usepackage{amssymb, booktabs, deriv, fancyhdr, float, graphicx, natex, pgfplots, siunitx, tikz}
 
 % biblatex
 \addbibresource{references.bib}
@@ -26,7 +26,7 @@
 \pgfplotsset{compat = newest}
 
 % custom
-\newcommand{\dash}{\text{---}}
+\newcommand{\dash}{\!\!-\!\!}
 \newcommand{\state}[2]{\prescript{#1}{}{#2}}
 
 \begin{document}
@@ -39,7 +39,7 @@
     \begin{center}
     \let \footnote \thanks
       {\LARGE \textbf{Simulation of Molecular Spectra} \par}
-      {\large Homonuclear and Heteronuclear Diatomics}
+      {\large Theory and Applications}
       \vskip 1.5em
       {\large
         \lineskip .5em
@@ -73,113 +73,19 @@
 
 \input{chapters/intensities}
 
-\chapter{Spectral Line Shapes}
-\label{c:spectral_line_shapes}
+\input{chapters/numbers}
 
-\section{Gaussian Profile}
-\label{s:gaussian_profile}
+\input{chapters/hund}
 
-The probability density function (PDF) for the Gaussian profile is
-\begin{equation*}
-    G(x; x_0, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp\pr*{-\frac{(x - x_0)^2}{2\sigma^2}},
-\end{equation*}
-where $x$ is the desired wavenumber, $x_0$ is the intensity at a wavenumber peak, and $\sigma$ is the broadening parameter.
+\input{chapters/uncoupling}
 
-\section{Lorentzian Profile}
-\label{s:lorentzian_profile}
+\input{chapters/transitions}
 
-The PDF for the Lorentzian profile is
-\begin{equation*}
-    L(x; x_0, \gamma) = \frac{1}{\pi}\bk*{\frac{\gamma}{(x - x_0)^2 + \gamma^2}},
-\end{equation*}
-where $\gamma$ is the broadening parameter.
+\input{chapters/lif}
 
-\section{Voigt Profile}
-\label{s:voigt_profile}
-
-The Voigt profile is a convolution of the Gaussian and Lorentzian profiles. The PDF for the Voigt profile is
-\begin{equation*}
-    V(x; x_0, \sigma, \gamma) = \frac{1}{\sigma\sqrt{2\pi}}\Re[w(z)],
-\end{equation*}
-where
-\begin{equation*}
-    w(z) \defn \eul^{-z^2}\erfc(-\img z) = \eul^{-z^2}\pr*{1 + 
-    \frac{2\img}{\sqrt{\pi}}\int_0^z \eul^{t^2} \odif{t}},
-\end{equation*}
-and
-\begin{equation*}
-    z = \frac{(x - x_0) + \img\gamma}{\sigma\sqrt{2}}.
-\end{equation*}
-
-\begin{figure}[H]
-    \centering
-    \begin{tikzpicture}
-        \begin{axis}[axis lines = left]
-            \addplot[smooth]
-            {1/(1*sqrt(2*pi))*exp(-((x-0)^2)/(2*1^2))};
-            \addlegendentry{Gaussian}
-            \addplot[color = red, smooth]
-            {1/pi*(1/((x-0)^2+1^2))};
-            \addlegendentry{Lorentzian}
-            \addplot gnuplot[color = blue, smooth, no marks]
-            {VP(x,1,1)};
-            \addlegendentry{Voigt}
-        \end{axis}
-    \end{tikzpicture}
-\end{figure}
-
-\chapter{Laser-Induced Fluorescence}
-\label{c:laser-induced_flourescence}
-
-Laser-induced fluorescence is a method of spectroscopy that excites a molecule into a higher electronic state via the absorption of laser radiation. A single ro-vibrational band is isolated and excited. Next, the molecule relaxes back into the original electronics state, filling multiple lower vibrational states in the process. These vibrational states are filled according to the known Franck-Condon factors.
-
-Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from the ground state to the excited state via laser excitation. Subsequently, the molecule relaxes to fill multiple vibrational states within the original electronic state.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{img/lif_bands.jpg}
-    \caption{Laser-induced fluorescence in Iodine.}
-    \label{f:laser-induced_fluorescence_in_iodine}
-\end{figure}
+\input{chapters/lineshapes}
 
 \chapter{Placeholder}
-
-\section{H\"onl-London Formulae}
-
-\begin{table}[H]
-    \centering
-    \caption{H\"onl-London factors \cite{herzberg:diatomic}.}
-    \label{t:honl-london_factors}
-    \begin{tabular}{ccc}
-        \toprule
-        Branch & Absorption & Emission \\
-        \midrule
-        \multicolumn{3}{c}{$\adif{\Lambda} = 0$ \textit{Transitions}} \\
-        \cmidrule(lr){1-3}
-        $S_J^R$ & $\dfrac{(J'' + 1 + \Lambda'')(J'' + 1 - \Lambda'')}{J'' + 1}$ & $\dfrac{(J' + \Lambda')(J' - \Lambda')}{J'}$ \\
-        \addlinespace[0.5em]
-        $S_J^Q$ & $\dfrac{(2J'' + 1)\Lambda''^2}{J''(J'' + 1)}$ & $\dfrac{(2J' + 1)\Lambda'^2}{J'(J' + 1)}$ \\
-        \addlinespace[0.5em]
-        $S_J^P$ & $\dfrac{(J'' + \Lambda'')(J'' - \Lambda'')}{J''}$ & $\dfrac{(J' + 1 + \Lambda')(J' + 1 - \Lambda')}{J' + 1}$ \\
-        \addlinespace[0.5em]
-        \multicolumn{3}{c}{$\adif{\Lambda} = +1$ \textit{Transitions}} \\
-        \cmidrule(lr){1-3}
-        $S_J^R$ & $\dfrac{(J'' + 2 + \Lambda'')(J'' + 1 + \Lambda'')}{4(J'' + 1)}$ & $\dfrac{(J' + \Lambda')(J' - 1 + \Lambda')}{4J'}$ \\
-        \addlinespace[0.5em]
-        $S_J^Q$ & $\dfrac{(J'' + 1 + \Lambda'')(J'' - \Lambda'')(2J'' + 1)}{4J''(J'' + 1)}$ & $\dfrac{(J' + \Lambda')(J' + 1 - \Lambda')(2J' + 1)}{4J'(J' + 1)}$ \\
-        \addlinespace[0.5em]
-        $S_J^P$ & $\dfrac{(J'' - 1 - \Lambda'')(J'' - \Lambda'')}{4J''}$ & $\dfrac{(J' + 1 - \Lambda')(J' + 2 - \Lambda')}{4(J' + 1)}$ \\
-        \addlinespace[0.5em]
-        \multicolumn{3}{c}{$\adif{\Lambda} = -1$ \textit{Transitions}} \\
-        \cmidrule(lr){1-3}
-        $S_J^R$ & $\dfrac{(J'' + 2 - \Lambda'')(J'' + 1 - \Lambda'')}{4(J'' + 1)}$ & $\dfrac{(J' - \Lambda')(J' - 1 - \Lambda')}{4J'}$ \\
-        \addlinespace[0.5em]
-        $S_J^Q$ & $\dfrac{(J'' + 1 - \Lambda'')(J'' + \Lambda'')(2J'' + 1)}{4J''(J'' + 1)}$ & $\dfrac{(J' - \Lambda')(J' + 1 + \Lambda')(2J' + 1)}{4J'(J' + 1)}$ \\
-        \addlinespace[0.5em]
-        $S_J^P$ & $\dfrac{(J'' - 1 + \Lambda'')(J'' + \Lambda'')}{4J''}$ & $\dfrac{(J' + 1 + \Lambda')(J' + 2 + \Lambda')}{4(J' + 1)}$ \\
-        \bottomrule
-    \end{tabular}
-\end{table}
 
 \begin{align*}
     P_{11}(J) &= \nu_0^{(1)} + F_1'(J - 1) - F_1''(J) \\
@@ -328,7 +234,7 @@ Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from th
         $\Lambda$ & Electronic Orbital Angular Momentum & $0, 1, \dotsb, L$ \\
         $\Sigma$ & ? & $S, S - 1, \dotsb, -S$ \\
         $\Omega$ & Resultant Electronic Angular Momentum & $\abs{\Lambda + \Sigma}$ \\
-        $K$ & Total Angular Momentum w/o Spin & $\Lambda, \Lambda + 1, \dotsb$ \\
+        $N$ & Total Angular Momentum w/o Spin & $\Lambda, \Lambda + 1, \dotsb$ \\
         \bottomrule
     \end{tabular}
 \end{table}

@@ -97,15 +97,19 @@ def rotational_term(rot_qn: int, state: 'State', branch_idx: int) -> float:
     l = state.consts['lamd']
     g = state.consts['gamm']
 
-    e0 = x * b - x**2 * d + x**3 * h
-    e1 = x * b - (x**2 + 4 * x) * d
-    e2 = (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * l - g
-    thing = - 2 * np.sqrt(x) * (b - 2 * (x + 1) * d - g / 2)
+    single = x * b - x**2 * d + x**3 * h
+
+    e0 = x * b - (x**2 + 4 * x) * d
+    e1 = (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * l - g
+    odiag = - 2 * np.sqrt(x) * (b - 2 * (x + 1) * d - g / 2)
+
+    energy1 = 0.5 * ((e0 + e1) + np.sqrt((e0 + e1)**2 - 4 * (e0 * e1 - odiag**2)))
+    energy2 = 0.5 * ((e0 + e1) - np.sqrt((e0 + e1)**2 - 4 * (e0 * e1 - odiag**2)))
 
     match branch_idx:
         case 1:
-            return e1
+            return energy1
         case 3:
-            return e2
+            return energy2
         case _:
-            return e0
+            return single

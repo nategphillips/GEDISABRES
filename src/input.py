@@ -12,11 +12,11 @@ TEMP: float = 300.0
 PRES: float = 101325.0
 
 # molecule to simulate
-MOLECULE: str = 'o2+'
+MOLECULE: str = 'o2'
 
 # upper and lower electronic states
-STATE_UP: str = 'a2pu'
-STATE_LO: str = 'x2pg'
+STATE_UP: str = 'b3su'
+STATE_LO: str = 'x3sg'
 
 # NOTE: temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
 
@@ -28,10 +28,10 @@ FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
 
 # rotational levels
 # Cosby predissociation data only goes up to N = 36
-ROT_LVLS: np.ndarray = np.arange(0, 25, 1)
+ROT_LVLS: np.ndarray = np.arange(0, 36, 1)
 
 # list of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(4, 20)]
+VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
 
 # band origin override
 BAND_ORIG: tuple[bool, int] = (False, 36185)
@@ -58,7 +58,7 @@ CONV_GRAN: int  = 50000
 
 # sample data
 SAMP_DATA: bool = True
-SAMP_FILE: list[str] = ['o2+/chen']
+SAMP_FILE: list[str] = ['pgopher']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['pgopher']
 

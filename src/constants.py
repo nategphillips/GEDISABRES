@@ -26,8 +26,8 @@ CONSTS_LO = MOLECULAR_CONSTS.loc[inp.STATE_LO].to_dict()
 MASS_DATA = pd.read_csv('../data/molecular_masses.csv', index_col=0).loc[inp.MOLECULE].to_dict()
 
 # mass of atoms [kg]
-MASS_ATOM_1 = MASS_DATA['atom_1'] / AVOGD / 1e3
-MASS_ATOM_2 = MASS_DATA['atom_2'] / AVOGD / 1e3
+MASS_ATOM_1 = MASS_DATA['mass_1'] / AVOGD / 1e3
+MASS_ATOM_2 = MASS_DATA['mass_2'] / AVOGD / 1e3
 
 # molecular mass [kg]
 MASS_MOLECULE = MASS_ATOM_1 + MASS_ATOM_2

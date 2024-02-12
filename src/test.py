@@ -5,7 +5,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-AVOGD = 6.02214076e23
+# physical constants
+BOLTZ = 1.380649e-23   # Boltzmann constant [J/K]
+PLANC = 6.62607015e-34 # Planck constant    [J*s]
+LIGHT = 2.99792458e10  # speed of light     [cm/s]
+AVOGD = 6.02214076e23  # Avodagro constant  [1/mol]
 
 class Atom:
     def __init__(self, name):
@@ -24,43 +28,44 @@ class Molecule:
         self.reduced_mass   = (self.atom_1.mass * self.atom_2.mass) / self.molecular_mass
 
 class Simulation:
-    def __init__(self, molecule, rot_levels, upper_state, lower_state, vib_bands):
+    def __init__(self, molecule, temp, rot_lvls, state_up, state_lo, vib_bands):
         self.molecule      = molecule
-        self.rot_levels    = rot_levels
-        self.upper_state   = ElectronicState(upper_state, self.molecule.consts)
-        self.lower_state   = ElectronicState(lower_state, self.molecule.consts)
+        self.rot_lvls      = rot_lvls
+        self.state_up      = ElectronicState(state_up, self.molecule.consts)
+        self.state_lo      = ElectronicState(state_lo, self.molecule.consts)
         self.allowed_lines = self.get_allowed_lines()
+        self.temp          = temp
         self.vib_bands     = [VibrationalBand(vib_band, self.allowed_lines,
-                             self.upper_state, self.lower_state) for vib_band in vib_bands]
+                             self.state_up, self.state_lo, self.temp) for vib_band in vib_bands]
 
     def get_allowed_lines(self):
         lines = []
 
-        for gnd_rot_qn, ext_rot_qn in itertools.product(self.rot_levels, repeat=2):
-            d_rot_qn = ext_rot_qn - gnd_rot_qn
+        for rot_qn_lo, rot_qn_up in itertools.product(self.rot_lvls, repeat=2):
+            d_rot_qn = rot_qn_up - rot_qn_lo
 
             # for molecular oxygen, all transitions with even values of J'' are forbidden
-            if gnd_rot_qn % 2 == 1:
+            if rot_qn_lo % 2 == 1:
 
                 # selection rules for the R branch
                 if d_rot_qn == 1:
-                    for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
-                        if gnd_triplet_idx == ext_triplet_idx:
-                            lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                      ext_triplet_idx, gnd_triplet_idx, 'r'))
-                        if gnd_triplet_idx > ext_triplet_idx:
-                            lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                      ext_triplet_idx, gnd_triplet_idx, 'rq'))
+                    for branch_idx_lo, branch_idx_up in itertools.product(range(1, 4), repeat=2):
+                        if branch_idx_lo == branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
+                                                      branch_idx_up, branch_idx_lo, 'r'))
+                        if branch_idx_lo > branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
+                                                      branch_idx_up, branch_idx_lo, 'rq'))
 
                 # selection rules for the P branch
                 elif d_rot_qn == -1:
-                    for gnd_triplet_idx, ext_triplet_idx in itertools.product(range(1, 4), repeat=2):
-                        if gnd_triplet_idx == ext_triplet_idx:
-                            lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                      ext_triplet_idx, gnd_triplet_idx, 'p'))
-                        if gnd_triplet_idx < ext_triplet_idx:
-                            lines.append(SpectralLine(ext_rot_qn, gnd_rot_qn,
-                                                      ext_triplet_idx, gnd_triplet_idx, 'pq'))
+                    for branch_idx_lo, branch_idx_up in itertools.product(range(1, 4), repeat=2):
+                        if branch_idx_lo == branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
+                                                      branch_idx_up, branch_idx_lo, 'p'))
+                        if branch_idx_lo < branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
+                                                      branch_idx_up, branch_idx_lo, 'pq'))
 
         return np.array(lines)
 
@@ -75,65 +80,63 @@ class ElectronicState:
         self.name   = name
         self.consts = consts.loc[self.name].to_dict()
 
-    def electronic_term(self):
-        return self.consts['t_e']
-
 class VibrationalBand:
-    def __init__(self, name, lines, upper_state, lower_state):
-        self.vib_qn_up   = name[0]
-        self.vib_qn_lo   = name[1]
-        self.lines       = lines
-        self.upper_state = upper_state
-        self.lower_state = lower_state
-
-    def vibrational_term(self, state, vib_qn):
-        return state.consts['w_e']   * (vib_qn + 0.5)    - \
-               state.consts['we_xe'] * (vib_qn + 0.5)**2 + \
-               state.consts['we_ye'] * (vib_qn + 0.5)**3 + \
-               state.consts['we_ze'] * (vib_qn + 0.5)**4
-
-    def rotational_constants(self, state, vib_qn):
-        b_v = state.consts['b_e']                        - \
-              state.consts['alph_e'] * (vib_qn + 0.5)    + \
-              state.consts['gamm_e'] * (vib_qn + 0.5)**2 + \
-              state.consts['delt_e'] * (vib_qn + 0.5)**3
-
-        d_v = state.consts['d_e'] - state.consts['beta_e'] * (vib_qn + 0.5)
-
-        h_v = state.consts['h_e']
-
-        return [b_v, d_v, h_v]
+    def __init__(self, name, lines, state_up, state_lo, temp):
+        self.vib_qn_up = name[0]
+        self.vib_qn_lo = name[1]
+        self.lines     = lines
+        self.state_up  = state_up
+        self.state_lo  = state_lo
+        self.temp      = temp
 
     def band_origin(self):
         # called once per band
-        elc_energy = self.upper_state.electronic_term() - \
-                     self.lower_state.electronic_term()
+        elc_energy = self.state_up.consts['t_e'] - \
+                     self.state_lo.consts['t_e']
 
-        vib_energy = self.vibrational_term(self.upper_state, self.vib_qn_up) - \
-                     self.vibrational_term(self.lower_state, self.vib_qn_lo)
+        vib_energy = vibrational_term(self.state_up, self.vib_qn_up) - \
+                     vibrational_term(self.state_lo, self.vib_qn_lo)
 
         return elc_energy + vib_energy
 
     def wavenumbers(self):
-        return np.array([line.wavenumber(self.band_origin(), self.upper_state, self.lower_state, self.vib_qn_up, self.vib_qn_lo) for line in self.lines])
+        return np.array([line.wavenumber(self.band_origin(), self.vib_qn_up, self.vib_qn_lo, self.state_up, self.state_lo) for line in self.lines])
 
     def intensities(self):
-        return np.array([line.intensity() for line in self.lines])
+        return np.array([line.intensity(self.band_origin(), self.vib_qn_up, self.vib_qn_lo, self.state_up, self.state_lo, self.temp) for line in self.lines])
+
+def vibrational_term(state, vib_qn):
+    return state.consts['w_e']   * (vib_qn + 0.5)     - \
+           state.consts['we_xe'] * (vib_qn + 0.5)**2 + \
+           state.consts['we_ye'] * (vib_qn + 0.5)**3 + \
+           state.consts['we_ze'] * (vib_qn + 0.5)**4
+
+def rotational_constants(state, vib_qn):
+    b_v = state.consts['b_e']                        - \
+          state.consts['alph_e'] * (vib_qn + 0.5)    + \
+          state.consts['gamm_e'] * (vib_qn + 0.5)**2 + \
+          state.consts['delt_e'] * (vib_qn + 0.5)**3
+
+    d_v = state.consts['d_e'] - state.consts['beta_e'] * (vib_qn + 0.5)
+
+    h_v = state.consts['h_e']
+
+    return [b_v, d_v, h_v]
 
 @dataclass
 class SpectralLine:
-    rot_qn_up:      int
-    rot_qn_lo:      int
-    triplet_idx_up: int
-    triplet_idx_lo: int
-    branch:         str
+    rot_qn_up:     int
+    rot_qn_lo:     int
+    branch_idx_up: int
+    branch_idx_lo: int
+    branch:        str
 
     def rotational_term(self, rot_qn, vib_qn, state, branch_idx):
         # called for each line
         x = rot_qn * (rot_qn + 1)
-        b = state.rotational_constants(vib_qn)[0]
-        d = state.rotational_constants(vib_qn)[1]
-        h = state.rotational_constants(vib_qn)[2]
+        b = rotational_constants(state, vib_qn)[0]
+        d = rotational_constants(state, vib_qn)[1]
+        h = rotational_constants(state, vib_qn)[2]
 
         # accessed
         l = state.consts['lamd']
@@ -156,16 +159,36 @@ class SpectralLine:
             case _:
                 return single
 
-    def wavenumber(self, band_origin, state_up, state_lo, vib_qn_up, vib_qn_lo):
-        return band_origin + self.rotational_term(self.rot_qn_up, vib_qn_up, state_up, self.triplet_idx_up) - \
-                             self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.triplet_idx_lo)
+    def wavenumber(self, band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo):
+        return band_origin + self.rotational_term(self.rot_qn_up, vib_qn_up, state_up, self.branch_idx_up) - \
+                             self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo)
 
-    def intensity(self):
-        return 1
+    def intensity(self, band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo, temp):
+        part = (BOLTZ * temp) / (PLANC * LIGHT * state_lo.consts['b_e'])
+
+        # the basic intensity function if no branches are considered
+        base = (self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part) * \
+               np.exp(- (self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo) * PLANC * LIGHT) / (BOLTZ * temp))
+        
+        match self.branch:
+            case 'r':
+                linestr = ((self.rot_qn_lo + 1)**2 - 0.25) / (self.rot_qn_lo + 1)
+                intn = base * linestr
+            case 'p':
+                linestr = ((self.rot_qn_lo)**2 - 0.25) / (self.rot_qn_lo)
+                intn = base * linestr
+            case _:
+                linestr = (2 * self.rot_qn_lo + 1) / (4 * self.rot_qn_lo * (self.rot_qn_lo + 1))
+                intn = base * linestr
+
+        if self.branch_idx_lo in (1, 3):
+            return intn / 2
+
+        return intn
 
 def main():
     o2_mol = Molecule('o2', 'o', 'o')
-    o2_sim = Simulation(o2_mol, np.arange(0, 36), 'b3su', 'x3sg', [(1, 0), (2, 0)])
+    o2_sim = Simulation(o2_mol, 300, np.arange(0, 36), 'b3su', 'x3sg', [(1, 0), (2, 0)])
 
     o2_sim.plot_lines()
 

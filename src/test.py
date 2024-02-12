@@ -36,7 +36,8 @@ class Simulation:
         self.allowed_lines = self.get_allowed_lines()
         self.temp          = temp
         self.vib_bands     = [VibrationalBand(vib_band, self.allowed_lines,
-                             self.state_up, self.state_lo, self.temp) for vib_band in vib_bands]
+                                              self.state_up, self.state_lo,
+                                              self.temp) for vib_band in vib_bands]
 
     def get_allowed_lines(self):
         lines = []
@@ -44,30 +45,34 @@ class Simulation:
         for rot_qn_lo, rot_qn_up in itertools.product(self.rot_lvls, repeat=2):
             d_rot_qn = rot_qn_up - rot_qn_lo
 
-            # for molecular oxygen, all transitions with even values of J'' are forbidden
             if rot_qn_lo % 2 == 1:
-
-                # selection rules for the R branch
-                if d_rot_qn == 1:
-                    for branch_idx_lo, branch_idx_up in itertools.product(range(1, 4), repeat=2):
-                        if branch_idx_lo == branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
-                                                      branch_idx_up, branch_idx_lo, 'r'))
-                        if branch_idx_lo > branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
-                                                      branch_idx_up, branch_idx_lo, 'rq'))
-
-                # selection rules for the P branch
-                elif d_rot_qn == -1:
-                    for branch_idx_lo, branch_idx_up in itertools.product(range(1, 4), repeat=2):
-                        if branch_idx_lo == branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
-                                                      branch_idx_up, branch_idx_lo, 'p'))
-                        if branch_idx_lo < branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo,
-                                                      branch_idx_up, branch_idx_lo, 'pq'))
+                lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo, d_rot_qn))
 
         return np.array(lines)
+
+    def get_allowed_branches(self, rot_qn_up, rot_qn_lo, d_rot_qn):
+        lines = []
+
+        # R branch
+        if d_rot_qn == 1:
+            lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, range(1, 4), 'r', 'rq'))
+
+        # P branch
+        elif d_rot_qn == -1:
+            lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, range(1, 4), 'p', 'pq'))
+
+        return lines
+
+    def get_branch_idx(self, rot_qn_up, rot_qn_lo, branch_indices, branch_main, branch_secondary):
+        lines = []
+
+        for branch_idx_lo, branch_idx_up in itertools.product(branch_indices, repeat=2):
+            if branch_idx_lo == branch_idx_up:
+                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo, branch_main))
+            elif branch_idx_lo > branch_idx_up:
+                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo, branch_secondary))
+
+        return lines
 
     def plot_lines(self):
         for vib_band in self.vib_bands:

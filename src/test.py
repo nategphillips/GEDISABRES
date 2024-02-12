@@ -68,17 +68,17 @@ class Simulation:
 
         for branch_idx_lo, branch_idx_up in itertools.product(branch_indices, repeat=2):
             if branch_idx_lo == branch_idx_up:
-                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo, branch_main))
+                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                                          branch_idx_lo, branch_main))
             elif branch_idx_lo > branch_idx_up:
-                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo, branch_secondary))
+                lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                                          branch_idx_lo, branch_secondary))
 
         return lines
 
     def plot_lines(self):
         for vib_band in self.vib_bands:
             plt.stem(vib_band.wavenumbers(), vib_band.intensities())
-
-        plt.show()
 
 class ElectronicState:
     def __init__(self, name, consts):
@@ -104,11 +104,15 @@ class VibrationalBand:
 
         return elc_energy + vib_energy
 
+    # TODO: janky
     def wavenumbers(self):
-        return np.array([line.wavenumber(self.band_origin(), self.vib_qn_up, self.vib_qn_lo, self.state_up, self.state_lo) for line in self.lines])
+        return np.array([line.wavenumber(self.band_origin(), self.vib_qn_up, self.vib_qn_lo,
+                                         self.state_up, self.state_lo) for line in self.lines])
 
     def intensities(self):
-        return np.array([line.intensity(self.band_origin(), self.vib_qn_up, self.vib_qn_lo, self.state_up, self.state_lo, self.temp) for line in self.lines])
+        return np.array([line.intensity(self.band_origin(), self.vib_qn_up, self.vib_qn_lo,
+                                        self.state_up, self.state_lo,
+                                        self.temp) for line in self.lines])
 
 def vibrational_term(state, vib_qn):
     return state.consts['w_e']   * (vib_qn + 0.5)     - \
@@ -137,13 +141,11 @@ class SpectralLine:
     branch:        str
 
     def rotational_term(self, rot_qn, vib_qn, state, branch_idx):
-        # called for each line
         x = rot_qn * (rot_qn + 1)
         b = rotational_constants(state, vib_qn)[0]
         d = rotational_constants(state, vib_qn)[1]
         h = rotational_constants(state, vib_qn)[2]
 
-        # accessed
         l = state.consts['lamd']
         g = state.consts['gamm']
 
@@ -165,15 +167,17 @@ class SpectralLine:
                 return single
 
     def wavenumber(self, band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo):
-        return band_origin + self.rotational_term(self.rot_qn_up, vib_qn_up, state_up, self.branch_idx_up) - \
-                             self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo)
+        return band_origin + \
+               self.rotational_term(self.rot_qn_up, vib_qn_up, state_up, self.branch_idx_up) - \
+               self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo)
 
     def intensity(self, band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo, temp):
         part = (BOLTZ * temp) / (PLANC * LIGHT * state_lo.consts['b_e'])
 
         # the basic intensity function if no branches are considered
         base = (self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part) * \
-               np.exp(- (self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo) * PLANC * LIGHT) / (BOLTZ * temp))
+               np.exp(- (self.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo,
+                                              self.branch_idx_lo) * PLANC * LIGHT) / (BOLTZ * temp))
         
         match self.branch:
             case 'r':
@@ -192,10 +196,15 @@ class SpectralLine:
         return intn
 
 def main():
-    o2_mol = Molecule('o2', 'o', 'o')
-    o2_sim = Simulation(o2_mol, 300, np.arange(0, 36), 'b3su', 'x3sg', [(1, 0), (2, 0)])
+    o2_mol  = Molecule('o2', 'o', 'o')
+    o2p_mol = Molecule('o2+', 'o', 'o')
+    o2_sim  = Simulation(o2_mol, 300, np.arange(0, 36), 'b3su', 'x3sg', [(1, 0), (2, 0)])
+    o2p_sim = Simulation(o2p_mol, 300, np.arange(0, 36), 'a2pu', 'x2pg', [(1, 0), (2, 0)])
 
     o2_sim.plot_lines()
+    o2p_sim.plot_lines()
+
+    plt.show()
 
 if __name__ == '__main__':
     main()

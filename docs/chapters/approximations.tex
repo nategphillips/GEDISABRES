@@ -167,15 +167,15 @@ since $r_e$ is constant. From direct comparison with the classical equation of m
 
 The Schr\"odinger equation for the harmonic oscillator is
 \begin{equation*}
-    \odv[2]{\psi}{x} + \frac{8\pi^2\mu}{h^2}\pr*{E - \tfrac{1}{2}kx^2}\psi = 0.
+    \odv[2]{\psi}{x} + \frac{8\pi^2\mu}{h^2}\ab(E - \tfrac{1}{2}kx^2)\psi = 0.
 \end{equation*}
 Solving this equation leads to the energy eigenvalues given by
 \begin{equation*}
-    E(v) = \frac{h}{2\pi}\sqrt{\frac{k}{\mu}}\pr*{v + \tfrac{1}{2}} = h\nu\_{vib}\pr*{v + \tfrac{1}{2}} \quad\text{for}\quad v = 0, 1, 2, \dotsb.
+    E(v) = \frac{h}{2\pi}\sqrt{\frac{k}{\mu}}\ab(v + \tfrac{1}{2}) = h\nu\_{vib}\ab(v + \tfrac{1}{2}) \quad\text{for}\quad v = 0, 1, 2, \dotsb.
 \end{equation*}
 Rewriting the energy as the vibrational term value $G(v)$ gives
 \begin{equation*}
-    G(v) = \frac{E(v)}{hc} = \frac{\nu\_{vib}}{c}\pr*{v + \tfrac{1}{2}} = \omega\pr*{v + \tfrac{1}{2}},
+    G(v) = \frac{E(v)}{hc} = \frac{\nu\_{vib}}{c}\ab(v + \tfrac{1}{2}) = \omega\ab(v + \tfrac{1}{2}),
 \end{equation*}
 where the quantity $\nu\_{vib}/c$ is designated $\omega$ and measured in \unit{cm^{-1}}.
 
@@ -223,11 +223,11 @@ for very small amplitudes only. This factor decreases slowly as the amplitude $x
 
 Substituting the anharmonic potential energy function into the Schr\"odinger equation and solving for the energy eigenvalues gives
 \begin{equation*}
-    E_v = hc\omega_e\pr*{v + \tfrac{1}{2}} - hc\omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + hc\omega_ey_e\pr*{v + \tfrac{1}{2}}^3 + \dotsb.
+    E_v = hc\omega_e\ab(v + \tfrac{1}{2}) - hc\omega_ex_e\ab(v + \tfrac{1}{2})^2 + hc\omega_ey_e\ab(v + \tfrac{1}{2})^3 + \dotsb.
 \end{equation*}
 Written as the vibrational term $G(v)$, this becomes
 \begin{equation*}
-    G(v) = \omega_e\pr*{v + \tfrac{1}{2}} - \omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + \omega_ey_e\pr*{v + \tfrac{1}{2}}^3 + \dotsb,
+    G(v) = \omega_e\ab(v + \tfrac{1}{2}) - \omega_ex_e\ab(v + \tfrac{1}{2})^2 + \omega_ey_e\ab(v + \tfrac{1}{2})^3 + \dotsb,
 \end{equation*}
 where $v$ is the vibrational quantum number, $\omega_ex_e \ll \omega_e$, and $\omega_ey_e \ll \omega_ex_e$. This equation directly shows that the energy levels of the anharmonic oscillator are not equidistant like those of the harmonic oscillator.
 
@@ -285,7 +285,7 @@ The selection rule for the infrared spectrum of the rigid rotator $\Delta{}J = \
 
 Since the molecule is vibrating, the internuclear distance and therefore the moment of inertia and the rotational constant $B$ are changing rapidly. Since the period of vibration is small compared to the period of rotation, the mean value of $B$ is
 \begin{equation*}
-    B_v = \frac{h}{8\pi^2c\mu}\bk*{\bar{\frac{1}{r^2}}},
+    B_v = \frac{h}{8\pi^2c\mu}\ab[\bar{\frac{1}{r^2}}],
 \end{equation*}
 where $\overline{1/r^2}$ is the mean value of $1/r^2$ during the vibration. The value of $B_v$ will be expected to be smaller than the equilibrium constant $B_e$ since the mean nuclear separation will be greater. The value of $B_e$ is given by
 \begin{equation*}
@@ -293,13 +293,13 @@ where $\overline{1/r^2}$ is the mean value of $1/r^2$ during the vibration. The 
 \end{equation*}
 To a first approximation, the rotational constant $B_v$ in the vibrational state $v$ is given as
 \begin{equation*}
-    B_v = B_e - \alpha_e\pr*{v + \tfrac{1}{2}} + \dotsb,
+    B_v = B_e - \alpha_e\ab(v + \tfrac{1}{2}) + \dotsb,
 \end{equation*}
 where $\alpha_e$ is a constant which is small compared to $B_e$. The ratio $\alpha_e/B_e$ is only slightly larger than $\omega_ex_e/\omega_e$.
 
 A mean rotational constant $D_v$ representing the contribution of centrifugal force can be found as
 \begin{equation*}
-    D_v = D_e + \beta_e\pr*{v + \tfrac{1}{2}} + \dotsb.
+    D_v = D_e + \beta_e\ab(v + \tfrac{1}{2}) + \dotsb.
 \end{equation*}
 In this equation, $\beta_e$ is small compared to
 \begin{equation*}
@@ -312,13 +312,13 @@ The rotational terms in a given vibrational level are therefore given by
 \end{equation*}
 Taking into account the interaction between vibration and rotation, the term values for the vibrating rotator are
 \begin{equation*}
-    T = G(v) + F_v(J) = \omega_e\pr*{v + \tfrac{1}{2}} - \omega_ex_e\pr*{v + \tfrac{1}{2}}^2 + \dotsb + B_vJ(J + 1) - D_vJ^2(J + 1)^2 + \dotsb.
+    T = G(v) + F_v(J) = \omega_e\ab(v + \tfrac{1}{2}) - \omega_ex_e\ab(v + \tfrac{1}{2})^2 + \dotsb + B_vJ(J + 1) - D_vJ^2(J + 1)^2 + \dotsb.
 \end{equation*}
 For the lowest vibrational state $v = 0$, the rotational constant $B_0$ must be used in this equation.
 
-If very precise measurements are available, higher powers of $\pr*{v + \tfrac{1}{2}}$ can be taken into account using
+If very precise measurements are available, higher powers of $\ab(v + \tfrac{1}{2})$ can be taken into account using
 \begin{equation*}
-    B_v = B_e - \alpha_e\pr*{v + \tfrac{1}{2}} + \gamma_e\pr*{v + \tfrac{1}{2}}^2 + \dotsb.
+    B_v = B_e - \alpha_e\ab(v + \tfrac{1}{2}) + \gamma_e\ab(v + \tfrac{1}{2})^2 + \dotsb.
 \end{equation*}
 In higher powers of $J(J + 1)$, the rotational term can be expressed as
 \begin{equation*}

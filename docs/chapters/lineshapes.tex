@@ -6,7 +6,7 @@
 
 The probability density function (PDF) for the Gaussian profile is
 \begin{equation*}
-    G(x; x_0, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp\pr*{-\frac{(x - x_0)^2}{2\sigma^2}},
+    G(x; x_0, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp\ab(-\frac{(x - x_0)^2}{2\sigma^2}),
 \end{equation*}
 where $x$ is the desired wavenumber, $x_0$ is the intensity at a wavenumber peak, and $\sigma$ is the broadening parameter.
 
@@ -15,7 +15,7 @@ where $x$ is the desired wavenumber, $x_0$ is the intensity at a wavenumber peak
 
 The PDF for the Lorentzian profile is
 \begin{equation*}
-    L(x; x_0, \gamma) = \frac{1}{\pi}\bk*{\frac{\gamma}{(x - x_0)^2 + \gamma^2}},
+    L(x; x_0, \gamma) = \frac{1}{\pi}\ab[\frac{\gamma}{(x - x_0)^2 + \gamma^2}],
 \end{equation*}
 where $\gamma$ is the broadening parameter.
 
@@ -28,8 +28,8 @@ The Voigt profile is a convolution of the Gaussian and Lorentzian profiles. The 
 \end{equation*}
 where
 \begin{equation*}
-    w(z) \defn \eul^{-z^2}\erfc(-\img z) = \eul^{-z^2}\pr*{1 + 
-    \frac{2\img}{\sqrt{\pi}}\int_0^z \eul^{t^2} \odif{t}},
+    w(z) \defn \eul^{-z^2}\erfc(-\img z) = \eul^{-z^2}\ab(1 + 
+    \frac{2\img}{\sqrt{\pi}}\int_0^z \eul^{t^2} \odif{t}),
 \end{equation*}
 and
 \begin{equation*}

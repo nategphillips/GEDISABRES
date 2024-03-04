@@ -110,19 +110,26 @@ class Simulation:
 
         return lines
 
-    def get_branch_idx(self, rot_qn_up: int, rot_qn_lo: int, branch_indices: range,
-                       branch_main: str, branch_secondary: str) -> list[float]:
+    def get_branch_idx(self, rot_qn_up: int, rot_qn_lo: int, branch_range: range, branch_main: str,
+                       branch_secondary: str) -> list[float]:
         lines = []
 
-        for branch_idx_lo in branch_indices:
-            for branch_idx_up in branch_indices:
+        for branch_idx_lo in branch_range:
+            for branch_idx_up in branch_range:
                 if branch_idx_lo == branch_idx_up:
                     lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
                                               branch_idx_lo, branch_main, self.molecule))
-                elif branch_idx_lo > branch_idx_up:
-                    if self.state_up.name == 'b3su':
-                        lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                                  branch_idx_lo, branch_secondary, self.molecule))
+                if self.molecule.name == 'o2':
+                    # NOTE: 03/04/24 don't have Honl-London factors for satellite bands, therefore
+                    #                can't do anything other than O2 for now
+                    if branch_main == 'p':
+                        if branch_idx_lo < branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                                                    branch_idx_lo, branch_secondary, self.molecule))
+                    elif branch_main == 'r':
+                        if branch_idx_lo > branch_idx_up:
+                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                                                    branch_idx_lo, branch_secondary, self.molecule))
 
         return lines
 
@@ -290,27 +297,28 @@ def rotational_term(rot_qn: int, vib_qn: int, state: ElectronicState, branch_idx
     b, d, h = rotational_constants(state, vib_qn)
 
     if state.name in ('b3su', 'x3sg'):
-        x = rot_qn * (rot_qn + 1)
-
-        l = state.consts['lamd']
-        g = state.consts['gamm']
-
-        single = x * b - x**2 * d + x**3 * h
-
-        e0 = x * b - (x**2 + 4 * x) * d
-        e1 = (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * l - g
-        odiag = - 2 * np.sqrt(x) * (b - 2 * (x + 1) * d - g / 2)
-
-        energy1 = 0.5 * ((e0 + e1) + np.sqrt((e0 + e1)**2 - 4 * (e0 * e1 - odiag**2)))
-        energy2 = 0.5 * ((e0 + e1) - np.sqrt((e0 + e1)**2 - 4 * (e0 * e1 - odiag**2)))
+        sqrt_sign  = 1
+        first_term = b * rot_qn * (rot_qn + 1)       - \
+                     d * rot_qn**2 * (rot_qn + 1)**2 + \
+                     h * rot_qn**3 * (rot_qn + 1)**3
 
         match branch_idx:
             case 1:
-                return energy1
+                return first_term + (2 * rot_qn + 3) * b - \
+                       state.consts['lamd'] - sqrt_sign * np.sqrt((2 * rot_qn + 3)**2 * \
+                       b**2 + state.consts['lamd']**2 - 2 * \
+                       state.consts['lamd'] * b) + \
+                       state.consts['gamm'] * (rot_qn + 1)
+
             case 3:
-                return energy2
+                return first_term - (2 * rot_qn - 1) * b - \
+                       state.consts['lamd'] + sqrt_sign * np.sqrt((2 * rot_qn - 1)**2 * \
+                       b**2 + state.consts['lamd']**2 - 2 * \
+                       state.consts['lamd'] * b) - \
+                       state.consts['gamm'] * rot_qn
+
             case _:
-                return single
+                return first_term
     else:
         lamb = 1
         a = state.consts['coupling']
@@ -327,6 +335,27 @@ def rotational_term(rot_qn: int, vib_qn: int, state: ElectronicState, branch_idx
                        d * (rot_qn + 1)**4
             case _:
                 raise ValueError('error')
+
+def plot_samp(samp_file: str, color: str, type: str = 'stem') -> None:
+    sample_data = pd.read_csv(f'../data/{samp_file}.csv')
+
+    wavenumbers = sample_data['wavenumbers'].to_numpy()
+    intensities = sample_data['intensities'].to_numpy()
+    intensities /= max(intensities)
+
+    if type == 'stem':
+        plt.stem(wavenumbers, intensities, color, markerfmt='', label=samp_file)
+    else:
+        plt.plot(wavenumbers, intensities, color, label=samp_file)
+
+def plot_info(sim: Simulation) -> None:
+    for vib_band in sim.vib_bands:
+        wavenumbers_line = vib_band.wavenumbers_line()
+        intensities_line = vib_band.intensities_line()
+        lines            = vib_band.lines
+
+        for idx, line in enumerate(lines):
+            plt.text(wavenumbers_line[idx], intensities_line[idx], f'{line.branch}')
 
 def plot_line(sim: Simulation, color: str) -> None:
     for vib_band in sim.vib_bands:
@@ -420,29 +449,15 @@ def main():
     mol_o2p = Molecule('o2+', 'o', 'o')
 
     o2_sim  = Simulation(mol_o2, default_temp, default_pres,
-                         np.arange(0, 36, 1), 'b3su', 'x3sg', [(0, 6), (4, 8)])
+                         np.arange(0, 36, 1), 'b3su', 'x3sg', [(2, 0)])
     o2p_sim = Simulation(mol_o2p, default_temp, default_pres,
-                         np.arange(0.5, 35.5, 1), 'a2pu', 'x2pg', [(0, 0), (2, 1)])
+                         np.arange(0.5, 35.5, 1), 'a2pu', 'x2pg', [(0, 0)])
 
     prop_cycle = plt.rcParams['axes.prop_cycle']
     colors     = prop_cycle.by_key()['color']
 
-    # TODO: line infomation
-
-    plot_line(o2_sim, colors[0])
-    # plot_line(o2p_sim, colors[1])
-
-    plot_conv(o2_sim, colors[1])
-    # plot_conv(o2p_sim, colors[3])
-
-    plot_conv_all(o2_sim, colors[2])
-    # plot_conv_all(o2p_sim, colors[5])
-
-    plot_inst(o2_sim, colors[3], 2)
-    # plot_inst(o2p_sim, colors[7], 15)
-
-    plot_inst_all(o2_sim, colors[4], 2)
-    # plot_inst_all(o2p_sim, colors[9], 15)
+    plot_conv(o2_sim, colors[0])
+    plot_samp('harvard/harvard20', colors[1], 'plot')
 
     plt.legend()
     plt.show()

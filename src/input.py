@@ -21,17 +21,17 @@ STATE_LO: str = 'x3sg'
 # NOTE: temperature used in Cosby (0, 9) is 300 K, pressure is 2666.45 Pa
 
 # predissociation constants
-PD_DATA = pd.read_csv('../data/predissociation.csv', delimiter=' ')
+PD_DATA = pd.read_csv('../data/predissociation/o2.csv')
 
 # Franck-Condon factors
-FC_DATA = np.loadtxt('../data/franck-condon/cheung_rkr_fc.csv', delimiter=' ')
+FC_DATA = np.loadtxt('../data/franck-condon/o2.csv', delimiter=',')
 
 # rotational levels
 # Cosby predissociation data only goes up to N = 36
 ROT_LVLS: np.ndarray = np.arange(0, 36, 1)
 
 # list of vibrational transitions considered in (v', v'') format
-VIB_BANDS: list[tuple[int, int]] = [(2, 0)]
+VIB_BANDS: list[tuple[int, int]] = [(0, 6), (4, 8)]
 
 # band origin override
 BAND_ORIG: tuple[bool, int] = (False, 36185)
@@ -57,7 +57,7 @@ CONV_ALL:  bool = False
 CONV_GRAN: int  = 50000
 
 # sample data
-SAMP_DATA: bool = True
+SAMP_DATA: bool = False
 SAMP_FILE: list[str] = ['pgopher']
 SAMP_COLS: list[str] = ['purple']
 SAMP_LABL: list[str] = ['pgopher']

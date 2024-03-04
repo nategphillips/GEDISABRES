@@ -348,7 +348,12 @@ def main():
     plot_line(o2_sim, 'r', max_intn)
     plot_line(o2p_sim, 'b', max_intn)
 
-    plot_conv(o2_sim, 'k', 10000)
+    plot_conv(o2_sim, 'r', 10000)
+    plot_conv(o2p_sim, 'b', 10000)
+
+    # TODO: instrument function applied to each vibrational band
+    # TODO: take all lines from all bands, make into a single array, convolve said array
+    # TODO: franck condon factors
 
     plt.legend()
     plt.show()

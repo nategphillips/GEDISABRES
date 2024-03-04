@@ -24,11 +24,12 @@ class Atom:
 
 class Molecule:
     def __init__(self, name: str, atom_1: str, atom_2: str) -> None:
-        self.name:   str          = name
-        self.atom_1: Atom         = Atom(atom_1)
-        self.atom_2: Atom         = Atom(atom_2)
-        self.consts: pd.DataFrame = pd.read_csv(f'../data/molecular_constants/{self.name}.csv',
-                                                index_col=0)
+        self.name:    str          = name
+        self.atom_1:  Atom         = Atom(atom_1)
+        self.atom_2:  Atom         = Atom(atom_2)
+        self.consts:  pd.DataFrame = pd.read_csv(f'../data/molecular_constants/{self.name}.csv',
+                                                 index_col=0)
+        self.prediss: pd.DataFrame = pd.read_csv(f'../data/predissociation/{self.name}.csv')
 
         self.molecular_mass: float = self.atom_1.mass + self.atom_2.mass
         self.reduced_mass:   float = self.atom_1.mass * self.atom_2.mass / self.molecular_mass
@@ -51,7 +52,7 @@ class Simulation:
         self.allowed_lines: np.ndarray            = self.get_allowed_lines()
         self.vib_bands:     list[VibrationalBand] = [VibrationalBand(vib_band, self.allowed_lines,
                                                                      self.state_up, self.state_lo,
-                                                                     self.temp)
+                                                                     self.temp, self)
                                                     for vib_band in vib_bands]
 
     def get_allowed_lines(self) -> np.ndarray:
@@ -111,23 +112,24 @@ class Simulation:
             for branch_idx_up in branch_indices:
                 if branch_idx_lo == branch_idx_up:
                     lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                              branch_idx_lo, branch_main))
+                                              branch_idx_lo, branch_main, self.molecule))
                 elif branch_idx_lo > branch_idx_up:
                     if self.state_up.name == 'b3su':
                         lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                                  branch_idx_lo, branch_secondary))
+                                                  branch_idx_lo, branch_secondary, self.molecule))
 
         return lines
 
 class VibrationalBand:
     def __init__(self, name: tuple[int, int], lines: np.ndarray, state_up: ElectronicState,
-                 state_lo: ElectronicState, temp: float) -> None:
+                 state_lo: ElectronicState, temp: float, sim: Simulation) -> None:
         self.vib_qn_up:   int             = name[0]
         self.vib_qn_lo:   int             = name[1]
         self.lines:       np.ndarray      = lines
         self.state_up:    ElectronicState = state_up
         self.state_lo:    ElectronicState = state_lo
         self.temp:        float           = temp
+        self.sim:         Simulation      = sim
         self.band_origin: float           = self.get_band_origin()
 
     def get_band_origin(self) -> float:
@@ -138,14 +140,29 @@ class VibrationalBand:
 
         return elc_energy + vib_energy
 
-    def wavenumbers(self) -> np.ndarray:
+    def wavenumbers_line(self) -> np.ndarray:
         return np.array([line.wavenumber(self.band_origin, self.vib_qn_up, self.vib_qn_lo,
                                          self.state_up, self.state_lo) for line in self.lines])
 
-    def intensities(self) -> np.ndarray:
+    def intensities_line(self) -> np.ndarray:
         return np.array([line.intensity(self.band_origin, self.vib_qn_up, self.vib_qn_lo,
                                         self.state_up, self.state_lo, self.temp)
                                         for line in self.lines])
+
+    def wavenumbers_conv(self, granularity: int) -> np.ndarray:
+        existing_wavenumbers = self.wavenumbers_line()
+
+        return np.linspace(existing_wavenumbers.min(), existing_wavenumbers.max(), granularity)
+
+    def intensities_conv(self, granularity: int):
+        convolved_wavenumbers = self.wavenumbers_conv(granularity)
+        convolved_intensities = np.zeros_like(convolved_wavenumbers)
+
+        for idx, (wave, intn) in enumerate(zip(self.wavenumbers_line(), self.intensities_line())):
+            convolved_intensities += intn * broadening_fn(self.sim, convolved_wavenumbers, wave,
+                                                          self.lines, idx)
+
+        return convolved_intensities / convolved_intensities.max()
 
 @dataclass
 class SpectralLine:
@@ -154,6 +171,14 @@ class SpectralLine:
     branch_idx_up: int
     branch_idx_lo: int
     branch:        str
+    molecule:      Molecule
+
+    def predissociation(self) -> float:
+        if self.molecule.name == 'o2':
+            return self.molecule.prediss[f'f{self.branch_idx_lo}'] \
+                                        [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0]
+
+        return 1
 
     def wavenumber(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int,
                    state_up: ElectronicState, state_lo: ElectronicState) -> float:
@@ -263,13 +288,18 @@ def rotational_term(rot_qn: int, vib_qn: int, state: ElectronicState, branch_idx
             case _:
                 raise ValueError('error')
 
-def plot_lines(sim: Simulation, color: str, max_intn: float) -> None:
+def plot_line(sim: Simulation, color: str, max_intn: float) -> None:
     for vib_band in sim.vib_bands:
-        plt.stem(vib_band.wavenumbers(), vib_band.intensities() / max_intn, color, markerfmt='',
-                 label=sim.molecule.name)
+        plt.stem(vib_band.wavenumbers_line(), vib_band.intensities_line() / max_intn, color,
+                 markerfmt='', label=f'{sim.molecule.name} line')
+
+def plot_conv(sim: Simulation, color: str, granularity: int) -> None:
+    for vib_band in sim.vib_bands:
+        plt.plot(vib_band.wavenumbers_conv(granularity), vib_band.intensities_conv(granularity),
+                 color, label=f'{sim.molecule.name} conv')
 
 def broadening_fn(sim: Simulation, convolved_wavenumbers: np.ndarray,
-                  wavenumber_peak: float) -> float:
+                  wavenumber_peak: float, lines: np.ndarray, line_idx: int) -> float:
     # TODO: 11/19/23 this function needs to be reworked since I also want to include the ability to
     #                convolve with an instrument function - ideally it takes in a convolution type
     #                and broadening parameters
@@ -288,7 +318,7 @@ def broadening_fn(sim: Simulation, convolved_wavenumbers: np.ndarray,
               np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * BOLTZ * sim.temp)) / 2
 
     # predissociation (Lorentzian)
-    prediss = 0 # lines[idx].predissociation()
+    prediss = lines[line_idx].predissociation()
 
     # TODO: this might be wrong, not sure if the parameters just add together or what
     gauss = doppler
@@ -298,20 +328,6 @@ def broadening_fn(sim: Simulation, convolved_wavenumbers: np.ndarray,
     fadd = ((convolved_wavenumbers - wavenumber_peak) + 1j * loren) / (gauss * np.sqrt(2))
 
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
-
-def convolve_lines(sim: Simulation, band: VibrationalBand,
-                   convolved_wavenumbers: np.ndarray) -> np.ndarray:
-    convolved_intensities = np.zeros_like(convolved_wavenumbers)
-
-    for _, line in enumerate(sim.allowed_lines):
-        convolved_intensities += line.intensity(band.band_origin, band.vib_qn_up, band.vib_qn_lo,
-                                                sim.state_up, sim.state_lo, sim.temp) * \
-                                                broadening_fn(sim, convolved_wavenumbers,
-                                                line.wavenumber(band.band_origin, band.vib_qn_up,
-                                                                band.vib_qn_lo, sim.state_up,
-                                                                sim.state_lo))
-
-    return convolved_intensities / convolved_intensities.max()
 
 def main():
     default_temp = 300    # [K]
@@ -323,19 +339,17 @@ def main():
     o2_sim  = Simulation(mol_o2, default_temp, default_pres,
                          np.arange(0, 36, 1), 'b3su', 'x3sg', [(0, 6)])
     o2p_sim = Simulation(mol_o2p, default_temp, default_pres,
-                         np.arange(0.5, 25.5, 1), 'a2pu', 'x2pg', [(0, 0)])
+                         np.arange(0.5, 35.5, 1), 'a2pu', 'x2pg', [(0, 0)])
 
-    max_o2   = np.array([vib_band.intensities() for vib_band in o2_sim.vib_bands]).flatten().max()
-    max_o2p  = np.array([vib_band.intensities() for vib_band in o2p_sim.vib_bands]).flatten().max()
+    max_o2   = np.array([vib_band.intensities_line() for vib_band in o2_sim.vib_bands]).flatten().max()
+    max_o2p  = np.array([vib_band.intensities_line() for vib_band in o2p_sim.vib_bands]).flatten().max()
     max_intn = max(max_o2, max_o2p)
 
-    plot_lines(o2_sim, 'r', max_intn)
-    plot_lines(o2p_sim, 'b', max_intn)
+    plot_line(o2_sim, 'r', max_intn)
+    plot_line(o2p_sim, 'b', max_intn)
 
-    conv_wns = np.linspace(39600, 40400, 5000)
-    conv_ins = convolve_lines(o2_sim, o2_sim.vib_bands[0], conv_wns)
+    plot_conv(o2_sim, 'k', 10000)
 
-    plt.plot(conv_wns, conv_ins)
     plt.legend()
     plt.show()
 

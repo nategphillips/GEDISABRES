@@ -14,10 +14,9 @@ import terms
 if TYPE_CHECKING:
     from simulation import Simulation
 
-class VibrationalBand:
-    def __init__(self, name: tuple[int, int], lines: np.ndarray, state_up: State,
-                 state_lo: State, temp: float, sim: Simulation,
-                 molecule: Molecule) -> None:
+class Band:
+    def __init__(self, name: tuple[int, int], lines: np.ndarray, state_up: State, state_lo: State,
+                 temp: float, sim: Simulation, molecule: Molecule) -> None:
         self.name:          tuple      = name
         self.vib_qn_up:     int        = name[0]
         self.vib_qn_lo:     int        = name[1]

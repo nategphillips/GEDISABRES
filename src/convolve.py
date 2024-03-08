@@ -30,12 +30,12 @@ def convolve_brod(sim: Simulation, lines: np.ndarray, wavenumbers_line: np.ndarr
     return intensities_conv
 
 def instrument_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
-                  broadening: float) -> float:
+                  broadening: float) -> np.ndarray:
     return np.exp(- 0.5 * (convolved_wavenumbers - wavenumber_peak)**2 / broadening**2) / \
            (broadening * np.sqrt(2 * np.pi))
 
 def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.ndarray,
-                  wavenumber_peak: float, line_idx: int) -> float:
+                  wavenumber_peak: float, line_idx: int) -> np.ndarray:
 
     # natural (Lorentzian)
     natural = sim.state_lo.cross_section**2 * \

@@ -10,7 +10,7 @@ import constants as cn
 import terms
 
 @dataclass
-class SpectralLine:
+class Line:
     rot_qn_up:     int
     rot_qn_lo:     int
     branch_idx_up: int

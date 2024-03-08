@@ -2,10 +2,10 @@
 
 import numpy as np
 
-from vibrationalband import VibrationalBand
-from spectralline import SpectralLine
 from molecule import Molecule
 from state import State
+from band import Band
+from line import Line
 import input as inp
 import convolve
 
@@ -19,9 +19,8 @@ class Simulation:
         self.state_up:      State      = State(state_up, self.molecule.consts)
         self.state_lo:      State      = State(state_lo, self.molecule.consts)
         self.allowed_lines: np.ndarray = self.get_allowed_lines()
-        self.vib_bands:     list[VibrationalBand] = [VibrationalBand(vib_band, self.allowed_lines,
-                                               self.state_up, self.state_lo,
-                                               self.temp, self, self.molecule)
+        self.vib_bands:     list[Band] = [Band(vib_band, self.allowed_lines, self.state_up,
+                                               self.state_lo, self.temp, self, self.molecule)
                                          for vib_band in vib_bands]
         self.max_fc:        float      = max(vib_band.franck_condon for vib_band in self.vib_bands)
 
@@ -81,18 +80,18 @@ class Simulation:
         for branch_idx_lo in branch_range:
             for branch_idx_up in branch_range:
                 if branch_idx_lo == branch_idx_up:
-                    lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                    lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
                                       branch_idx_lo, branch_main, self.molecule))
                 if self.molecule.name == 'o2':
                     # NOTE: 03/04/24 don't have Honl-London factors for satellite bands, therefore
                     #                can't do anything other than O2 for now
                     if branch_main == 'p':
                         if branch_idx_lo < branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
                                               branch_idx_lo, branch_secondary, self.molecule))
                     elif branch_main == 'r':
                         if branch_idx_lo > branch_idx_up:
-                            lines.append(SpectralLine(rot_qn_up, rot_qn_lo, branch_idx_up,
+                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
                                               branch_idx_lo, branch_secondary, self.molecule))
 
         return lines

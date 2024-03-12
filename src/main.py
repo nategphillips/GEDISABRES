@@ -25,8 +25,7 @@ def main():
     plot.plot_conv(o2_sim, colors[0])
     plot.plot_samp('harvard/harvard20', colors[1], 'plot')
 
-    plt.legend()
-    plt.show()
+    plot.plot_show()
 
 if __name__ == '__main__':
     main()

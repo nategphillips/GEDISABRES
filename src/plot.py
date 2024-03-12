@@ -3,6 +3,7 @@
 import scienceplots # pylint: disable = unused-import
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 
 from simulation import Simulation
 import convolve
@@ -14,7 +15,7 @@ def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
 
     wavenumbers = sample_data['wavenumbers'].to_numpy()
     intensities = sample_data['intensities'].to_numpy()
-    intensities /= max(intensities)
+    intensities /= np.max(intensities)
 
     if plot_as == 'stem':
         plt.stem(wavenumbers, intensities, color, markerfmt='', label=samp_file)
@@ -43,7 +44,7 @@ def plot_conv(sim: Simulation, color: str) -> None:
 def plot_conv_all(sim: Simulation, color: str) -> None:
     wavenumbers_conv, intensities_conv = sim.all_convolved_data()
 
-    intensities_conv /= intensities_conv.max()
+    intensities_conv /= np.max(intensities_conv)
 
     plt.plot(wavenumbers_conv, intensities_conv, color, label=f'{sim.molecule.name} conv all')
 
@@ -56,6 +57,6 @@ def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:
     wavenumbers_conv, intensities_conv = sim.all_convolved_data()
     intensities_inst = convolve.convolve_inst(wavenumbers_conv, intensities_conv, broadening)
 
-    intensities_inst /= intensities_inst.max()
+    intensities_inst /= np.max(intensities_inst)
 
     plt.plot(wavenumbers_conv, intensities_inst, color, label=f'{sim.molecule.name} inst all')

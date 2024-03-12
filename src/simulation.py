@@ -106,7 +106,7 @@ class Simulation:
             intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
             lines            = np.concatenate((lines, vib_band.lines))
 
-        wavenumbers_conv = np.linspace(wavenumbers_line.min(), wavenumbers_line.max(),
+        wavenumbers_conv = np.linspace(np.min(wavenumbers_line), np.max(wavenumbers_line),
                                        inp.GRANULARITY)
         intensities_conv = convolve.convolve_brod(self, lines, wavenumbers_line, intensities_line,
                                                   wavenumbers_conv)

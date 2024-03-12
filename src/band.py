@@ -47,7 +47,7 @@ class Band:
                                                     self.temp)
                                     for line in self.lines])
 
-        intensities_line /= intensities_line.max()
+        intensities_line /= np.max(intensities_line)
         intensities_line *= self.franck_condon / self.sim.max_fc
 
         return intensities_line
@@ -55,13 +55,13 @@ class Band:
     def wavenumbers_conv(self) -> np.ndarray:
         wavenumbers_line = self.wavenumbers_line()
 
-        return np.linspace(wavenumbers_line.min(), wavenumbers_line.max(), inp.GRANULARITY)
+        return np.linspace(np.min(wavenumbers_line), np.max(wavenumbers_line), inp.GRANULARITY)
 
     def intensities_conv(self) -> np.ndarray:
         intensities_conv = convolve.convolve_brod(self.sim, self.lines, self.wavenumbers_line(),
                                                   self.intensities_line(), self.wavenumbers_conv())
 
-        intensities_conv /= intensities_conv.max()
+        intensities_conv /= np.max(intensities_conv)
         intensities_conv *= self.franck_condon / self.sim.max_fc
 
         return intensities_conv
@@ -70,7 +70,7 @@ class Band:
         intensities_inst = convolve.convolve_inst(self.wavenumbers_conv(), self.intensities_conv(),
                                                   broadening)
 
-        intensities_inst /= intensities_inst.max()
+        intensities_inst /= np.max(intensities_inst)
         intensities_inst *= self.franck_condon / self.sim.max_fc
 
         return intensities_inst

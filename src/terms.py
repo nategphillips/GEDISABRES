@@ -22,7 +22,7 @@ def rotational_constants(state: State, vib_qn: int) -> list[float]:
 
     return [b_v, d_v, h_v]
 
-def rotational_term(rot_qn: int, vib_qn: int, state: State, branch_idx: int) -> float:
+def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> float:
     b, d, h = rotational_constants(state, vib_qn)
 
     if state.name in ('b3su', 'x3sg'):

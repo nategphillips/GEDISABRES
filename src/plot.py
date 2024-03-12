@@ -10,6 +10,25 @@ import convolve
 
 # plt.style.use(['science', 'grid'])
 
+def plot_show():
+    ax = plt.gca()
+
+    def inverse(x):
+        x = np.array(x, float)
+        near_zero = np.isclose(x, 0)
+        x[near_zero] = np.inf
+        x[~near_zero] = 1 / x[~near_zero]
+        return x * 1e7
+
+    secax = ax.secondary_xaxis('top', functions=(inverse, inverse))
+    secax.set_xlabel('Wavelength $\\lambda$, [nm]')
+
+    plt.xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    plt.ylabel('Normalized Intensity')
+
+    plt.legend()
+    plt.show()
+
 def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
     sample_data = pd.read_csv(f'../data/samples/{samp_file}.csv')
 
@@ -17,10 +36,13 @@ def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
     intensities = sample_data['intensities'].to_numpy()
     intensities /= np.max(intensities)
 
-    if plot_as == 'stem':
-        plt.stem(wavenumbers, intensities, color, markerfmt='', label=samp_file)
-    else:
-        plt.plot(wavenumbers, intensities, color, label=samp_file)
+    match plot_as:
+        case 'stem':
+            plt.stem(wavenumbers, intensities, color, markerfmt='', label=samp_file)
+        case 'plot':
+            plt.plot(wavenumbers, intensities, color, label=samp_file)
+        case _:
+            raise ValueError(f'Invalid value for plot_as: {plot_as}.')
 
 def plot_info(sim: Simulation) -> None:
     for vib_band in sim.vib_bands:

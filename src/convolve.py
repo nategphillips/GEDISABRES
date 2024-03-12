@@ -52,7 +52,7 @@ def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.
 
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
 
-def broadening_params(sim: Simulation):
+def broadening_params(sim: Simulation) -> tuple[float, float]:
     natural = sim.state_lo.cross_section**2 * \
               np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * cn.BOLTZ * sim.temp)) / 4
 

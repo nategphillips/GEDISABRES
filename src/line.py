@@ -28,15 +28,15 @@ class Line:
     def wavenumber(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
                    state_lo: State) -> float:
         return band_origin + \
-               terms.rotational_term(self.rot_qn_up, vib_qn_up, state_up, self.branch_idx_up) - \
-               terms.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo, self.branch_idx_lo)
+               terms.rotational_term(state_up, vib_qn_up, self.rot_qn_up, self.branch_idx_up) - \
+               terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo, self.branch_idx_lo)
 
     def intensity(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
                   state_lo: State, temp: float) -> float:
         part = cn.BOLTZ * temp / (cn.PLANC * cn.LIGHT * state_lo.consts['b_e'])
 
         base = self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part * \
-               np.exp(- terms.rotational_term(self.rot_qn_lo, vib_qn_lo, state_lo,
+               np.exp(- terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
                                               self.branch_idx_lo) * \
                       cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp))
 

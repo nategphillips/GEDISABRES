@@ -34,11 +34,15 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
             case 1:
                 return x * b - (x**2 + 4 * x) * d
 
+            case 2:
+                return x * b - x**2 * d + x**3 * h
+
             case 3:
                 return (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * l - g
 
             case _:
-                return x * b - x**2 * d + x**3 * h
+                raise ValueError('Invalid branch index.')
+
     else:
         lamb = 1
         a = state.consts['coupling']
@@ -54,4 +58,4 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
                        0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) - \
                        d * (rot_qn + 1)**4
             case _:
-                raise ValueError('error')
+                raise ValueError('Invalid branch index.')

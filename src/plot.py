@@ -53,14 +53,14 @@ def plot_info(sim: Simulation) -> None:
         for idx, line in enumerate(lines):
             plt.text(wavenumbers_line[idx], intensities_line[idx], f'{line.branch}')
 
-def plot_line(sim: Simulation, color: str) -> None:
-    for vib_band in sim.vib_bands:
-        plt.stem(vib_band.wavenumbers_line(), vib_band.intensities_line(), color,
+def plot_line(sim: Simulation, colors: list) -> None:
+    for idx, vib_band in enumerate(sim.vib_bands):
+        plt.stem(vib_band.wavenumbers_line(), vib_band.intensities_line(), colors[idx],
                  markerfmt='', label=f'{sim.molecule.name} {vib_band.name} line')
 
-def plot_conv(sim: Simulation, color: str) -> None:
-    for vib_band in sim.vib_bands:
-        plt.plot(vib_band.wavenumbers_conv(), vib_band.intensities_conv(), color,
+def plot_conv(sim: Simulation, colors: list) -> None:
+    for idx, vib_band in enumerate(sim.vib_bands):
+        plt.plot(vib_band.wavenumbers_conv(), vib_band.intensities_conv(), colors[idx],
                  label=f'{sim.molecule.name} {vib_band.name} conv')
 
 def plot_conv_all(sim: Simulation, color: str) -> None:
@@ -70,9 +70,9 @@ def plot_conv_all(sim: Simulation, color: str) -> None:
 
     plt.plot(wavenumbers_conv, intensities_conv, color, label=f'{sim.molecule.name} conv all')
 
-def plot_inst(sim: Simulation, color: str, broadening: float) -> None:
-    for vib_band in sim.vib_bands:
-        plt.plot(vib_band.wavenumbers_conv(), vib_band.intensities_inst(broadening), color,
+def plot_inst(sim: Simulation, colors: list, broadening: float) -> None:
+    for idx, vib_band in enumerate(sim.vib_bands):
+        plt.plot(vib_band.wavenumbers_conv(), vib_band.intensities_inst(broadening), colors[idx],
                  label=f'{sim.molecule.name} {vib_band.name} inst')
 
 def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:

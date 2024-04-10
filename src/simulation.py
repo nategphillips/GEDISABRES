@@ -10,36 +10,16 @@ import input as inp
 import convolve
 
 class Simulation:
-    def __init__(self, molecule: Molecule, temp: float, pres: float, rot_lvls: np.ndarray,
-                 state_up: str, state_lo: str, vib_bands: list[tuple[int, int]]) -> None:
-        self.molecule:      Molecule   = molecule
-        self.temp:          float      = temp
-        self.pres:          float      = pres
-        self.rot_lvls:      np.ndarray = rot_lvls
-        self.state_up:      State      = State(state_up, self.molecule.consts)
-        self.state_lo:      State      = State(state_lo, self.molecule.consts)
-        self.allowed_lines: np.ndarray = self.get_allowed_lines()
-        self.vib_bands:     list[Band] = [Band(vib_band, self.allowed_lines, self.state_up,
-                                               self.state_lo, self.temp, self, self.molecule)
-                                         for vib_band in vib_bands]
-        self.max_fc:        float      = max(vib_band.franck_condon for vib_band in self.vib_bands)
-
-    def get_allowed_lines(self) -> np.ndarray:
-        lines = []
-
-        for rot_qn_lo in self.rot_lvls:
-            for rot_qn_up in self.rot_lvls:
-                d_rot_qn = rot_qn_up - rot_qn_lo
-
-                if self.state_up.name == 'b3su':
-                    rule = rot_qn_lo
-                else:
-                    rule = rot_qn_lo + 0.5
-
-                if rule % 2:
-                    lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo, d_rot_qn))
-
-        return np.array(lines)
+    def __init__(self, molecule: Molecule, temp: float, pres: float, state_up: str,
+                 state_lo: str) -> None:
+        self.molecule:  Molecule   = molecule
+        self.temp:      float      = temp
+        self.pres:      float      = pres
+        self.state_up:  State      = State(state_up, self.molecule.consts)
+        self.state_lo:  State      = State(state_lo, self.molecule.consts)
+        # to be overwritten by child classes
+        self.vib_bands: list[Band] = []
+        self.max_fc:    float      = 0
 
     def get_allowed_branches(self, rot_qn_up: int, rot_qn_lo: int, d_rot_qn: int) -> list[float]:
         lines = []
@@ -112,3 +92,62 @@ class Simulation:
                                                   wavenumbers_conv)
 
         return wavenumbers_conv, intensities_conv
+
+class LIF(Simulation):
+    def __init__(self, molecule: Molecule, temp: float, pres: float, rot_qn_up: int, rot_qn_lo: int,
+                 vib_qn_up: int, vib_qn_lo_max: int, state_up: str, state_lo: str) -> None:
+        Simulation.__init__(self, molecule, temp, pres, state_up, state_lo)
+        self.rot_qn_up:     int         = rot_qn_up
+        self.rot_qn_lo:     int         = rot_qn_lo
+        self.vib_qn_up:     int         = vib_qn_up
+        self.vib_qn_lo_max: int         = vib_qn_lo_max
+        self.allowed_lines: np.ndarray  = self.get_allowed_lines()
+        self.band_list:     list[tuple] = [(self.vib_qn_up, vib_qn_lo) for vib_qn_lo
+                                           in range(self.vib_qn_lo_max + 1)]
+        self.vib_bands:     list[Band]  = [Band(vib_band, self.allowed_lines, self.state_up,
+                                                self.state_lo, self.temp, self, self.molecule)
+                                           for vib_band in self.band_list]
+        self.max_fc:        float       = max(vib_band.franck_condon for vib_band in self.vib_bands)
+
+    def get_allowed_lines(self) -> np.ndarray:
+        lines = []
+
+        d_rot_qn = self.rot_qn_up - self.rot_qn_lo
+
+        if self.state_up.name == 'b3su':
+            rule = self.rot_qn_lo
+        else:
+            rule = self.rot_qn_lo + 0.5
+
+        if rule % 2:
+            lines.extend(self.get_allowed_branches(self.rot_qn_up, self.rot_qn_lo, d_rot_qn))
+
+        return np.array(lines)
+
+class Spectra(Simulation):
+    def __init__(self, molecule: Molecule, temp: float, pres: float, rot_lvls: np.ndarray,
+                 state_up: str, state_lo: str, vib_bands: list[tuple[int, int]]) -> None:
+        Simulation.__init__(self, molecule, temp, pres, state_up, state_lo)
+        self.rot_lvls:      np.ndarray = rot_lvls
+        self.allowed_lines: np.ndarray = self.get_allowed_lines()
+        self.vib_bands:     list[Band] = [Band(vib_band, self.allowed_lines, self.state_up,
+                                               self.state_lo, self.temp, self, self.molecule)
+                                          for vib_band in vib_bands]
+        self.max_fc:        float      = max(vib_band.franck_condon for vib_band in self.vib_bands)
+
+    def get_allowed_lines(self) -> np.ndarray:
+        lines = []
+
+        for rot_qn_lo in self.rot_lvls:
+            for rot_qn_up in self.rot_lvls:
+                d_rot_qn = rot_qn_up - rot_qn_lo
+
+                if self.state_up.name == 'b3su':
+                    rule = rot_qn_lo
+                else:
+                    rule = rot_qn_lo + 0.5
+
+                if rule % 2:
+                    lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo, d_rot_qn))
+
+        return np.array(lines)

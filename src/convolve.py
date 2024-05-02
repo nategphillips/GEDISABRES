@@ -33,15 +33,15 @@ def convolve_brod(sim: Simulation, lines: np.ndarray, wavenumbers_line: np.ndarr
 
 def instrument_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
                   broadening: float) -> np.ndarray:
-    return np.exp(- 0.5 * (convolved_wavenumbers - wavenumber_peak)**2 / broadening**2) / \
-           (broadening * np.sqrt(2 * np.pi))
+    return (np.exp(- 0.5 * (convolved_wavenumbers - wavenumber_peak)**2 / broadening**2) /
+           (broadening * np.sqrt(2 * np.pi)))
 
 def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.ndarray,
                   wavenumber_peak: float, line_idx: int, natural: float,
                   collide: float) -> np.ndarray:
 
-    doppler = wavenumber_peak * \
-              np.sqrt(cn.BOLTZ * sim.temp / (sim.molecule.molecular_mass * (cn.LIGHT / 1e2)**2))
+    doppler = (wavenumber_peak *
+               np.sqrt(cn.BOLTZ * sim.temp / (sim.molecule.molecular_mass * (cn.LIGHT / 1e2)**2)))
 
     prediss = lines[line_idx].predissociation()
 
@@ -53,10 +53,10 @@ def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
 
 def broadening_params(sim: Simulation) -> tuple[float, float]:
-    natural = sim.state_lo.cross_section**2 * \
-              np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * cn.BOLTZ * sim.temp)) / 4
+    natural = (sim.state_lo.cross_section**2 *
+               np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * cn.BOLTZ * sim.temp)) / 4)
 
-    collide = (sim.pres * 10) * sim.state_lo.cross_section**2 * \
-              np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * cn.BOLTZ * sim.temp)) / 2
+    collide = ((sim.pres * 10) * sim.state_lo.cross_section**2 *
+               np.sqrt(8 / (np.pi * sim.molecule.reduced_mass * cn.BOLTZ * sim.temp)) / 2)
 
     return natural, collide

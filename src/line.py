@@ -20,25 +20,24 @@ class Line:
 
     def predissociation(self) -> float:
         if self.molecule.name == 'o2':
-            return self.molecule.prediss[f'f{self.branch_idx_lo}'] \
-                                        [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0]
+            return (self.molecule.prediss[f'f{self.branch_idx_lo}']
+                    [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0])
 
         return 0
 
     def wavenumber(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
                    state_lo: State) -> float:
-        return band_origin + \
-               terms.rotational_term(state_up, vib_qn_up, self.rot_qn_up, self.branch_idx_up) - \
-               terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo, self.branch_idx_lo)
+        return (band_origin +
+                terms.rotational_term(state_up, vib_qn_up, self.rot_qn_up, self.branch_idx_up) -
+                terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo, self.branch_idx_lo))
 
     def intensity(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
                   state_lo: State, temp: float) -> float:
         part = cn.BOLTZ * temp / (cn.PLANC * cn.LIGHT * state_lo.consts['b_e'])
 
-        base = self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part * \
-               np.exp(- terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
-                                              self.branch_idx_lo) * \
-                      cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp))
+        base = (self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part *
+                np.exp(- terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
+                self.branch_idx_lo) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp)))
 
         if state_up.name == 'b3su':
             match self.branch:
@@ -60,16 +59,16 @@ class Line:
 
             match self.branch:
                 case 'r':
-                    linestr = ((self.rot_qn_lo + 1 + lambda_lo) * \
-                               (self.rot_qn_lo + 1 - lambda_lo)) / (self.rot_qn_lo + 1)
+                    linestr = (((self.rot_qn_lo + 1 + lambda_lo) *
+                                (self.rot_qn_lo + 1 - lambda_lo)) / (self.rot_qn_lo + 1))
                     intn = base * linestr
                 case 'p':
-                    linestr = ((self.rot_qn_lo + lambda_lo) * \
-                               (self.rot_qn_lo - lambda_lo)) / self.rot_qn_lo
+                    linestr = (((self.rot_qn_lo + lambda_lo) *
+                                (self.rot_qn_lo - lambda_lo)) / self.rot_qn_lo)
                     intn = base * linestr
                 case 'q':
-                    linestr = ((2 * self.rot_qn_lo + 1) * lambda_lo**2) / \
-                              (self.rot_qn_lo * (self.rot_qn_lo + 1))
+                    linestr = (((2 * self.rot_qn_lo + 1) * lambda_lo**2) /
+                               (self.rot_qn_lo * (self.rot_qn_lo + 1)))
                     intn = base * linestr
 
         return intn

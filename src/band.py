@@ -32,8 +32,8 @@ class Band:
     def get_band_origin(self) -> float:
         elc_energy = self.state_up.consts['t_e'] - self.state_lo.consts['t_e']
 
-        vib_energy = terms.vibrational_term(self.state_up, self.vib_qn_up) - \
-                     terms.vibrational_term(self.state_lo, self.vib_qn_lo)
+        vib_energy = (terms.vibrational_term(self.state_up, self.vib_qn_up) -
+                      terms.vibrational_term(self.state_lo, self.vib_qn_lo))
 
         return elc_energy + vib_energy
 

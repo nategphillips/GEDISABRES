@@ -5,16 +5,16 @@ import numpy as np
 from state import State
 
 def vibrational_term(state: State, vib_qn: int) -> float:
-    return state.consts['w_e']   * (vib_qn + 0.5)    - \
-           state.consts['we_xe'] * (vib_qn + 0.5)**2 + \
-           state.consts['we_ye'] * (vib_qn + 0.5)**3 + \
-           state.consts['we_ze'] * (vib_qn + 0.5)**4
+    return (state.consts['w_e']   * (vib_qn + 0.5)    -
+            state.consts['we_xe'] * (vib_qn + 0.5)**2 +
+            state.consts['we_ye'] * (vib_qn + 0.5)**3 +
+            state.consts['we_ze'] * (vib_qn + 0.5)**4)
 
 def rotational_constants(state: State, vib_qn: int) -> list[float]:
-    b_v = state.consts['b_e']                        - \
-          state.consts['alph_e'] * (vib_qn + 0.5)    + \
-          state.consts['gamm_e'] * (vib_qn + 0.5)**2 + \
-          state.consts['delt_e'] * (vib_qn + 0.5)**3
+    b_v = (state.consts['b_e']                        -
+           state.consts['alph_e'] * (vib_qn + 0.5)    +
+           state.consts['gamm_e'] * (vib_qn + 0.5)**2 +
+           state.consts['delt_e'] * (vib_qn + 0.5)**3)
 
     d_v = state.consts['d_e'] - state.consts['beta_e'] * (vib_qn + 0.5)
 
@@ -50,12 +50,12 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
 
         match branch_idx:
             case 1:
-                return b * ((rot_qn + 0.5)**2 - lamb**2 - \
-                       0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) - \
-                       d * rot_qn**4
+                return (b * ((rot_qn + 0.5)**2 - lamb**2 -
+                        0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) -
+                        d * rot_qn**4)
             case 2:
-                return b * ((rot_qn + 0.5)**2 - lamb**2 + \
-                       0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) - \
-                       d * (rot_qn + 1)**4
+                return (b * ((rot_qn + 0.5)**2 - lamb**2 +
+                        0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) -
+                        d * (rot_qn + 1)**4)
             case _:
                 raise ValueError('Invalid branch index.')

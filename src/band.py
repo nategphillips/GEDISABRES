@@ -46,7 +46,7 @@ class Band:
         intensities_line = np.array([line.intensity(self.band_origin, self.vib_qn_up,
                                                     self.vib_qn_lo, self.state_up, self.state_lo,
                                                     self.temp)
-                                    for line in self.lines])
+                                     for line in self.lines])
 
         intensities_line /= np.max(intensities_line)
         intensities_line *= self.franck_condon / self.sim.max_fc

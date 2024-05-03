@@ -30,31 +30,26 @@ class Simulation:
 
             # P branch
             if d_rot_qn == -1:
-                lines.extend(self.get_branch_idx(
-                    rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
+                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
 
             # R branch
             elif d_rot_qn == 1:
-                lines.extend(self.get_branch_idx(
-                    rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
+                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
 
         else:
             branch_range = range(1, 3)
 
             # P branch
             if d_rot_qn == -1:
-                lines.extend(self.get_branch_idx(
-                    rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
+                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
 
             # Q branch
             elif d_rot_qn == 0:
-                lines.extend(self.get_branch_idx(
-                    rot_qn_up, rot_qn_lo, branch_range, 'q', 'qq'))
+                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'q', 'qq'))
 
             # R branch
             elif d_rot_qn == 1:
-                lines.extend(self.get_branch_idx(
-                    rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
+                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
 
         return lines
 
@@ -65,19 +60,19 @@ class Simulation:
         for branch_idx_lo in branch_range:
             for branch_idx_up in branch_range:
                 if branch_idx_lo == branch_idx_up:
-                    lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                      branch_idx_lo, branch_main, self.molecule))
+                    lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
+                                      branch_main, self.molecule))
                 if self.molecule.name == 'o2':
                     # NOTE: 03/04/24 don't have Honl-London factors for satellite bands, therefore
                     #                can't do anything other than O2 for now
                     if branch_main == 'p':
                         if branch_idx_lo < branch_idx_up:
-                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                              branch_idx_lo, branch_secondary, self.molecule))
+                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
+                                              branch_secondary, self.molecule))
                     elif branch_main == 'r':
                         if branch_idx_lo > branch_idx_up:
-                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up,
-                                              branch_idx_lo, branch_secondary, self.molecule))
+                            lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
+                                              branch_secondary, self.molecule))
 
         return lines
 
@@ -87,10 +82,8 @@ class Simulation:
         lines = np.ndarray([0])
 
         for vib_band in self.vib_bands:
-            wavenumbers_line = np.concatenate(
-                (wavenumbers_line, vib_band.wavenumbers_line()))
-            intensities_line = np.concatenate(
-                (intensities_line, vib_band.intensities_line()))
+            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
+            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
             lines = np.concatenate((lines, vib_band.lines))
 
         wavenumbers_conv = np.linspace(np.min(wavenumbers_line), np.max(wavenumbers_line),
@@ -157,7 +150,6 @@ class Spectra(Simulation):
                     rule = rot_qn_lo + 0.5
 
                 if rule % 2:
-                    lines.extend(self.get_allowed_branches(
-                        rot_qn_up, rot_qn_lo, d_rot_qn))
+                    lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo, d_rot_qn))
 
         return np.array(lines)

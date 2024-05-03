@@ -4,9 +4,9 @@ import pandas as pd
 
 import constants as cn
 
+
 class Atom:
     def __init__(self, name: str) -> None:
         self.name: str   = name
-        self.mass: float = (pd.read_csv('../data/atomic_masses.csv', index_col=0)
-                            .loc[self.name]
-                            .iloc[0] / cn.AVOGD / 1e3)
+        self.mass: float = (pd.read_csv('../data/atomic_masses.csv', index_col=0)['mass']['o'] /
+                            cn.AVOGD / 1e3)

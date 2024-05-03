@@ -9,6 +9,7 @@ from state import State
 import constants as cn
 import terms
 
+
 @dataclass
 class Line:
     rot_qn_up:     int
@@ -33,22 +34,27 @@ class Line:
 
     def intensity(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
                   state_lo: State, temp: float) -> float:
+        # NOTE: 05/02/24 this comes from an approximation of q_r from Herzberg pp. 125 - needs to be
+        #                calculated more accurately in the future
         part = cn.BOLTZ * temp / (cn.PLANC * cn.LIGHT * state_lo.consts['b_e'])
 
         base = (self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part *
                 np.exp(- terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
-                self.branch_idx_lo) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp)))
+                                               self.branch_idx_lo) * cn.PLANC * cn.LIGHT /
+                       (cn.BOLTZ * temp)))
 
         if state_up.name == 'b3su':
             match self.branch:
                 case 'r':
-                    linestr = ((self.rot_qn_lo + 1)**2 - 0.25) / (self.rot_qn_lo + 1)
+                    linestr = ((self.rot_qn_lo + 1)**2 - 0.25) / \
+                        (self.rot_qn_lo + 1)
                     intn = base * linestr
                 case 'p':
                     linestr = ((self.rot_qn_lo)**2 - 0.25) / (self.rot_qn_lo)
                     intn = base * linestr
                 case _:
-                    linestr = (2 * self.rot_qn_lo + 1) / (4 * self.rot_qn_lo * (self.rot_qn_lo + 1))
+                    linestr = (2 * self.rot_qn_lo + 1) / \
+                        (4 * self.rot_qn_lo * (self.rot_qn_lo + 1))
                     intn = base * linestr
 
             if self.branch_idx_lo in (1, 3):

@@ -14,6 +14,7 @@ import terms
 if TYPE_CHECKING:
     from simulation import Simulation
 
+
 class Band:
     def __init__(self, name: tuple[int, int], lines: np.ndarray, state_up: State, state_lo: State,
                  temp: float, sim: Simulation, molecule: Molecule) -> None:

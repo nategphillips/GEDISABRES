@@ -23,8 +23,7 @@ def wavenum_to_wavelen(x):
 def plot_show():
     ax = plt.gca()
 
-    secax = ax.secondary_xaxis('top', functions=(
-        wavenum_to_wavelen, wavenum_to_wavelen))
+    secax = ax.secondary_xaxis('top', functions=(wavenum_to_wavelen, wavenum_to_wavelen))
     secax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
 
     plt.xlabel('Wavelength $\\lambda$, [nm]')
@@ -44,8 +43,7 @@ def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
 
     match plot_as:
         case 'stem':
-            plt.stem(wavelengths, intensities, color,
-                     markerfmt='', label=samp_file)
+            plt.stem(wavelengths, intensities, color, markerfmt='', label=samp_file)
         case 'plot':
             plt.plot(wavelengths, intensities, color, label=samp_file)
         case _:
@@ -60,16 +58,15 @@ def plot_info(sim: Simulation) -> None:
         lines = vib_band.lines
 
         for idx, line in enumerate(lines):
-            plt.text(wavelengths_line[idx],
-                     intensities_line[idx], f'{line.branch}')
+            plt.text(wavelengths_line[idx], intensities_line[idx], f'{line.branch}')
 
 
 def plot_line(sim: Simulation, colors: list) -> None:
     for idx, vib_band in enumerate(sim.vib_bands):
         wavelengths_line = wavenum_to_wavelen(vib_band.wavenumbers_line())
 
-        plt.stem(wavelengths_line, vib_band.intensities_line(), colors[idx],
-                 markerfmt='', label=f'{sim.molecule.name} {vib_band.name} line')
+        plt.stem(wavelengths_line, vib_band.intensities_line(), colors[idx], markerfmt='',
+                 label=f'{sim.molecule.name} {vib_band.name} line')
 
 
 def plot_conv(sim: Simulation, colors: list) -> None:
@@ -86,8 +83,7 @@ def plot_conv_all(sim: Simulation, color: str) -> None:
 
     intensities_conv /= np.max(intensities_conv)
 
-    plt.plot(wavelengths_conv, intensities_conv, color,
-             label=f'{sim.molecule.name} conv all')
+    plt.plot(wavelengths_conv, intensities_conv, color, label=f'{sim.molecule.name} conv all')
 
 
 def plot_inst(sim: Simulation, colors: list, broadening: float) -> None:
@@ -105,5 +101,4 @@ def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:
     intensities_inst = convolve.convolve_inst(wavenumbers_conv, intensities_conv, broadening)
     intensities_inst /= np.max(intensities_inst)
 
-    plt.plot(wavelengths_conv, intensities_inst, color,
-             label=f'{sim.molecule.name} inst all')
+    plt.plot(wavelengths_conv, intensities_inst, color, label=f'{sim.molecule.name} inst all')

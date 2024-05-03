@@ -17,8 +17,7 @@ def convolve_inst(wavenumbers_conv: np.ndarray, intensities_conv: np.ndarray,
     intensities_inst = np.zeros_like(wavenumbers_conv)
 
     for wave, intn in zip(wavenumbers_conv, intensities_conv):
-        intensities_inst += intn * \
-            instrument_fn(wavenumbers_conv, wave, broadening)
+        intensities_inst += intn * instrument_fn(wavenumbers_conv, wave, broadening)
 
     return intensities_inst
 
@@ -53,8 +52,7 @@ def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.
     gauss = doppler
     loren = natural + collide + prediss
 
-    fadd = ((convolved_wavenumbers - wavenumber_peak) +
-            1j * loren) / (gauss * np.sqrt(2))
+    fadd = ((convolved_wavenumbers - wavenumber_peak) + 1j * loren) / (gauss * np.sqrt(2))
 
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
 

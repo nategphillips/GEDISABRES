@@ -4,11 +4,13 @@ import numpy as np
 
 from state import State
 
+
 def vibrational_term(state: State, vib_qn: int) -> float:
-    return (state.consts['w_e']   * (vib_qn + 0.5)    -
+    return (state.consts['w_e'] * (vib_qn + 0.5)      -
             state.consts['we_xe'] * (vib_qn + 0.5)**2 +
             state.consts['we_ye'] * (vib_qn + 0.5)**3 +
             state.consts['we_ze'] * (vib_qn + 0.5)**4)
+
 
 def rotational_constants(state: State, vib_qn: int) -> list[float]:
     b_v = (state.consts['b_e']                        -
@@ -21,6 +23,7 @@ def rotational_constants(state: State, vib_qn: int) -> list[float]:
     h_v = state.consts['h_e']
 
     return [b_v, d_v, h_v]
+
 
 def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> float:
     b, d, h = rotational_constants(state, vib_qn)

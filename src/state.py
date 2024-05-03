@@ -3,6 +3,7 @@
 import pandas as pd
 import numpy as np
 
+
 class State:
     def __init__(self, name: str, consts: pd.DataFrame) -> None:
         self.name:          str              = name

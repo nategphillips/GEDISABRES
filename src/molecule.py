@@ -5,6 +5,7 @@ import numpy as np
 
 from atom import Atom
 
+
 class Molecule:
     def __init__(self, name: str, atom_1: str, atom_2: str) -> None:
         self.name:    str          = name
@@ -15,6 +16,5 @@ class Molecule:
         self.prediss: pd.DataFrame = pd.read_csv(f'../data/predissociation/{self.name}.csv')
         self.fc_data: np.ndarray   = np.loadtxt(f'../data/franck-condon/{self.name}.csv',
                                                 delimiter=',')
-
         self.molecular_mass: float = self.atom_1.mass + self.atom_2.mass
         self.reduced_mass:   float = self.atom_1.mass * self.atom_2.mass / self.molecular_mass

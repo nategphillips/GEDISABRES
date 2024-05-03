@@ -9,6 +9,7 @@ from line import Line
 import input as inp
 import convolve
 
+
 class Simulation:
     def __init__(self, molecule: Molecule, temp: float, pres: float, state_up: str,
                  state_lo: str) -> None:
@@ -29,27 +30,31 @@ class Simulation:
 
             # P branch
             if d_rot_qn == -1:
-                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
+                lines.extend(self.get_branch_idx(
+                    rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
 
             # R branch
             elif d_rot_qn == 1:
-                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
+                lines.extend(self.get_branch_idx(
+                    rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
 
         else:
             branch_range = range(1, 3)
 
             # P branch
             if d_rot_qn == -1:
-                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
+                lines.extend(self.get_branch_idx(
+                    rot_qn_up, rot_qn_lo, branch_range, 'p', 'pq'))
 
             # Q branch
             elif d_rot_qn == 0:
-                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'q', 'qq'))
+                lines.extend(self.get_branch_idx(
+                    rot_qn_up, rot_qn_lo, branch_range, 'q', 'qq'))
 
             # R branch
             elif d_rot_qn == 1:
-                lines.extend(self.get_branch_idx(rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
-
+                lines.extend(self.get_branch_idx(
+                    rot_qn_up, rot_qn_lo, branch_range, 'r', 'rq'))
 
         return lines
 
@@ -79,12 +84,14 @@ class Simulation:
     def all_convolved_data(self) -> tuple[np.ndarray, np.ndarray]:
         wavenumbers_line = np.ndarray([0])
         intensities_line = np.ndarray([0])
-        lines            = np.ndarray([0])
+        lines = np.ndarray([0])
 
         for vib_band in self.vib_bands:
-            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
-            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
-            lines            = np.concatenate((lines, vib_band.lines))
+            wavenumbers_line = np.concatenate(
+                (wavenumbers_line, vib_band.wavenumbers_line()))
+            intensities_line = np.concatenate(
+                (intensities_line, vib_band.intensities_line()))
+            lines = np.concatenate((lines, vib_band.lines))
 
         wavenumbers_conv = np.linspace(np.min(wavenumbers_line), np.max(wavenumbers_line),
                                        inp.GRANULARITY)
@@ -92,6 +99,7 @@ class Simulation:
                                                   wavenumbers_conv)
 
         return wavenumbers_conv, intensities_conv
+
 
 class LIF(Simulation):
     def __init__(self, molecule: Molecule, temp: float, pres: float, rot_qn_up: int, rot_qn_lo: int,
@@ -124,6 +132,7 @@ class LIF(Simulation):
 
         return np.array(lines)
 
+
 class Spectra(Simulation):
     def __init__(self, molecule: Molecule, temp: float, pres: float, rot_lvls: np.ndarray,
                  state_up: str, state_lo: str, vib_bands: list[tuple[int, int]]) -> None:
@@ -148,6 +157,7 @@ class Spectra(Simulation):
                     rule = rot_qn_lo + 0.5
 
                 if rule % 2:
-                    lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo, d_rot_qn))
+                    lines.extend(self.get_allowed_branches(
+                        rot_qn_up, rot_qn_lo, d_rot_qn))
 
         return np.array(lines)

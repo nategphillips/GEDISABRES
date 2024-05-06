@@ -51,7 +51,7 @@ class Line:
                 case 'p':
                     linestr = ((self.rot_qn_lo)**2 - 0.25) / (self.rot_qn_lo)
                     intn = base * linestr
-                case _:
+                case 'pq' | 'rq':
                     linestr = (2 * self.rot_qn_lo + 1) / (4 * self.rot_qn_lo * (self.rot_qn_lo + 1))
                     intn = base * linestr
 

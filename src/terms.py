@@ -1,11 +1,12 @@
 # module term
 
-import numpy as np
-
 from state import State
 
 
 def vibrational_term(state: State, vib_qn: int) -> float:
+    # calculates the vibrational term for the vibrating rotator
+    # Herzberg p. 149, eq. (IV, 10)
+
     return (state.consts['w_e'] * (vib_qn + 0.5)      -
             state.consts['we_xe'] * (vib_qn + 0.5)**2 +
             state.consts['we_ye'] * (vib_qn + 0.5)**3 +
@@ -13,6 +14,9 @@ def vibrational_term(state: State, vib_qn: int) -> float:
 
 
 def rotational_constants(state: State, vib_qn: int) -> list[float]:
+    # calculates the rotational constants for the vibrating rotator
+    # Herzberg pp. 107-109, eqs. (III, 117-127)
+
     b_v = (state.consts['b_e']                        -
            state.consts['alph_e'] * (vib_qn + 0.5)    +
            state.consts['gamm_e'] * (vib_qn + 0.5)**2 +
@@ -26,39 +30,24 @@ def rotational_constants(state: State, vib_qn: int) -> list[float]:
 
 
 def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> float:
+    # calculates the rotational term value
+    # Bergeman, 1972 - The Fine Structure of O2
+
     b, d, h = rotational_constants(state, vib_qn)
 
-    if state.name in ('b3su', 'x3sg'):
-        x = rot_qn * (rot_qn + 1)
-        l = state.consts['lamd']
-        g = state.consts['gamm']
+    x    = rot_qn * (rot_qn + 1)
+    lamd = state.consts['lamd']
+    gamm = state.consts['gamm']
 
-        match branch_idx:
-            case 1:
-                return x * b - (x**2 + 4 * x) * d
-
-            case 2:
-                return x * b - x**2 * d + x**3 * h
-
-            case 3:
-                return (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * l - g
-
-            case _:
-                raise ValueError('Invalid branch index.')
-
-    else:
-        lamb = 1
-        a = state.consts['coupling']
-        y = a / b
-
-        match branch_idx:
-            case 1:
-                return (b * ((rot_qn + 0.5)**2 - lamb**2 -
-                        0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) -
-                        d * rot_qn**4)
-            case 2:
-                return (b * ((rot_qn + 0.5)**2 - lamb**2 +
-                        0.5 * np.sqrt(4 * (rot_qn + 0.5)**2 + y * (y - 4) * lamb**2)) -
-                        d * (rot_qn + 1)**4)
-            case _:
-                raise ValueError('Invalid branch index.')
+    match branch_idx:
+        # F1
+        case 1:
+            return x * b - (x**2 + 4 * x) * d
+        # F2
+        case 2:
+            return x * b - x**2 * d + x**3 * h
+        # F3
+        case 3:
+            return (x + 2) * b - (x**2 + 8 * x + 4) * d - 2 * lamd - gamm
+        case _:
+            raise ValueError('Invalid branch index.')

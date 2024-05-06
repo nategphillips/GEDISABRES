@@ -1,5 +1,8 @@
 # module line
 
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -9,6 +12,8 @@ from state import State
 import constants as cn
 import terms
 
+if TYPE_CHECKING:
+    from band import Band
 
 @dataclass
 class Line:
@@ -16,63 +21,57 @@ class Line:
     rot_qn_lo:     int
     branch_idx_up: int
     branch_idx_lo: int
-    branch:        str
+    branch_name:   str
+    band:          Band
     molecule:      Molecule
 
     def predissociation(self) -> float:
-        if self.molecule.name == 'o2':
-            return (self.molecule.prediss[f'f{self.branch_idx_lo}']
-                    [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0])
+        return (self.molecule.prediss[f'f{self.branch_idx_lo}']
+                [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0])
 
-        return 0
+    def wavenumber(self, state_up: State, state_lo: State, vib_qn_up: int, vib_qn_lo: int,
+                   band_origin: float) -> float:
+        # calculates the wavenumber
+        # Herzberg p. 168, eq. (IV, 24)
 
-    def wavenumber(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
-                   state_lo: State) -> float:
         return (band_origin +
                 terms.rotational_term(state_up, vib_qn_up, self.rot_qn_up, self.branch_idx_up) -
                 terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo, self.branch_idx_lo))
 
-    def intensity(self, band_origin: float, vib_qn_up: int, vib_qn_lo: int, state_up: State,
-                  state_lo: State, temp: float) -> float:
-        # NOTE: 05/02/24 this comes from an approximation of q_r from Herzberg pp. 125 - needs to be
-        #                calculated more accurately in the future
-        part = cn.BOLTZ * temp / (cn.PLANC * cn.LIGHT * state_lo.consts['b_e'])
+    def boltzmann_factor(self, state_lo: State, vib_qn_lo: int, temp: float) -> float:
+        # calculates the Boltzmann factor
+        # Herzberg p. 125, eq. (III, 164)
 
-        base = (self.wavenumber(band_origin, vib_qn_up, vib_qn_lo, state_up, state_lo) / part *
-                np.exp(-terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
-                                              self.branch_idx_lo) *
-                       cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp)))
+        return np.exp(-terms.rotational_term(state_lo, vib_qn_lo, self.rot_qn_lo,
+                                             self.branch_idx_lo) *
+                       cn.PLANC * cn.LIGHT / (cn.BOLTZ * temp))
 
-        if state_up.name == 'b3su':
-            match self.branch:
-                case 'r':
-                    linestr = ((self.rot_qn_lo + 1)**2 - 0.25) / (self.rot_qn_lo + 1)
-                    intn = base * linestr
-                case 'p':
-                    linestr = ((self.rot_qn_lo)**2 - 0.25) / (self.rot_qn_lo)
-                    intn = base * linestr
-                case 'pq' | 'rq':
-                    linestr = (2 * self.rot_qn_lo + 1) / (4 * self.rot_qn_lo * (self.rot_qn_lo + 1))
-                    intn = base * linestr
+    def honl_london_factor(self) -> float:
+        # calculates the Hönl-London factors (line strengths)
+        # Herzberg p. 250, eq. (V, 57)
 
-            if self.branch_idx_lo in (1, 3):
-                return intn / 2
+        match self.branch_name:
+            case 'r':
+                line_strength = ((self.rot_qn_lo + 1)**2 - 0.25) / (self.rot_qn_lo + 1)
+            case 'p':
+                line_strength = (self.rot_qn_lo**2 - 0.25) / (self.rot_qn_lo)
+            case 'pq' | 'rq':
+                line_strength = (2 * self.rot_qn_lo + 1) / (4 * self.rot_qn_lo *
+                                                            (self.rot_qn_lo + 1))
 
-        else:
-            lambda_lo = 1
+        return line_strength
 
-            match self.branch:
-                case 'r':
-                    linestr = (((self.rot_qn_lo + 1 + lambda_lo) *
-                                (self.rot_qn_lo + 1 - lambda_lo)) / (self.rot_qn_lo + 1))
-                    intn = base * linestr
-                case 'p':
-                    linestr = (((self.rot_qn_lo + lambda_lo) *
-                                (self.rot_qn_lo - lambda_lo)) / self.rot_qn_lo)
-                    intn = base * linestr
-                case 'q':
-                    linestr = (((2 * self.rot_qn_lo + 1) * lambda_lo**2) /
-                               (self.rot_qn_lo * (self.rot_qn_lo + 1)))
-                    intn = base * linestr
+    def intensity(self, state_up: State, state_lo: State, vib_qn_up: int, vib_qn_lo: int,
+                  band_origin: float, temp: float) -> float:
+        # calculates the intensity in absorption
+        # Herzberg p. 126, eq. (III, 2)
 
-        return intn
+        intensity = (self.wavenumber(state_up, state_lo, vib_qn_up, vib_qn_lo, band_origin) *
+                     self.honl_london_factor() *
+                     self.boltzmann_factor(state_lo, vib_qn_lo, temp) /
+                     self.band.rotational_partition())
+
+        if self.branch_idx_lo in (1, 3):
+            return intensity / 2
+
+        return intensity

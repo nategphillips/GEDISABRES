@@ -39,7 +39,7 @@ def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
     wavenumbers = sample_data['wavenumbers'].to_numpy()
     wavelengths = wavenum_to_wavelen(wavenumbers)
     intensities = sample_data['intensities'].to_numpy()
-    intensities /= np.max(intensities)
+    intensities /= intensities.max()
 
     match plot_as:
         case 'stem':
@@ -81,7 +81,7 @@ def plot_conv_all(sim: Simulation, color: str) -> None:
     wavenumbers_conv, intensities_conv = sim.all_convolved_data()
     wavelengths_conv = wavenum_to_wavelen(wavenumbers_conv)
 
-    intensities_conv /= np.max(intensities_conv)
+    intensities_conv /= intensities_conv.max()
 
     plt.plot(wavelengths_conv, intensities_conv, color, label=f'{sim.molecule.name} conv all')
 
@@ -99,6 +99,6 @@ def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:
     wavelengths_conv = wavenum_to_wavelen(wavenumbers_conv)
 
     intensities_inst = convolve.convolve_inst(wavenumbers_conv, intensities_conv, broadening)
-    intensities_inst /= np.max(intensities_inst)
+    intensities_inst /= intensities_inst.max()
 
     plt.plot(wavelengths_conv, intensities_inst, color, label=f'{sim.molecule.name} inst all')

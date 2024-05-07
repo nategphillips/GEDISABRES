@@ -68,16 +68,16 @@ class Band:
                 # R1, R2, R3, P1, P2, P3
                 if branch_idx_up == branch_idx_lo:
                     lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
-                                      branch_main, self, self.sim.molecule))
+                                      branch_main, self.sim, self, self.sim.molecule))
                 # satellite branches
                 # RQ31, RQ32, RQ21
                 if (branch_idx_up > branch_idx_lo) & (branch_secondary == 'rq'):
                     lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
-                                      branch_secondary, self, self.sim.molecule))
+                                      branch_secondary, self.sim, self, self.sim.molecule))
                 # PQ13, PQ23, PQ12
                 elif (branch_idx_up < branch_idx_lo) & (branch_secondary == 'pq'):
                     lines.append(Line(rot_qn_up, rot_qn_lo, branch_idx_up, branch_idx_lo,
-                                      branch_secondary, self, self.sim.molecule))
+                                      branch_secondary, self.sim, self, self.sim.molecule))
 
         return lines
 
@@ -88,8 +88,11 @@ class Band:
         q_r = 0
 
         for line in self.lines:
+            # NOTE: 05/07/24 - the Boltzmann factor and line strengths already change for emission
+            #       versus absorption, so this function can remain as-is
+
             honl_london = line.honl_london_factor()
-            boltzmann   = line.boltzmann_factor(self.sim.state_lo, self.vib_qn_lo, self.sim.temp)
+            boltzmann   = line.boltzmann_factor()
 
             q_r += honl_london * boltzmann
 
@@ -107,17 +110,12 @@ class Band:
         return elc_energy + vib_energy
 
     def wavenumbers_line(self) -> np.ndarray:
-        return np.array([line.wavenumber(self.sim.state_up, self.sim.state_lo, self.vib_qn_up,
-                                         self.vib_qn_lo, self.band_origin)
-                         for line in self.lines])
+        return np.array([line.wavenumber() for line in self.lines])
 
     def intensities_line(self) -> np.ndarray:
-        intensities_line = np.array([line.intensity(self.sim.state_up, self.sim.state_lo,
-                                                    self.vib_qn_up, self.vib_qn_lo,
-                                                    self.band_origin, self.sim.temp)
-                                     for line in self.lines])
+        intensities_line = np.array([line.intensity() for line in self.lines])
 
-        intensities_line /= np.max(intensities_line)
+        intensities_line /= intensities_line.max()
         intensities_line *= self.franck_condon / self.sim.max_fc
 
         return intensities_line
@@ -125,13 +123,13 @@ class Band:
     def wavenumbers_conv(self) -> np.ndarray:
         wavenumbers_line = self.wavenumbers_line()
 
-        return np.linspace(np.min(wavenumbers_line), np.max(wavenumbers_line), inp.GRANULARITY)
+        return np.linspace(wavenumbers_line.min(), wavenumbers_line.max(), inp.GRANULARITY)
 
     def intensities_conv(self) -> np.ndarray:
         intensities_conv = convolve.convolve_brod(self.sim, self.lines, self.wavenumbers_line(),
                                                   self.intensities_line(), self.wavenumbers_conv())
 
-        intensities_conv /= np.max(intensities_conv)
+        intensities_conv /= intensities_conv.max()
         intensities_conv *= self.franck_condon / self.sim.max_fc
 
         return intensities_conv
@@ -140,7 +138,7 @@ class Band:
         intensities_inst = convolve.convolve_inst(self.wavenumbers_conv(), self.intensities_conv(),
                                                   broadening)
 
-        intensities_inst /= np.max(intensities_inst)
+        intensities_inst /= intensities_inst.max()
         intensities_inst *= self.franck_condon / self.sim.max_fc
 
         return intensities_inst

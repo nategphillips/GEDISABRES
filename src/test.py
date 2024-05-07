@@ -46,12 +46,13 @@ def get_fc(vib_qn):
 
 vibrational_levels = np.arange(0, 19)
 
-total_partition = np.sum(np.exp(-vibrational_term(vibrational_levels)
-                         * cn.PLANC * cn.LIGHT / (cn.BOLTZ * temperature)))
+total_partition = (np.exp(-vibrational_term(vibrational_levels) *
+                          cn.PLANC * cn.LIGHT / (cn.BOLTZ * temperature))).sum()
 
 
 def number_density(vib_qn):
-    return density * np.exp(-vibrational_term(vib_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * temperature)) / total_partition
+    return (density * np.exp(-vibrational_term(vib_qn) * cn.PLANC * cn.LIGHT /
+                             (cn.BOLTZ * temperature)) / total_partition)
 
 
 x = np.linspace(vibrational_levels.min(), vibrational_levels.max(), 1000)

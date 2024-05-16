@@ -11,16 +11,16 @@ The rigid rotator model assumes that the molecule is shaped like a dumbbell. Eac
 \begin{figure}[H]
     \centering
     \begin{tikzpicture}
-        \draw[fill=black](-2,0) circle(0.25);
+        \draw[fill=fgcolor](-2,0) circle(0.25);
         \node at (-2.5,0.5){$m_1$};
-        \draw[color=black] (-2,0)rectangle(2,0);
-        \draw[fill=black] (2,0)circle(0.25);
+        \draw[color=fgcolor] (-2,0)rectangle(2,0);
+        \draw[fill=fgcolor] (2,0)circle(0.25);
         \node at (2.5,0.5){$m_2$};
 
-        \draw[|<->|](-2,-0.5)--(2,-0.5) node[midway, fill=white]{$r$};
+        \draw[|<->|](-2,-0.5)--(2,-0.5) node[midway, fill=bgcolor]{$r$};
         \draw[dashed](1,0.6)--(1,-0.6) node[below]{$C$};
-        \draw[|<->](-2,0.5)--(1,0.5) node[midway, fill=white]{$r_1$};
-        \draw[<->|](1,0.5)--(2,0.5) node[midway, fill=white]{$r_2$};
+        \draw[|<->](-2,0.5)--(1,0.5) node[midway, fill=bgcolor]{$r_1$};
+        \draw[<->|](1,0.5)--(2,0.5) node[midway, fill=bgcolor]{$r_2$};
     \end{tikzpicture}
     \caption{Dumbbell model of a diatomic molecule.}
     \label{f:dumbbell_model}

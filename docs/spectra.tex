@@ -4,14 +4,13 @@
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
 \usepackage[hidelinks]{hyperref}
-\usepackage{pagecolor}
-\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, natex, pgfplots, siunitx, tikz}
+\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, natex, pagecolor, pgfplots, siunitx, tikz}
 
-% background and foreground
+% background and foreground colors
 \definecolor{bgcolor}{HTML}{1e1e2e}
 \definecolor{fgcolor}{HTML}{cdd6f4}
 
-% palette
+% catppuccin palette
 \definecolor{p1}{HTML}{cba6f7}
 \definecolor{p2}{HTML}{f38ba8}
 \definecolor{p3}{HTML}{fab387}
@@ -40,7 +39,7 @@
 \urlstyle{same}
 
 % pgfplots
-\pgfplotsset{compat = newest}
+\pgfplotsset{compat=newest}
 
 % custom
 \newcommand{\dash}{\!\!-\!\!}
@@ -106,25 +105,25 @@
 
 \begin{align*}
     P_{11}(J) &= \nu_0^{(1)} + F_1'(J - 1) - F_1''(J) \\
-    Q_{11}(J) &= \nu_0^{(1)} + F_1'(J) - F_1''(J) \\
+    Q_{11}(J) &= \nu_0^{(1)} + F_1'(J) - F_1''(J)     \\
     R_{11}(J) &= \nu_0^{(1)} + F_1'(J + 1) - F_1''(J)
 \end{align*}
 
 \begin{align*}
     P_{12}(J) &= \nu_0^{(1)} + F_1'(J - 1) - F_2''(J) \\
-    Q_{12}(J) &= \nu_0^{(1)} + F_1'(J) - F_2''(J) \\
+    Q_{12}(J) &= \nu_0^{(1)} + F_1'(J) - F_2''(J)     \\
     R_{12}(J) &= \nu_0^{(1)} + F_1'(J + 1) - F_2''(J)
 \end{align*}
 
 \begin{align*}
     P_{22}(J) &= \nu_0^{(2)} + F_2'(J - 1) - F_2''(J) \\
-    Q_{22}(J) &= \nu_0^{(2)} + F_2'(J) - F_2''(J) \\
+    Q_{22}(J) &= \nu_0^{(2)} + F_2'(J) - F_2''(J)     \\
     R_{22}(J) &= \nu_0^{(2)} + F_2'(J + 1) - F_2''(J)
 \end{align*}
 
 \begin{align*}
     P_{21}(J) &= \nu_0^{(2)} + F_2'(J - 1) - F_1''(J) \\
-    Q_{21}(J) &= \nu_0^{(2)} + F_2'(J) - F_1''(J) \\
+    Q_{21}(J) &= \nu_0^{(2)} + F_2'(J) - F_1''(J)     \\
     R_{21}(J) &= \nu_0^{(2)} + F_2'(J + 1) - F_1''(J)
 \end{align*}
 
@@ -227,31 +226,31 @@
     \label{t:quantum_numbers}
     \begin{tabular}{clc}
         \toprule
-        Symbol & Definition & Values \\
+        Symbol    & Definition                            & Values                                      \\
         \midrule
-        \multicolumn{3}{c}{\textit{Single Electron in Atoms}} \\
+        \multicolumn{3}{c}{\textit{Single Electron in Atoms}}                                           \\
         \cmidrule(lr){1-3}
-        $n$ & Principal & $1, 2, \dotsb$ \\
-        $l$ & Azimuthal & $0, 1, \dotsb, (n - 1)$ \\
-        $m_l$ & Magnetic & $-l, \dotsb, l$ \\
-        $m_s$ & Spin & $\pm \frac{1}{2}$ \\
-        \multicolumn{3}{c}{\textit{Single Electron in Molecules}} \\
+        $n$       & Principal                             & $1, 2, \dotsb$                              \\
+        $l$       & Azimuthal                             & $0, 1, \dotsb, (n - 1)$                     \\
+        $m_l$     & Magnetic                              & $-l, \dotsb, l$                             \\
+        $m_s$     & Spin                                  & $\pm \frac{1}{2}$                           \\
+        \multicolumn{3}{c}{\textit{Single Electron in Molecules}}                                       \\
         \cmidrule(lr){1-3}
-        $\lambda$ & Orbital Angular Momentum & $\abs{m_l}$ \\
-        \multicolumn{3}{c}{\textit{Whole Atoms}} \\
+        $\lambda$ & Orbital Angular Momentum              & $\abs{m_l}$                                 \\
+        \multicolumn{3}{c}{\textit{Whole Atoms}}                                                        \\
         \cmidrule(lr){1-3}
-        $S$ & Resultant Spin & $\sum s_i$ \\
-        $L$ & Resultant Orbital Angular Momentum & $\sum l_i$ \\
-        $J$ & Total Angular Momentum & $(L + S), (L + S - 1), \dotsb, \abs{L - S}$ \\
-        $I$ & Nuclear Spin & ? \\
-        $F$ & Total Angular Momentum w/ Spin & $(J + I), (J + I - 1), \dotsb, \abs{J - I}$ \\
-        \multicolumn{3}{c}{\textit{Whole Molecules}} \\
+        $S$       & Resultant Spin                        & $\sum s_i$                                  \\
+        $L$       & Resultant Orbital Angular Momentum    & $\sum l_i$                                  \\
+        $J$       & Total Angular Momentum                & $(L + S), (L + S - 1), \dotsb, \abs{L - S}$ \\
+        $I$       & Nuclear Spin                          & ?                                           \\
+        $F$       & Total Angular Momentum w/ Spin        & $(J + I), (J + I - 1), \dotsb, \abs{J - I}$ \\
+        \multicolumn{3}{c}{\textit{Whole Molecules}}                                                    \\
         \cmidrule(lr){1-3}
-        $M_L$ & ? & $L, L - 1, \dotsb, -L$ \\
-        $\Lambda$ & Electronic Orbital Angular Momentum & $0, 1, \dotsb, L$ \\
-        $\Sigma$ & ? & $S, S - 1, \dotsb, -S$ \\
-        $\Omega$ & Resultant Electronic Angular Momentum & $\abs{\Lambda + \Sigma}$ \\
-        $N$ & Total Angular Momentum w/o Spin & $\Lambda, \Lambda + 1, \dotsb$ \\
+        $M_L$     & ?                                     & $L, L - 1, \dotsb, -L$                      \\
+        $\Lambda$ & Electronic Orbital Angular Momentum   & $0, 1, \dotsb, L$                           \\
+        $\Sigma$  & ?                                     & $S, S - 1, \dotsb, -S$                      \\
+        $\Omega$  & Resultant Electronic Angular Momentum & $\abs{\Lambda + \Sigma}$                    \\
+        $N$       & Total Angular Momentum w/o Spin       & $\Lambda, \Lambda + 1, \dotsb$              \\
         \bottomrule
     \end{tabular}
 \end{table}
@@ -265,20 +264,20 @@
     \label{t:states}
     \begin{tabular}{cc}
         \toprule
-        Defining Quantum Number & Values \\
+        Defining Quantum Number & Values                                 \\
         \midrule
-        \multicolumn{2}{c}{\textit{Single Electron in Atoms}} \\
+        \multicolumn{2}{c}{\textit{Single Electron in Atoms}}            \\
         \cmidrule(lr){1-2}
-        $l$ & s, p, d, f, $\dotsb$ \\
-        \multicolumn{2}{c}{\textit{Single Electron in Molecules}} \\
+        $l$                     & s, p, d, f, $\dotsb$                   \\
+        \multicolumn{2}{c}{\textit{Single Electron in Molecules}}        \\
         \cmidrule(lr){1-2}
-        $\lambda$ & $\sigma, \pi, \delta, \varphi, \dotsb$ \\
-        \multicolumn{2}{c}{\textit{Whole Atoms}} \\
+        $\lambda$               & $\sigma, \pi, \delta, \varphi, \dotsb$ \\
+        \multicolumn{2}{c}{\textit{Whole Atoms}}                         \\
         \cmidrule(lr){1-2}
-        $L$ & S, P, D, F, $\dotsb$ \\
-        \multicolumn{2}{c}{\textit{Whole Molecules}} \\
+        $L$                     & S, P, D, F, $\dotsb$                   \\
+        \multicolumn{2}{c}{\textit{Whole Molecules}}                     \\
         \cmidrule(lr){1-2}
-        $\Lambda$ & $\Sigma, \Pi, \Delta, \Phi, \dotsb$ \\
+        $\Lambda$               & $\Sigma, \Pi, \Delta, \Phi, \dotsb$    \\
         \bottomrule
     \end{tabular}
 \end{table}

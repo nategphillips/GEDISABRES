@@ -102,3 +102,24 @@ def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:
     intensities_inst /= intensities_inst.max()
 
     plt.plot(wavelengths_conv, intensities_inst, color, label=f'{sim.molecule.name} inst all')
+
+def plot_residual(sim: Simulation, color: str, samp_file: str) -> None:
+    sample_data = pd.read_csv(f'../data/samples/{samp_file}.csv')
+    wavenumbers = sample_data['wavenumbers'].to_numpy()
+    intensities = sample_data['intensities'].to_numpy()
+    intensities /= intensities.max()
+
+    for _, vib_band in enumerate(sim.vib_bands):
+        # Experimental data is held as the baseline, simulated data is linearly interpolated; the
+        # accuracy of the interpolated data and therefore residual should increase as the
+        # granularity of the simulation is increased
+        intensities_interp = np.interp(wavenumbers, vib_band.wavenumbers_conv(), vib_band.intensities_conv())
+
+        residual = np.abs(intensities - intensities_interp)
+
+        print(f'Max absolute residual: {residual.max()}')
+        print(f'Mean absolute residual: {residual.mean()}')
+        print(f'Standard deviation: {residual.std()}')
+
+        plt.plot(wavenum_to_wavelen(wavenumbers), residual, color,
+                 label=f'{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} residual')

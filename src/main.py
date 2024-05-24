@@ -50,6 +50,7 @@ def main():
     plot.plot_conv(o2_sim, colors_lif)
     plot.plot_samp('pgopher', 'red', 'stem')
     plot.plot_samp('harvard/harvard20', 'green', 'plot')
+    plot.plot_residual(o2_sim, 'k', 'harvard/harvard20')
     plot.plot_show()
 
 

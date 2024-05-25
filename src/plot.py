@@ -115,10 +115,11 @@ def plot_residual(sim: Simulation, color: str, samp_file: str) -> None:
         # granularity of the simulation is increased
         intensities_interp = np.interp(wavenumbers, vib_band.wavenumbers_conv(), vib_band.intensities_conv())
 
-        residual = np.abs(intensities - intensities_interp)
+        residual = intensities - intensities_interp
+        abs_residual = np.abs(residual)
 
-        print(f'Max absolute residual: {residual.max()}')
-        print(f'Mean absolute residual: {residual.mean()}')
+        print(f'Max absolute residual: {abs_residual.max()}')
+        print(f'Mean absolute residual: {abs_residual.mean()}')
         print(f'Standard deviation: {residual.std()}')
 
         plt.plot(wavenum_to_wavelen(wavenumbers), residual, color,

@@ -1,15 +1,14 @@
 # module plot
 
-import scienceplots  # pylint: disable = unused-import
-import matplotlib.pyplot as plt
-import pandas as pd
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import scienceplots  # pylint: disable = unused-import
 
-from simulation import Simulation
 import convolve
+from simulation import Simulation
 
 # plt.style.use(['science', 'grid'])
-
 
 def wavenum_to_wavelen(x):
     x             = np.array(x, float)
@@ -18,7 +17,6 @@ def wavenum_to_wavelen(x):
     x[~near_zero] = 1 / x[~near_zero]
 
     return x * 1e7
-
 
 def plot_show():
     ax = plt.gca()
@@ -31,7 +29,6 @@ def plot_show():
 
     plt.legend()
     plt.show()
-
 
 def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
     sample_data = pd.read_csv(f'../data/samples/{samp_file}.csv')
@@ -49,7 +46,6 @@ def plot_samp(samp_file: str, color: str, plot_as: str = 'stem') -> None:
         case _:
             raise ValueError(f'Invalid value for plot_as: {plot_as}.')
 
-
 def plot_info(sim: Simulation) -> None:
     for vib_band in sim.vib_bands:
         wavenumbers_line = vib_band.wavenumbers_line()
@@ -60,7 +56,6 @@ def plot_info(sim: Simulation) -> None:
         for idx, line in enumerate(lines):
             plt.text(wavelengths_line[idx], intensities_line[idx], f'{line.branch_name}')
 
-
 def plot_line(sim: Simulation, colors: list) -> None:
     for idx, vib_band in enumerate(sim.vib_bands):
         wavelengths_line = wavenum_to_wavelen(vib_band.wavenumbers_line())
@@ -68,14 +63,12 @@ def plot_line(sim: Simulation, colors: list) -> None:
         plt.stem(wavelengths_line, vib_band.intensities_line(), colors[idx], markerfmt='',
                  label=f'{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} line')
 
-
 def plot_conv(sim: Simulation, colors: list) -> None:
     for idx, vib_band in enumerate(sim.vib_bands):
         wavelengths_conv = wavenum_to_wavelen(vib_band.wavenumbers_conv())
 
         plt.plot(wavelengths_conv, vib_band.intensities_conv(), colors[idx],
                  label=f'{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} conv')
-
 
 def plot_conv_all(sim: Simulation, color: str) -> None:
     wavenumbers_conv, intensities_conv = sim.all_convolved_data()
@@ -85,14 +78,12 @@ def plot_conv_all(sim: Simulation, color: str) -> None:
 
     plt.plot(wavelengths_conv, intensities_conv, color, label=f'{sim.molecule.name} conv all')
 
-
 def plot_inst(sim: Simulation, colors: list, broadening: float) -> None:
     for idx, vib_band in enumerate(sim.vib_bands):
         wavelengths_conv = wavenum_to_wavelen(vib_band.wavenumbers_conv())
 
         plt.plot(wavelengths_conv, vib_band.intensities_inst(broadening), colors[idx],
                  label=f'{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} inst')
-
 
 def plot_inst_all(sim: Simulation, color: str, broadening: float) -> None:
     wavenumbers_conv, intensities_conv = sim.all_convolved_data()

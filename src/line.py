@@ -7,10 +7,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from molecule import Molecule
-from simtype import SimType
-import constants as cn
 import terms
+import constants as cn
+from simtype import SimType
+from molecule import Molecule
 
 if TYPE_CHECKING:
     from band import Band

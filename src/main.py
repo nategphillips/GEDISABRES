@@ -1,13 +1,12 @@
 # module test
 
-import matplotlib.pyplot as plt
-import matplotlib.colors
 import numpy as np
+import matplotlib.colors
+import matplotlib.pyplot as plt
 
-from simulation import Simulation, SimType
-from molecule import Molecule
 import plot
-
+from molecule import Molecule
+from simulation import Simulation, SimType
 
 def main():
     # NOTE: 05/06/24 - only O2 is working right now, selection rules, etc. for other molecules are
@@ -46,13 +45,18 @@ def main():
     # plot.plot_info(o2_lif)
     # plot.plot_show()
 
-    plot.plot_line(o2_sim, colors_lif)
+    # plot.plot_line(o2_sim, colors_lif)
     plot.plot_conv(o2_sim, colors_lif)
-    plot.plot_samp('pgopher', 'red', 'stem')
-    plot.plot_samp('harvard/harvard20', 'green', 'plot')
-    plot.plot_residual(o2_sim, 'k', 'harvard/harvard20')
-    plot.plot_show()
+    # plot.plot_samp('pgopher', 'red', 'stem')
+    plot.plot_samp('harvard/harvard20', 'red', 'plot')
+    plot.plot_residual(o2_sim, 'green', 'harvard/harvard20')
 
+    # testing how the PGOPHER data compares when convolved (estimating predissociation rates)
+    from test import cwls, cins
+
+    plt.plot(cwls, cins, 'black', label='pgopher')
+
+    plot.plot_show()
 
 if __name__ == '__main__':
     main()

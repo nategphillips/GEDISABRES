@@ -2,13 +2,12 @@
 
 import numpy as np
 
-from molecule import Molecule
-from simtype import SimType
-from state import State
-from band import Band
-import input as inp
 import convolve
-
+import input as inp
+from band import Band
+from state import State
+from simtype import SimType
+from molecule import Molecule
 
 class Simulation:
     def __init__(self, molecule: Molecule, temp: float, pres: float, rot_lvls: np.ndarray,

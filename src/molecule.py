@@ -1,10 +1,9 @@
 # module molecule
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from atom import Atom
-
 
 class Molecule:
     def __init__(self, name: str, atom_1: str, atom_2: str) -> None:

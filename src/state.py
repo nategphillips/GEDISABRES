@@ -1,8 +1,7 @@
 # module state
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 
 class State:
     def __init__(self, name: str, consts: pd.DataFrame) -> None:

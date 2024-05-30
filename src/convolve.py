@@ -3,14 +3,13 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from scipy.special import wofz  # pylint: disable=no-name-in-module
 import numpy as np
+from scipy.special import wofz # pylint: disable=no-name-in-module
 
 import constants as cn
 
 if TYPE_CHECKING:
     from simulation import Simulation
-
 
 def convolve_inst(wavenumbers_conv: np.ndarray, intensities_conv: np.ndarray,
                   broadening: float) -> np.ndarray:
@@ -20,7 +19,6 @@ def convolve_inst(wavenumbers_conv: np.ndarray, intensities_conv: np.ndarray,
         intensities_inst += intn * instrument_fn(wavenumbers_conv, wave, broadening)
 
     return intensities_inst
-
 
 def convolve_brod(sim: Simulation, lines: np.ndarray, wavenumbers_line: np.ndarray,
                   intensities_line: np.ndarray, wavenumbers_conv: np.ndarray) -> np.ndarray:
@@ -33,12 +31,10 @@ def convolve_brod(sim: Simulation, lines: np.ndarray, wavenumbers_line: np.ndarr
 
     return intensities_conv
 
-
 def instrument_fn(convolved_wavenumbers: np.ndarray, wavenumber_peak: float,
                   broadening: float) -> np.ndarray:
     return (np.exp(- 0.5 * (convolved_wavenumbers - wavenumber_peak)**2 / broadening**2) /
             (broadening * np.sqrt(2 * np.pi)))
-
 
 def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.ndarray,
                   wavenumber_peak: float, line_idx: int, natural: float,
@@ -55,7 +51,6 @@ def broadening_fn(sim: Simulation, lines: np.ndarray, convolved_wavenumbers: np.
     fadd = ((convolved_wavenumbers - wavenumber_peak) + 1j * loren) / (gauss * np.sqrt(2))
 
     return np.real(wofz(fadd)) / (gauss * np.sqrt(2 * np.pi))
-
 
 def broadening_params(sim: Simulation) -> tuple[float, float]:
     natural = (sim.state_lo.cross_section**2 *

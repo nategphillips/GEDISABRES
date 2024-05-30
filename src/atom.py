@@ -4,7 +4,6 @@ import pandas as pd
 
 import constants as cn
 
-
 class Atom:
     def __init__(self, name: str) -> None:
         self.name: str   = name

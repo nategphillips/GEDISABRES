@@ -5,10 +5,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from line import Line
-import input as inp
-import convolve
 import terms
+import convolve
+import input as inp
+from line import Line
 
 if TYPE_CHECKING:
     from simulation import Simulation

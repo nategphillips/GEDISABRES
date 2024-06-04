@@ -22,6 +22,21 @@ class Band:
         self.lines:         np.ndarray = self.get_allowed_lines()
         self.franck_condon: float      = self.sim.molecule.fc_data[self.vib_qn_up][self.vib_qn_lo]
 
+    def get_lif_lines(self, rot_qn_up: int, rot_qn_lo: int) -> np.ndarray:
+        # TODO: 06/04/24 - maybe make a separate class for LIF to bypass having to pass rot_qn_up
+        #       and rot_qn_lo in here
+
+        # NOTE: 06/04/24 - since the rotational partition function requires all the lines to be
+        #       simulated to get an accurate result, the total number of lines in each band is
+        #       always calculated
+
+        lines = []
+
+        if rot_qn_lo % 2:
+            lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
+
+        return np.array(lines)
+
     def get_allowed_lines(self) -> np.ndarray:
         lines = []
 
@@ -108,6 +123,18 @@ class Band:
                       terms.vibrational_term(self.sim.state_lo, self.vib_qn_lo))
 
         return elc_energy + vib_energy
+
+    def wavenumbers_lif(self, rot_qn_up: int, rot_qn_lo: int) -> np.ndarray:
+        return np.array([line.wavenumber() for line in self.get_lif_lines(rot_qn_up, rot_qn_lo)])
+
+    def intensities_lif(self, rot_qn_up: int, rot_qn_lo: int) -> np.ndarray:
+        intensities_lif = np.array([line.intensity() for line in
+                                    self.get_lif_lines(rot_qn_up, rot_qn_lo)])
+
+        intensities_lif /= intensities_lif.max()
+        intensities_lif *= self.franck_condon / self.sim.max_fc
+
+        return intensities_lif
 
     def wavenumbers_line(self) -> np.ndarray:
         return np.array([line.wavenumber() for line in self.lines])

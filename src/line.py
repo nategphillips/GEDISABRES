@@ -51,7 +51,7 @@ class Line:
                 vib_qn     = self.band.vib_qn_lo
                 rot_qn     = self.rot_qn_lo
                 branch_idx = self.branch_idx_lo
-            case SimType.EMISSION:
+            case SimType.EMISSION | SimType.LIF:
                 state      = self.sim.state_up
                 vib_qn     = self.band.vib_qn_up
                 rot_qn     = self.rot_qn_up
@@ -82,9 +82,17 @@ class Line:
 
     def intensity(self) -> float:
         # calculates the intensity
-        # Herzberg p. 126, eq. (III, 2)
+        # Herzberg p. 126, eqs. (III, 169-170)
 
-        intensity = (self.wavenumber() * self.honl_london_factor() * self.boltzmann_factor() /
+        match self.sim.sim_type:
+            case SimType.ABSORPTION:
+                wavenumber_part = self.wavenumber()
+            case SimType.EMISSION | SimType.LIF:
+                wavenumber_part = self.wavenumber()**4
+            case _:
+                raise ValueError('Invalid SimType.')
+
+        intensity = (wavenumber_part * self.honl_london_factor() * self.boltzmann_factor() /
                      self.band.rotational_partition())
 
         if self.branch_idx_lo in (1, 3):

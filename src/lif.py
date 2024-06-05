@@ -5,9 +5,8 @@ import matplotlib.colors
 import matplotlib.pyplot as plt
 
 import plot
-from simtype import SimType
 from molecule import Molecule
-from simulation import Simulation
+from lif_utils import LifSimulation
 
 def main():
     temp: float = 300.0
@@ -21,11 +20,11 @@ def main():
 
     o2_mol: Molecule = Molecule('o2', 'o', 'o')
 
-    o2_up: Simulation = Simulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg', upper_lif,
-                                   SimType.LIF)
+    o2_up: LifSimulation = LifSimulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg',
+                                         upper_lif)
 
-    o2_lo: Simulation = Simulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg', lower_lif,
-                                   SimType.LIF)
+    o2_lo: LifSimulation = LifSimulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg',
+                                         lower_lif)
 
     palette: list[tuple] = plt.cycler('color', plt.cm.tab20c.colors).by_key()['color']
     colors:  list[str]   = [matplotlib.colors.to_hex(color) for color in palette]
@@ -58,19 +57,6 @@ def main():
         lower_wavenumbers = np.concatenate((lower_wavenumbers, vib_band.wavenumbers_line()))
         lower_intensities = np.concatenate((lower_intensities, vib_band.intensities_line()))
         lower_lines       = np.concatenate((lower_lines, vib_band.lines))
-
-    # filter by branch index and branch name
-    upper_mask  = np.array([line.branch_idx_up == 2 and line.branch_name in ('r', 'p')
-                            for line in upper_lines])
-    upper_wavenumbers = upper_wavenumbers[upper_mask]
-    upper_intensities = upper_intensities[upper_mask]
-    upper_lines       = upper_lines[upper_mask]
-
-    lower_mask  = np.array([line.branch_idx_up == 2 and line.branch_name in ('r', 'p')
-                            for line in lower_lines])
-    lower_wavenumbers = lower_wavenumbers[lower_mask]
-    lower_intensities = lower_intensities[lower_mask]
-    lower_lines       = lower_lines[lower_mask]
 
     # filter by intensity (can't be done per line since the vibrational bands hold the information
     # about the normalized intensity of the lines)

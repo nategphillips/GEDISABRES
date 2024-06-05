@@ -25,9 +25,9 @@ class Simulation:
         self.max_fc:    float      = max(vib_band.franck_condon for vib_band in self.vib_bands)
 
     def all_convolved_data(self) -> tuple[np.ndarray, np.ndarray]:
-        wavenumbers_line = np.ndarray([0])
-        intensities_line = np.ndarray([0])
-        lines = np.ndarray([0])
+        wavenumbers_line = np.array([])
+        intensities_line = np.array([])
+        lines            = np.array([])
 
         for vib_band in self.vib_bands:
             wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))

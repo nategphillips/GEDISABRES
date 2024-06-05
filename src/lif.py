@@ -1,0 +1,120 @@
+# module lif
+
+import numpy as np
+import matplotlib.colors
+import matplotlib.pyplot as plt
+
+import plot
+from simtype import SimType
+from molecule import Molecule
+from simulation import Simulation
+
+def main():
+    temp: float = 300.0
+    pres: float = 101325.0
+
+    upper_band: int = 4
+    lower_band: int = 2
+
+    upper_lif: list[tuple[int, int]] = [(upper_band, v) for v in range(18, -1, -1)]
+    lower_lif: list[tuple[int, int]] = [(lower_band, v) for v in range(18, -1, -1)]
+
+    o2_mol: Molecule = Molecule('o2', 'o', 'o')
+
+    o2_up: Simulation = Simulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg', upper_lif,
+                                   SimType.LIF)
+
+    o2_lo: Simulation = Simulation(o2_mol, temp, pres, np.arange(0, 36), 'b3su', 'x3sg', lower_lif,
+                                   SimType.LIF)
+
+    palette: list[tuple] = plt.cycler('color', plt.cm.tab20c.colors).by_key()['color']
+    colors:  list[str]   = [matplotlib.colors.to_hex(color) for color in palette]
+
+    plot.plot_lif(o2_up, 12, 13, colors)
+    plot.plot_lif(o2_lo, 16, 15, colors)
+    plot.plot_lif_info(o2_up, 12, 13)
+    plot.plot_lif_info(o2_lo, 16, 15)
+    plot.plot_show()
+
+    # NOTE: 06/05/24 - the Franck-Condon factors of all 18 v'' bands sharing the same v' must to be
+    #       considered since their intensities are normalized relative to the highest intensity in
+    #       the given simulation
+
+    # only search the main triplet in non-satellite bands
+    upper_wavenumbers = np.array([])
+    upper_intensities = np.array([])
+    upper_lines       = np.array([])
+
+    lower_wavenumbers = np.array([])
+    lower_intensities = np.array([])
+    lower_lines       = np.array([])
+
+    for vib_band in o2_up.vib_bands:
+        upper_wavenumbers = np.concatenate((upper_wavenumbers, vib_band.wavenumbers_line()))
+        upper_intensities = np.concatenate((upper_intensities, vib_band.intensities_line()))
+        upper_lines       = np.concatenate((upper_lines, vib_band.lines))
+
+    for vib_band in o2_lo.vib_bands:
+        lower_wavenumbers = np.concatenate((lower_wavenumbers, vib_band.wavenumbers_line()))
+        lower_intensities = np.concatenate((lower_intensities, vib_band.intensities_line()))
+        lower_lines       = np.concatenate((lower_lines, vib_band.lines))
+
+    # filter by branch index and branch name
+    upper_mask  = np.array([line.branch_idx_up == 2 and line.branch_name in ('r', 'p')
+                            for line in upper_lines])
+    upper_wavenumbers = upper_wavenumbers[upper_mask]
+    upper_intensities = upper_intensities[upper_mask]
+    upper_lines       = upper_lines[upper_mask]
+
+    lower_mask  = np.array([line.branch_idx_up == 2 and line.branch_name in ('r', 'p')
+                            for line in lower_lines])
+    lower_wavenumbers = lower_wavenumbers[lower_mask]
+    lower_intensities = lower_intensities[lower_mask]
+    lower_lines       = lower_lines[lower_mask]
+
+    # filter by intensity (can't be done per line since the vibrational bands hold the information
+    # about the normalized intensity of the lines)
+    upper_indices = np.where(upper_intensities > 0.2)
+    lower_indices = np.where(lower_intensities > 0.2)
+
+    upper_wavenumbers = upper_wavenumbers[upper_indices]
+    upper_intensities = upper_intensities[upper_indices]
+    upper_lines       = upper_lines[upper_indices]
+
+    lower_wavenumbers = lower_wavenumbers[lower_indices]
+    lower_intensities = lower_intensities[lower_indices]
+    lower_lines       = lower_lines[lower_indices]
+
+    # compare all wavenumbers against each other and find nearby lines
+    diff_matrix = np.abs(upper_wavenumbers[:, np.newaxis] - lower_wavenumbers)
+    pair_mask = diff_matrix < 1
+
+    upper_indices, lower_indices = np.where(pair_mask)
+
+    upper_wavenumbers = upper_wavenumbers[upper_indices]
+    upper_intensities = upper_intensities[upper_indices]
+    upper_lines       = upper_lines[upper_indices]
+
+    lower_wavenumbers = lower_wavenumbers[lower_indices]
+    lower_intensities = lower_intensities[lower_indices]
+    lower_lines       = lower_lines[lower_indices]
+
+    upper_wavelengths = plot.wavenum_to_wavelen(upper_wavenumbers)
+    lower_wavelengths = plot.wavenum_to_wavelen(lower_wavenumbers)
+
+    plt.stem(upper_wavelengths, upper_intensities, 'b', markerfmt='')
+    for idx, line in enumerate(upper_lines):
+        plt.text(upper_wavelengths[idx], upper_intensities[idx],
+                 f'v: {line.band.vib_qn_up, line.band.vib_qn_lo}\n'
+                 f'J: {line.rot_qn_up, line.rot_qn_lo}')
+
+    plt.stem(lower_wavelengths, lower_intensities, 'r', markerfmt='')
+    for idx, line in enumerate(lower_lines):
+        plt.text(lower_wavelengths[idx], lower_intensities[idx],
+                 f'v: {line.band.vib_qn_up, line.band.vib_qn_lo}\n'
+                 f'J: {line.rot_qn_up, line.rot_qn_lo}')
+
+    plt.show()
+
+if __name__ == '__main__':
+    main()

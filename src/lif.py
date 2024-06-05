@@ -58,6 +58,11 @@ def main():
         lower_intensities = np.concatenate((lower_intensities, vib_band.intensities_line()))
         lower_lines       = np.concatenate((lower_lines, vib_band.lines))
 
+    # now that all the intensities from every band are collected together, normalize them so that we
+    # can filter
+    upper_intensities /= upper_intensities.max()
+    lower_intensities /= lower_intensities.max()
+
     # filter by intensity (can't be done per line since the vibrational bands hold the information
     # about the normalized intensity of the lines)
     upper_indices = np.where(upper_intensities > 0.2)

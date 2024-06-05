@@ -71,7 +71,9 @@ def plot_lif_info(sim: Simulation, rot_qn_up: int, rot_qn_lo: int) -> None:
         lines = vib_band.get_lif_lines(rot_qn_up, rot_qn_lo)
 
         for idx, line in enumerate(lines):
-            plt.text(wavelengths_line[idx], intensities_line[idx], f'{line.branch_name}')
+            plt.text(wavelengths_line[idx], intensities_line[idx],
+                     f'v: {line.band.vib_qn_up, line.band.vib_qn_lo}\n'
+                     f'J: {line.rot_qn_up, line.rot_qn_lo}')
 
 def plot_lif(sim: Simulation, rot_qn_up: int, rot_qn_lo: int, colors: list) -> None:
     for idx, vib_band in enumerate(sim.vib_bands):

@@ -41,8 +41,8 @@ class Line:
                 terms.rotational_term(self.sim.state_lo, self.band.vib_qn_lo, self.rot_qn_lo,
                                       self.branch_idx_lo))
 
-    def boltzmann_factor(self) -> float:
-        # calculates the Boltzmann factor
+    def rot_boltzmann_factor(self) -> float:
+        # calculates the rotational Boltzmann factor
         # Herzberg p. 125, eq. (III, 164)
 
         match self.sim.sim_type:
@@ -86,14 +86,16 @@ class Line:
 
         match self.sim.sim_type:
             case SimType.ABSORPTION:
-                wavenumber_part = self.wavenumber()
+                wavenumber_factor = self.wavenumber()
             case SimType.EMISSION | SimType.LIF:
-                wavenumber_part = self.wavenumber()**4
+                wavenumber_factor = self.wavenumber()**4
             case _:
                 raise ValueError('Invalid SimType.')
 
-        intensity = (wavenumber_part * self.honl_london_factor() * self.boltzmann_factor() /
-                     self.band.rotational_partition())
+        # Honl-London contribution
+        intensity = wavenumber_factor * self.honl_london_factor()
+        # rotational contribution
+        intensity *= self.rot_boltzmann_factor() / self.band.rot_part
 
         if self.branch_idx_lo in (1, 3):
             return intensity / 2

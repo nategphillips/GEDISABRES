@@ -2,9 +2,11 @@
 
 import numpy as np
 
+import terms
 import convolve
 import input as inp
 from band import Band
+import constants as cn
 from state import State
 from simtype import SimType
 from molecule import Molecule
@@ -23,6 +25,31 @@ class Simulation:
         self.vib_bands: list[Band] = [Band(vib_band[0], vib_band[1], self)
                                       for vib_band in band_list]
         self.max_fc:    float      = max(vib_band.franck_condon for vib_band in self.vib_bands)
+        self.vib_part:  float      = self.vibrational_partition()
+
+    def vibrational_partition(self) -> float:
+        # calculates the vibrational partition function
+        # Herzberg p. 123, eq. (III, 159)
+
+        match self.sim_type:
+            case SimType.ABSORPTION:
+                state   = self.state_lo
+            case SimType.EMISSION | SimType.LIF:
+                state   = self.state_up
+            case _:
+                raise ValueError('Invalid SimType.')
+
+        q_v = 0
+
+        # NOTE: 06/05/24 - since the partition function relies on the sum as the vibrational quantum
+        #       number goes to infinity, the currently selected vibrational bands are not used;
+        #       since the user might only have a single band selected, it would not correctly
+        #       generate the state sum (the range from 0 to 18 is somewhat arbitrary though)
+        for vib_qn in range(0, 19):
+            q_v += np.exp(-terms.vibrational_term(state, vib_qn) * cn.PLANC * cn.LIGHT /
+                          (cn.BOLTZ * self.temp))
+
+        return q_v
 
     def all_convolved_data(self) -> tuple[np.ndarray, np.ndarray]:
         wavenumbers_line = np.array([])

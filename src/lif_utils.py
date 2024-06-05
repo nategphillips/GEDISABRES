@@ -21,6 +21,19 @@ class LifSimulation:
         self.vib_bands: list[LifBand] = [LifBand(vib_band[0], vib_band[1], self)
                                          for vib_band in band_list]
         self.max_fc:    float         = max(vib_band.franck_condon for vib_band in self.vib_bands)
+        self.vib_part:  float         = self.vibrational_partition()
+
+    def vibrational_partition(self) -> float:
+        # NOTE: 06/05/24 - assuming emission here for LIF
+        state = self.state_up
+
+        q_v = 0
+
+        for vib_qn in range(0, 19):
+            q_v += np.exp(-terms.vibrational_term(state, vib_qn) * cn.PLANC * cn.LIGHT /
+                          (cn.BOLTZ * self.temp))
+
+        return q_v
 
 class LifBand:
     def __init__(self, vib_qn_up: int, vib_qn_lo: int, sim: LifSimulation) -> None:
@@ -28,18 +41,20 @@ class LifBand:
         self.vib_qn_lo:     int        = vib_qn_lo
         self.sim:           LifSimulation = sim
         self.band_origin:   float      = self.get_band_origin()
-        self.lines:         np.ndarray = self.get_allowed_lines()
+        self.lines:         list       = self.get_allowed_lines()
         self.franck_condon: float      = self.sim.molecule.fc_data[self.vib_qn_up][self.vib_qn_lo]
+        self.rot_part:      float      = self.rotational_partition()
+        self.vib_boltz:     float      = self.vib_boltzmann_factor()
 
-    def get_lif_lines(self, rot_qn_up: int, rot_qn_lo: int) -> np.ndarray:
+    def get_lif_lines(self, rot_qn_up: int, rot_qn_lo: int) -> list:
         lines = []
 
         if rot_qn_lo % 2:
             lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
 
-        return np.array(lines)
+        return lines
 
-    def get_allowed_lines(self) -> np.ndarray:
+    def get_allowed_lines(self) -> list:
         lines = []
 
         for rot_qn_up in self.sim.rot_lvls:
@@ -47,9 +62,9 @@ class LifBand:
                 if rot_qn_lo % 2:
                     lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
 
-        return np.array(lines)
+        return lines
 
-    def get_allowed_branches(self, rot_qn_up: int, rot_qn_lo: int) -> list[float]:
+    def get_allowed_branches(self, rot_qn_up: int, rot_qn_lo: int) -> list:
         lines = []
 
         branch_range = range(1, 4)
@@ -65,7 +80,7 @@ class LifBand:
         return lines
 
     def get_branch_idx(self, rot_qn_up: int, rot_qn_lo: int, branch_range: range,
-                       branch_main: str) -> list[float]:
+                       branch_main: str) -> list:
         lines = []
 
         for branch_idx_up in branch_range:
@@ -78,12 +93,24 @@ class LifBand:
 
         return lines
 
+    def vib_boltzmann_factor(self) -> float:
+        # NOTE: 06/05/24 - assuming emission here for LIF
+        state  = self.sim.state_up
+        vib_qn = self.vib_qn_up
+
+        return np.exp(-terms.vibrational_term(state, vib_qn) * cn.PLANC * cn.LIGHT /
+                      (cn.BOLTZ * self.sim.temp))
+
     def rotational_partition(self) -> float:
         q_r = 0
 
+        # NOTE: 06/05/24 - technically this function is broken since the partition function relies
+        #       on the sum as the number of lines goes to infinity; since some lines were taken out
+        #       artificially, this is no longer physical - however, since the intensities are
+        #       relative, it shouldn't matter too much
         for line in self.lines:
             honl_london = line.honl_london_factor()
-            boltzmann   = line.boltzmann_factor()
+            boltzmann   = line.rot_boltzmann_factor()
 
             q_r += honl_london * boltzmann
 
@@ -104,7 +131,7 @@ class LifBand:
         intensities_lif = np.array([line.intensity() for line in
                                     self.get_lif_lines(rot_qn_up, rot_qn_lo)])
 
-        intensities_lif /= intensities_lif.max()
+        intensities_lif *= self.vib_boltz / self.sim.vib_part
         intensities_lif *= self.franck_condon / self.sim.max_fc
 
         return intensities_lif
@@ -115,7 +142,7 @@ class LifBand:
     def intensities_line(self) -> np.ndarray:
         intensities_line = np.array([line.intensity() for line in self.lines])
 
-        intensities_line /= intensities_line.max()
+        intensities_line *= self.vib_boltz / self.sim.vib_part
         intensities_line *= self.franck_condon / self.sim.max_fc
 
         return intensities_line
@@ -142,7 +169,7 @@ class LifLine:
                 terms.rotational_term(self.sim.state_lo, self.band.vib_qn_lo, self.rot_qn_lo,
                                       self.branch_idx_lo))
 
-    def boltzmann_factor(self) -> float:
+    def rot_boltzmann_factor(self) -> float:
         # NOTE: 06/05/24 - assuming emission here for LIF
         state      = self.sim.state_up
         vib_qn     = self.band.vib_qn_up
@@ -164,12 +191,9 @@ class LifLine:
 
     def intensity(self) -> float:
         # NOTE: 06/05/24 - assuming emission here for LIF
-        wavenumber_part = self.wavenumber()**4
+        wavenumber_factor = self.wavenumber()**4
 
-        intensity = (wavenumber_part * self.honl_london_factor() * self.boltzmann_factor() /
-                     self.band.rotational_partition())
-
-        if self.branch_idx_lo in (1, 3):
-            return intensity / 2
+        intensity = wavenumber_factor * self.honl_london_factor()
+        intensity *= self.rot_boltzmann_factor() / self.band.rot_part
 
         return intensity

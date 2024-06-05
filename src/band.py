@@ -9,6 +9,8 @@ import terms
 import convolve
 import input as inp
 from line import Line
+import constants as cn
+from simtype import SimType
 
 if TYPE_CHECKING:
     from simulation import Simulation
@@ -19,10 +21,12 @@ class Band:
         self.vib_qn_lo:     int        = vib_qn_lo
         self.sim:           Simulation = sim
         self.band_origin:   float      = self.get_band_origin()
-        self.lines:         np.ndarray = self.get_allowed_lines()
+        self.lines:         list[Line] = self.get_allowed_lines()
         self.franck_condon: float      = self.sim.molecule.fc_data[self.vib_qn_up][self.vib_qn_lo]
+        self.rot_part:      float      = self.rotational_partition()
+        self.vib_boltz:     float      = self.vib_boltzmann_factor()
 
-    def get_lif_lines(self, rot_qn_up: int, rot_qn_lo: int) -> np.ndarray:
+    def get_lif_lines(self, rot_qn_up: int, rot_qn_lo: int) -> list[Line]:
         # TODO: 06/04/24 - maybe make a separate class for LIF to bypass having to pass rot_qn_up
         #       and rot_qn_lo in here
 
@@ -35,9 +39,9 @@ class Band:
         if rot_qn_lo % 2:
             lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
 
-        return np.array(lines)
+        return lines
 
-    def get_allowed_lines(self) -> np.ndarray:
+    def get_allowed_lines(self) -> list[Line]:
         lines = []
 
         for rot_qn_up in self.sim.rot_lvls:
@@ -46,9 +50,9 @@ class Band:
                 if rot_qn_lo % 2:
                     lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
 
-        return np.array(lines)
+        return lines
 
-    def get_allowed_branches(self, rot_qn_up: int, rot_qn_lo: int) -> list[float]:
+    def get_allowed_branches(self, rot_qn_up: int, rot_qn_lo: int) -> list[Line]:
         # determines the selection rules for Hund's case (b)
         # ∆N = ±1, ∆N = 0 is forbidden for Σ-Σ transitions
         # Herzberg p. 244, eq. (V, 44)
@@ -71,7 +75,7 @@ class Band:
         return lines
 
     def get_branch_idx(self, rot_qn_up: int, rot_qn_lo: int, branch_range: range, branch_main: str,
-                       branch_secondary: str) -> list[float]:
+                       branch_secondary: str) -> list[Line]:
         # determines the lines included in the transition
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
@@ -96,18 +100,38 @@ class Band:
 
         return lines
 
+    def vib_boltzmann_factor(self) -> float:
+        # calculates the vibrational Boltzmann factor
+        # Herzberg p. 123, eq. (III, 159)
+
+        match self.sim.sim_type:
+            case SimType.ABSORPTION:
+                state  = self.sim.state_lo
+                vib_qn = self.vib_qn_lo
+            case SimType.EMISSION | SimType.LIF:
+                state  = self.sim.state_up
+                vib_qn = self.vib_qn_up
+            case _:
+                raise ValueError('Invalid SimType.')
+
+        return np.exp(-terms.vibrational_term(state, vib_qn) * cn.PLANC * cn.LIGHT /
+                      (cn.BOLTZ * self.sim.temp))
+
     def rotational_partition(self) -> float:
         # calculates the rotational partition function
         # Herzberg p. 125, eq. (III, 164)
 
         q_r = 0
 
+        # NOTE: 06/05/24 - this *should* always include the maximum number of lines possible, i.e.
+        #       the limit as the number of lines goes to infinity; the rotational quantum numbers go
+        #       up to 35, so this should be quite accurate
         for line in self.lines:
             # NOTE: 05/07/24 - the Boltzmann factor and line strengths already change for emission
             #       versus absorption, so this function can remain as-is
 
             honl_london = line.honl_london_factor()
-            boltzmann   = line.boltzmann_factor()
+            boltzmann   = line.rot_boltzmann_factor()
 
             q_r += honl_london * boltzmann
 
@@ -131,7 +155,9 @@ class Band:
         intensities_lif = np.array([line.intensity() for line in
                                     self.get_lif_lines(rot_qn_up, rot_qn_lo)])
 
-        intensities_lif /= intensities_lif.max()
+        # normalize w.r.t. vibrational partition
+        intensities_lif *= self.vib_boltz / self.sim.vib_part
+        # normalize w.r.t. Franck-Condon factor
         intensities_lif *= self.franck_condon / self.sim.max_fc
 
         return intensities_lif
@@ -142,7 +168,7 @@ class Band:
     def intensities_line(self) -> np.ndarray:
         intensities_line = np.array([line.intensity() for line in self.lines])
 
-        intensities_line /= intensities_line.max()
+        intensities_line *= self.vib_boltz / self.sim.vib_part
         intensities_line *= self.franck_condon / self.sim.max_fc
 
         return intensities_line
@@ -156,7 +182,7 @@ class Band:
         intensities_conv = convolve.convolve_brod(self.sim, self.lines, self.wavenumbers_line(),
                                                   self.intensities_line(), self.wavenumbers_conv())
 
-        intensities_conv /= intensities_conv.max()
+        intensities_conv *= self.vib_boltz / self.sim.vib_part
         intensities_conv *= self.franck_condon / self.sim.max_fc
 
         return intensities_conv
@@ -165,7 +191,7 @@ class Band:
         intensities_inst = convolve.convolve_inst(self.wavenumbers_conv(), self.intensities_conv(),
                                                   broadening)
 
-        intensities_inst /= intensities_inst.max()
+        intensities_inst *= self.vib_boltz / self.sim.vib_part
         intensities_inst *= self.franck_condon / self.sim.max_fc
 
         return intensities_inst

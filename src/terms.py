@@ -8,7 +8,7 @@ def vibrational_term(state: State, vib_qn: int) -> float:
     # calculates the vibrational term for the vibrating rotator
     # Herzberg p. 149, eq. (IV, 10)
 
-    return (state.consts['w_e'] * (vib_qn + 0.5)      -
+    return (state.consts['w_e']   * (vib_qn + 0.5)    -
             state.consts['we_xe'] * (vib_qn + 0.5)**2 +
             state.consts['we_ye'] * (vib_qn + 0.5)**3 +
             state.consts['we_ze'] * (vib_qn + 0.5)**4)

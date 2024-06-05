@@ -22,10 +22,10 @@ def plot_show():
     ax = plt.gca()
 
     secax = ax.secondary_xaxis('top', functions=(wavenum_to_wavelen, wavenum_to_wavelen))
-    secax.set_xlabel('Wavenumber $\\nu$, [cm$^{-1}$]')
+    secax.set_xlabel('Wavenumber, $\\nu$ [cm$^{-1}$]')
 
-    plt.xlabel('Wavelength $\\lambda$, [nm]')
-    plt.ylabel('Normalized Intensity')
+    plt.xlabel('Wavelength, $\\lambda$ [nm]')
+    plt.ylabel('Intensity, Arbitrary Units [-]')
 
     plt.legend()
     plt.show()

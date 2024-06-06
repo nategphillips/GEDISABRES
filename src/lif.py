@@ -1,4 +1,7 @@
 # module lif
+"""
+Contains example spectra for LIF.
+"""
 
 import numpy as np
 import matplotlib.colors

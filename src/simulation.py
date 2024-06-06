@@ -1,4 +1,7 @@
 # module simulation
+"""
+Contains the implementation of the Simulation class.
+"""
 
 import numpy as np
 
@@ -6,12 +9,17 @@ import terms
 import convolve
 import input as inp
 from band import Band
+from line import Line
 import constants as cn
 from state import State
 from simtype import SimType
 from molecule import Molecule
 
 class Simulation:
+    """
+    A simulation containing multiple vibrational bands.
+    """
+
     def __init__(self, molecule: Molecule, temp: float, pres: float, rot_lvls: np.ndarray,
                  state_up: str, state_lo: str, band_list: list[tuple[int, int]],
                  sim_type: SimType) -> None:
@@ -28,7 +36,10 @@ class Simulation:
         self.vib_part:  float      = self.vibrational_partition()
 
     def vibrational_partition(self) -> float:
-        # calculates the vibrational partition function
+        """
+        Returns the vibrational partition function.
+        """
+
         # Herzberg p. 123, eq. (III, 159)
 
         match self.sim_type:
@@ -52,14 +63,18 @@ class Simulation:
         return q_v
 
     def all_convolved_data(self) -> tuple[np.ndarray, np.ndarray]:
-        wavenumbers_line = np.array([])
-        intensities_line = np.array([])
-        lines            = np.array([])
+        """
+        Creates common axes for plotting the convolved data of all vibrational bands at once.
+        """
+
+        wavenumbers_line: np.ndarray = np.array([])
+        intensities_line: np.ndarray = np.array([])
+        lines:            list[Line] = []
 
         for vib_band in self.vib_bands:
             wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
             intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
-            lines = np.concatenate((lines, vib_band.lines))
+            lines.extend(vib_band.lines)
 
         wavenumbers_conv = np.linspace(wavenumbers_line.min(), wavenumbers_line.max(),
                                        inp.GRANULARITY)

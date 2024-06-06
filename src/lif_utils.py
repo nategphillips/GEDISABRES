@@ -1,4 +1,7 @@
 # module lif_utils
+"""
+Contains separate implementations of Simulation, Band, and Line for use with the LIF module.
+"""
 
 from dataclasses import dataclass
 

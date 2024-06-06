@@ -1,4 +1,7 @@
 # module test
+"""
+Contains temporary functions used for testing.
+"""
 
 import numpy as np
 import pandas as pd

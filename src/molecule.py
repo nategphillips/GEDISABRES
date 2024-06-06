@@ -1,4 +1,7 @@
 # module molecule
+"""
+Contains the implementation of the Molecule class.
+"""
 
 import numpy as np
 import pandas as pd
@@ -6,6 +9,10 @@ import pandas as pd
 from atom import Atom
 
 class Molecule:
+    """
+    A molecule.
+    """
+
     def __init__(self, name: str, atom_1: str, atom_2: str) -> None:
         self.name:    str          = name
         self.atom_1:  Atom         = Atom(atom_1)

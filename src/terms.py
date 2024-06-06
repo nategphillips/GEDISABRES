@@ -1,4 +1,7 @@
 # module term
+"""
+Contains functions used for vibrational and rotational term calculations.
+"""
 
 import numpy as np
 

@@ -1,4 +1,7 @@
 # module transmission
+"""
+Contains functions for modeling transmission.
+"""
 
 import numpy as np
 import pandas as pd

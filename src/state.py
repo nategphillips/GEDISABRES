@@ -1,4 +1,7 @@
 # module state
+"""
+Contains the implementation of the State class.
+"""
 
 import numpy as np
 import pandas as pd

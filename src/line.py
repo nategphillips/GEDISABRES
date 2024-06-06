@@ -1,4 +1,7 @@
 # module line
+"""
+Contains the implementation of the Line class.
+"""
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -18,6 +21,10 @@ if TYPE_CHECKING:
 
 @dataclass
 class Line:
+    """
+    A rotational line.
+    """
+
     rot_qn_up:     int
     rot_qn_lo:     int
     branch_idx_up: int
@@ -28,11 +35,18 @@ class Line:
     molecule:      Molecule
 
     def predissociation(self) -> float:
+        """
+        Returns the predissociation value.
+        """
+
         return (self.molecule.prediss[f'f{self.branch_idx_lo}']
                 [self.molecule.prediss['rot_qn'] == self.rot_qn_up].iloc[0])
 
     def wavenumber(self) -> float:
-        # calculates the wavenumber
+        """
+        Returns the wavenumber.
+        """
+
         # Herzberg p. 168, eq. (IV, 24)
 
         return (self.band.band_origin +
@@ -42,7 +56,10 @@ class Line:
                                       self.branch_idx_lo))
 
     def rot_boltzmann_factor(self) -> float:
-        # calculates the rotational Boltzmann factor
+        """
+        Returns the rotational Boltzmann factor.
+        """
+
         # Herzberg p. 125, eq. (III, 164)
 
         match self.sim.sim_type:
@@ -63,7 +80,10 @@ class Line:
                        cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.sim.temp))
 
     def honl_london_factor(self) -> float:
-        # calculates the Hönl-London factors (line strengths)
+        """
+        Returns the Hönl-London factor (line strength).
+        """
+
         # Herzberg p. 250, eq. (V, 57)
 
         # FIXME: 05/07/24 - the Boltzmann factor changes based on emission or absorption, which
@@ -81,7 +101,10 @@ class Line:
         return line_strength
 
     def intensity(self) -> float:
-        # calculates the intensity
+        """
+        Returns the intensity.
+        """
+
         # Herzberg p. 126, eqs. (III, 169-170)
 
         match self.sim.sim_type:
@@ -92,7 +115,7 @@ class Line:
             case _:
                 raise ValueError('Invalid SimType.')
 
-        # Honl-London contribution
+        # Hönl-London contribution
         intensity = wavenumber_factor * self.honl_london_factor()
         # rotational contribution
         intensity *= self.rot_boltzmann_factor() / self.band.rot_part

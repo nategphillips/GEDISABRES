@@ -44,15 +44,15 @@ class Simulation:
 
         match self.sim_type:
             case SimType.ABSORPTION:
-                state   = self.state_lo
+                state: State = self.state_lo
             case SimType.EMISSION | SimType.LIF:
-                state   = self.state_up
+                state: State = self.state_up
             case _:
                 raise ValueError('Invalid SimType.')
 
-        q_v = 0
+        q_v: float = 0.0
 
-        # NOTE: 06/05/24 - since the partition function relies on the sum as the vibrational quantum
+        # NOTE: 06/05/24 - Since the partition function relies on the sum as the vibrational quantum
         #       number goes to infinity, the currently selected vibrational bands are not used;
         #       since the user might only have a single band selected, it would not correctly
         #       generate the state sum (the range from 0 to 18 is somewhat arbitrary though)

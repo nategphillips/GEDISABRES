@@ -12,6 +12,7 @@ import numpy as np
 
 import terms
 import constants as cn
+from state import State
 from simtype import SimType
 from molecule import Molecule
 
@@ -64,15 +65,15 @@ class Line:
 
         match self.sim.sim_type:
             case SimType.ABSORPTION:
-                state      = self.sim.state_lo
-                vib_qn     = self.band.vib_qn_lo
-                rot_qn     = self.rot_qn_lo
-                branch_idx = self.branch_idx_lo
+                state:      State = self.sim.state_lo
+                vib_qn:     int   = self.band.vib_qn_lo
+                rot_qn:     int   = self.rot_qn_lo
+                branch_idx: int   = self.branch_idx_lo
             case SimType.EMISSION | SimType.LIF:
-                state      = self.sim.state_up
-                vib_qn     = self.band.vib_qn_up
-                rot_qn     = self.rot_qn_up
-                branch_idx = self.branch_idx_up
+                state:      State = self.sim.state_up
+                vib_qn:     int   = self.band.vib_qn_up
+                rot_qn:     int   = self.rot_qn_up
+                branch_idx: int   = self.branch_idx_up
             case _:
                 raise ValueError('Invalid SimType.')
 
@@ -86,7 +87,7 @@ class Line:
 
         # Herzberg p. 250, eq. (V, 57)
 
-        # FIXME: 05/07/24 - the Boltzmann factor changes based on emission or absorption, which
+        # FIXME: 05/07/24 - The Boltzmann factor changes based on emission or absorption, which
         #        presumably means these need to change as well
 
         match self.branch_name:
@@ -109,15 +110,15 @@ class Line:
 
         match self.sim.sim_type:
             case SimType.ABSORPTION:
-                wavenumber_factor = self.wavenumber()
+                wavenumber_factor: float = self.wavenumber()
             case SimType.EMISSION | SimType.LIF:
-                wavenumber_factor = self.wavenumber()**4
+                wavenumber_factor: float = self.wavenumber()**4
             case _:
                 raise ValueError('Invalid SimType.')
 
         # Hönl-London contribution
-        intensity = wavenumber_factor * self.honl_london_factor()
-        # rotational contribution
+        intensity: float = wavenumber_factor * self.honl_london_factor()
+        # Rotational contribution
         intensity *= self.rot_boltzmann_factor() / self.band.rot_part
 
         if self.branch_idx_lo in (1, 3):

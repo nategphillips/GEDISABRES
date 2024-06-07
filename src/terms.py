@@ -66,10 +66,19 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
 
     # Schlapp, 1936 - Fine Structure in the 3Σ Ground State of the Oxygen Molecule
     # From matrix elements - "precise" values
-    # FIXME: 06/07/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
     f1: float = b * x1 + b - lamd - np.sqrt((b - lamd)**2 + (b - gamm / 2)**2 * 4 * x1)
     f2: float = b * x2
     f3: float = b * x3 + b - lamd + np.sqrt((b - lamd)**2 + (b - gamm / 2)**2 * 4 * x3)
+
+    # NOTE: 06/07/24 - The rotational quantum number being input into this function is N
+    # TODO: 06/07/24 - When N = 0, only the F1 triplet exists for the ground state
+    # Hanson - Spectroscopy and Optical Diagnostics for Gases p. 170
+
+    # TODO: 06/07/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
+    # Hougen - The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15
+    # TODO: 06/07/24 -  J is only zero when N = 1 and the triplet branch is F3
+    # Hanson - Spectroscopy and Optical Diagnostics for Gases, p. 170
+
 
     match branch_idx:
         # F1 triplet

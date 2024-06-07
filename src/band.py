@@ -13,6 +13,7 @@ import convolve
 import input as inp
 from line import Line
 import constants as cn
+from state import State
 from simtype import SimType
 
 if TYPE_CHECKING:
@@ -38,11 +39,11 @@ class Band:
         Returns a list of allowed spectral lines.
         """
 
-        lines = []
+        lines: list[Line] = []
 
         for rot_qn_up in self.sim.rot_lvls:
             for rot_qn_lo in self.sim.rot_lvls:
-                # For molecular oxygen, all transitions with even values of J'' are forbidden
+                # For molecular oxygen, all transitions with even values of N'' are forbidden
                 if rot_qn_lo % 2:
                     lines.extend(self.get_allowed_branches(rot_qn_up, rot_qn_lo))
 
@@ -56,12 +57,12 @@ class Band:
         # ∆N = ±1, ∆N = 0 is forbidden for Σ-Σ transitions
         # Herzberg p. 244, eq. (V, 44)
 
-        lines = []
+        lines: list[Line] = []
 
         # Account for triplet splitting in the 3Σ-3Σ transition
-        branch_range = range(1, 4)
+        branch_range: range = range(1, 4)
 
-        delta_rot_qn = rot_qn_up - rot_qn_lo
+        delta_rot_qn: int = rot_qn_up - rot_qn_lo
 
         # R branch
         if delta_rot_qn == 1:
@@ -81,7 +82,7 @@ class Band:
 
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
-        lines = []
+        lines: list[Line] = []
 
         for branch_idx_up in branch_range:
             for branch_idx_lo in branch_range:
@@ -111,11 +112,11 @@ class Band:
 
         match self.sim.sim_type:
             case SimType.ABSORPTION:
-                state  = self.sim.state_lo
-                vib_qn = self.vib_qn_lo
+                state:  State = self.sim.state_lo
+                vib_qn: int   = self.vib_qn_lo
             case SimType.EMISSION | SimType.LIF:
-                state  = self.sim.state_up
-                vib_qn = self.vib_qn_up
+                state:  State = self.sim.state_up
+                vib_qn: int   = self.vib_qn_up
             case _:
                 raise ValueError('Invalid SimType.')
 
@@ -129,7 +130,7 @@ class Band:
 
         # Herzberg p. 125, eq. (III, 164)
 
-        q_r = 0
+        q_r: float = 0.0
 
         # NOTE: 06/05/24 - This *should* always include the maximum number of lines possible, i.e.
         #       the limit as the number of lines goes to infinity; the rotational quantum numbers go
@@ -137,9 +138,8 @@ class Band:
         for line in self.lines:
             # NOTE: 05/07/24 - The Boltzmann factor and line strengths already change for emission
             #       versus absorption, so this function can remain as-is
-
-            honl_london = line.honl_london_factor()
-            boltzmann   = line.rot_boltzmann_factor()
+            honl_london: float = line.honl_london_factor()
+            boltzmann:   float = line.rot_boltzmann_factor()
 
             q_r += honl_london * boltzmann
 
@@ -152,10 +152,10 @@ class Band:
 
         # Herzberg p. 151, eq. (IV, 12)
 
-        elc_energy = self.sim.state_up.consts['t_e'] - self.sim.state_lo.consts['t_e']
+        elc_energy: float = self.sim.state_up.consts['t_e'] - self.sim.state_lo.consts['t_e']
 
-        vib_energy = (terms.vibrational_term(self.sim.state_up, self.vib_qn_up) -
-                      terms.vibrational_term(self.sim.state_lo, self.vib_qn_lo))
+        vib_energy: float = (terms.vibrational_term(self.sim.state_up, self.vib_qn_up) -
+                             terms.vibrational_term(self.sim.state_lo, self.vib_qn_lo))
 
         return elc_energy + vib_energy
 
@@ -171,7 +171,7 @@ class Band:
         Returns an array of intensities for each line.
         """
 
-        intensities_line = np.array([line.intensity() for line in self.lines])
+        intensities_line: np.ndarray = np.array([line.intensity() for line in self.lines])
 
         # Normalize w.r.t. vibrational partition function
         intensities_line *= self.vib_boltz / self.sim.vib_part
@@ -185,7 +185,7 @@ class Band:
         Returns an array of convolved wavenumbers.
         """
 
-        wavenumbers_line = self.wavenumbers_line()
+        wavenumbers_line: np.ndarray = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data
         return np.linspace(wavenumbers_line.min(), wavenumbers_line.max(), inp.GRANULARITY)
@@ -195,8 +195,10 @@ class Band:
         Returns an array of convolved intensities.
         """
 
-        intensities_conv = convolve.convolve_brod(self.sim, self.lines, self.wavenumbers_line(),
-                                                  self.intensities_line(), self.wavenumbers_conv())
+        intensities_conv: np.ndarray = convolve.convolve_brod(self.sim, self.lines,
+                                                              self.wavenumbers_line(),
+                                                              self.intensities_line(),
+                                                              self.wavenumbers_conv())
 
         intensities_conv *= self.vib_boltz / self.sim.vib_part
         intensities_conv *= self.franck_condon / self.sim.max_fc
@@ -208,8 +210,9 @@ class Band:
         Returns an array of convolved intensities.
         """
 
-        intensities_inst = convolve.convolve_inst(self.wavenumbers_conv(), self.intensities_conv(),
-                                                  broadening)
+        intensities_inst: np.ndarray = convolve.convolve_inst(self.wavenumbers_conv(),
+                                                              self.intensities_conv(),
+                                                              broadening)
 
         intensities_inst *= self.vib_boltz / self.sim.vib_part
         intensities_inst *= self.franck_condon / self.sim.max_fc

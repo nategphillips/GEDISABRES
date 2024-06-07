@@ -9,9 +9,13 @@ import matplotlib.pyplot as plt
 
 import plot
 from molecule import Molecule
-from lif_utils import LifSimulation
+from lif_utils import LifSimulation, plot_lif, plot_lif_info
 
 def main():
+    """
+    Construct example spectra here.
+    """
+
     temp: float = 300.0
     pres: float = 101325.0
 
@@ -32,24 +36,24 @@ def main():
     palette: list[tuple] = plt.cycler('color', plt.cm.tab20c.colors).by_key()['color']
     colors:  list[str]   = [matplotlib.colors.to_hex(color) for color in palette]
 
-    plot.plot_lif(o2_up, 12, 13, colors)
-    plot.plot_lif(o2_lo, 16, 15, colors)
-    plot.plot_lif_info(o2_up, 12, 13)
-    plot.plot_lif_info(o2_lo, 16, 15)
+    plot_lif(o2_up, 12, 13, colors)
+    plot_lif(o2_lo, 16, 15, colors)
+    plot_lif_info(o2_up, 12, 13)
+    plot_lif_info(o2_lo, 16, 15)
     plot.plot_show()
 
-    # NOTE: 06/05/24 - the Franck-Condon factors of all 18 v'' bands sharing the same v' must to be
+    # NOTE: 06/05/24 - The Franck-Condon factors of all 18 v'' bands sharing the same v' must to be
     #       considered since their intensities are normalized relative to the highest intensity in
     #       the given simulation
 
-    # only search the main triplet in non-satellite bands
-    upper_wavenumbers = np.array([])
-    upper_intensities = np.array([])
-    upper_lines       = np.array([])
+    # Only search the main triplet in non-satellite bands
+    upper_wavenumbers: np.ndarray = np.array([])
+    upper_intensities: np.ndarray = np.array([])
+    upper_lines:       np.ndarray = np.array([])
 
-    lower_wavenumbers = np.array([])
-    lower_intensities = np.array([])
-    lower_lines       = np.array([])
+    lower_wavenumbers: np.ndarray = np.array([])
+    lower_intensities: np.ndarray = np.array([])
+    lower_lines:       np.ndarray = np.array([])
 
     for vib_band in o2_up.vib_bands:
         upper_wavenumbers = np.concatenate((upper_wavenumbers, vib_band.wavenumbers_line()))
@@ -61,13 +65,13 @@ def main():
         lower_intensities = np.concatenate((lower_intensities, vib_band.intensities_line()))
         lower_lines       = np.concatenate((lower_lines, vib_band.lines))
 
-    # now that all the intensities from every band are collected together, we have to normalize both
+    # Now that all the intensities from every band are collected together, we have to normalize both
     # of them by the same factor, otherwise their relative intensities will not be preserved
-    max_intensity = max(upper_intensities.max(), lower_intensities.max())
+    max_intensity: float = max(upper_intensities.max(), lower_intensities.max())
     upper_intensities /= max_intensity
     lower_intensities /= max_intensity
 
-    # filter by intensity (can't be done per line since the vibrational bands hold the information
+    # Filter by intensity (can't be done per line since the vibrational bands hold the information
     # about the normalized intensity of the lines)
     upper_indices = np.where(upper_intensities > 0.001)
     lower_indices = np.where(lower_intensities > 0.001)
@@ -80,7 +84,7 @@ def main():
     lower_intensities = lower_intensities[lower_indices]
     lower_lines       = lower_lines[lower_indices]
 
-    # compare all wavenumbers against each other and find nearby lines
+    # Compare all wavenumbers against each other and find nearby lines
     diff_matrix = np.abs(upper_wavenumbers[:, np.newaxis] - lower_wavenumbers)
     pair_mask = diff_matrix < 1
 

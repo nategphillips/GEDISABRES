@@ -14,10 +14,10 @@ def vibrational_term(state: State, vib_qn: int) -> float:
 
     # Herzberg p. 149, eq. (IV, 10)
 
-    return (state.consts['w_e']   * (vib_qn + 0.5)    -
-            state.consts['we_xe'] * (vib_qn + 0.5)**2 +
-            state.consts['we_ye'] * (vib_qn + 0.5)**3 +
-            state.consts['we_ze'] * (vib_qn + 0.5)**4)
+    return (state.consts["w_e"]   * (vib_qn + 0.5)    -
+            state.consts["we_xe"] * (vib_qn + 0.5)**2 +
+            state.consts["we_ye"] * (vib_qn + 0.5)**3 +
+            state.consts["we_ze"] * (vib_qn + 0.5)**4)
 
 def rotational_constants(state: State, vib_qn: int) -> list[float]:
     """
@@ -26,14 +26,14 @@ def rotational_constants(state: State, vib_qn: int) -> list[float]:
 
     # Herzberg pp. 107-109, eqs. (III, 117-127)
 
-    b_v: float = (state.consts['b_e']                        -
-                  state.consts['alph_e'] * (vib_qn + 0.5)    +
-                  state.consts['gamm_e'] * (vib_qn + 0.5)**2 +
-                  state.consts['delt_e'] * (vib_qn + 0.5)**3)
+    b_v: float = (state.consts["b_e"]                        -
+                  state.consts["alph_e"] * (vib_qn + 0.5)    +
+                  state.consts["gamm_e"] * (vib_qn + 0.5)**2 +
+                  state.consts["delt_e"] * (vib_qn + 0.5)**3)
 
-    d_v: float = state.consts['d_e'] - state.consts['beta_e'] * (vib_qn + 0.5)
+    d_v: float = state.consts["d_e"] - state.consts["beta_e"] * (vib_qn + 0.5)
 
-    h_v: float = state.consts['h_e']
+    h_v: float = state.consts["h_e"]
 
     return [b_v, d_v, h_v]
 
@@ -44,8 +44,8 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
 
     b, d, h = rotational_constants(state, vib_qn)
 
-    lamd: float = state.consts['lamd']
-    gamm: float = state.consts['gamm']
+    lamd: float = state.consts["lamd"]
+    gamm: float = state.consts["gamm"]
 
     # Shorthand notation for rotational quantum numbers
     x1: int = (rot_qn + 1) * (rot_qn + 2) # F1: J = N + 1, so J(J + 1) -> (N + 1)(N + 2)
@@ -91,4 +91,4 @@ def rotational_term(state: State, vib_qn: int, rot_qn: int, branch_idx: int) -> 
         case 3:
             return f3
         case _:
-            raise ValueError('Invalid branch index.')
+            raise ValueError("ERROR: invalid branch index.")

@@ -6,6 +6,7 @@ Contains functions used for plotting.
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.axes import Axes
 import scienceplots  # pylint: disable = unused-import
 
 import convolve
@@ -89,7 +90,7 @@ def plot_line_info(sim: Simulation) -> None:
         for idx, line in enumerate(lines):
             plt.text(wavelengths_line[idx], intensities_line[idx], f"{line.branch_name}")
 
-def plot_line(sim: Simulation, colors: list) -> None:
+def plot_line(axs: Axes, sim: Simulation, colors: list) -> None:
     """
     Plots each rotational line.
     """
@@ -100,10 +101,10 @@ def plot_line(sim: Simulation, colors: list) -> None:
         wavelengths_line: np.ndarray = wavenum_to_wavelen(vib_band.wavenumbers_line())
         intensities_line: np.ndarray = vib_band.intensities_line() / max_intensity
 
-        plt.stem(wavelengths_line, intensities_line, colors[idx], markerfmt='',
+        axs.stem(wavelengths_line, intensities_line, colors[idx], markerfmt='',
                  label=f"{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} line")
 
-def plot_conv(sim: Simulation, colors: list) -> None:
+def plot_conv(axs: Axes, sim: Simulation, colors: list) -> None:
     """
     Plots convolved data for each vibrational band separately.
     """
@@ -114,7 +115,7 @@ def plot_conv(sim: Simulation, colors: list) -> None:
         wavelengths_conv: np.ndarray = wavenum_to_wavelen(vib_band.wavenumbers_conv())
         intensities_conv: np.ndarray = vib_band.intensities_conv() / max_intensity
 
-        plt.plot(wavelengths_conv, intensities_conv, colors[idx],
+        axs.plot(wavelengths_conv, intensities_conv, colors[idx],
                  label=f"{sim.molecule.name} {vib_band.vib_qn_up, vib_band.vib_qn_lo} conv")
 
 def plot_conv_all(sim: Simulation, color: str) -> None:

@@ -37,6 +37,7 @@ def main():
     plot.plot_line(o2_sim, colors)
 
     # plot.plot_conv(o2_sim, colors)
+
     # plot.plot_samp("harvard/harvard20", colors[1], "plot")
     # plot.plot_residual(o2_sim, colors[2], "harvard/harvard20")
 

@@ -42,13 +42,13 @@ class Simulation:
 
         # Herzberg p. 123, eq. (III, 159)
 
-        state: State
-
         match self.sim_type:
             case SimType.ABSORPTION:
-                state = self.state_lo
+                state: State = self.state_lo
             case SimType.EMISSION | SimType.LIF:
-                state = self.state_up
+                state: State = self.state_up
+            case _:
+                raise ValueError("ERROR: invalid SimType.")
 
         q_v: float = 0.0
 

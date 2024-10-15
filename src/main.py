@@ -263,6 +263,9 @@ class VibrationalBand:
 
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
+        # TODO: 10/15/24 - Handle special case rules for the N' = 0 case for satellite bands (PQ12
+        #                  and PQ13 bands should be the only ones to appear)
+
         lines = []
 
         for branch_idx_up in branch_range:
@@ -270,21 +273,36 @@ class VibrationalBand:
                 # Main branches
                 # R1, R2, R3, P1, P2, P3
                 if branch_idx_up == branch_idx_lo:
-                    # print(branch_name, n_qn_up, n_qn_lo, branch_idx_up, branch_idx_lo)
-
-                    lines.append(
-                        RotationalLine(
-                            sim=self.sim,
-                            band=self,
-                            n_qn_up=n_qn_up,
-                            n_qn_lo=n_qn_lo,
-                            j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
-                            j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
-                            branch_idx_up=branch_idx_up,
-                            branch_idx_lo=branch_idx_lo,
-                            branch_name=branch_name,
+                    # When N' = 0, only the P1 transition within the F1 band exists
+                    if n_qn_up == 0:
+                        if branch_idx_up == 1:
+                            lines.append(
+                                RotationalLine(
+                                    sim=self.sim,
+                                    band=self,
+                                    n_qn_up=n_qn_up,
+                                    n_qn_lo=n_qn_lo,
+                                    j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
+                                    j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
+                                    branch_idx_up=branch_idx_up,
+                                    branch_idx_lo=branch_idx_lo,
+                                    branch_name=branch_name,
+                                )
+                            )
+                    else:
+                        lines.append(
+                            RotationalLine(
+                                sim=self.sim,
+                                band=self,
+                                n_qn_up=n_qn_up,
+                                n_qn_lo=n_qn_lo,
+                                j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
+                                j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
+                                branch_idx_up=branch_idx_up,
+                                branch_idx_lo=branch_idx_lo,
+                                branch_name=branch_name,
+                            )
                         )
-                    )
                 # Satellite branches
                 # RQ31, RQ32, RQ21
                 if (branch_idx_up > branch_idx_lo) & (branch_name == "A"):
@@ -366,15 +384,15 @@ class RotationalLine:
         return (
             self.band.band_origin()
             + self.rotational_term(
-                self.sim.state_up, self.n_qn_up, self.band.v_qn_up, self.branch_idx_up
+                self.sim.state_up, self.j_qn_up, self.band.v_qn_up, self.branch_idx_up
             )
             - self.rotational_term(
-                self.sim.state_lo, self.n_qn_lo, self.band.v_qn_lo, self.branch_idx_lo
+                self.sim.state_lo, self.j_qn_lo, self.band.v_qn_lo, self.branch_idx_lo
             )
         )
 
     def rotational_term(
-        self, state: ElectronicState, n_qn: int, v_qn: int, branch_idx: int
+        self, state: ElectronicState, j_qn: int, v_qn: int, branch_idx: int
     ) -> float:
         """
         Returns the rotational term value in [1/cm].
@@ -392,30 +410,26 @@ class RotationalLine:
         lamda: float = state.constants["lamda"]
         gamma: float = state.constants["gamma"]
 
-        # Shorthand notation for rotational quantum numbers
-        # F1: J = N + 1, so J(J + 1) -> (N + 1)(N + 2)
-        # F2: J = N,     so J(J + 1) -> N(N + 1)
-        # F3: J = N - 1, so J(J + 1) -> N(N - 1)
-        x1: int = (n_qn + 1) * (n_qn + 2)
-        x2: int = n_qn * (n_qn + 1)
-        x3: int = n_qn * (n_qn - 1)
+        # Shorthand notation for the rotational quantum number
+        x = j_qn * (j_qn + 1)
 
         # Schlapp, 1936 - Fine Structure in the 3Σ Ground State of the Oxygen Molecule
         # From matrix elements - "precise" values
         f1: float = (
-            b_v * x1 + b_v - lamda - np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x1)
+            b_v * x + b_v - lamda - np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
         )
-        f2: float = b_v * x2
+        f2: float = b_v * x
         f3: float = (
-            b_v * x3 + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x3)
+            b_v * x + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
         )
 
-        # TODO: 06/07/24 - When N = 0, only the F1 triplet exists for the ground state
-        # Hanson - Spectroscopy and Optical Diagnostics for Gases p. 170
         # TODO: 06/07/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
         # Hougen - The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15
         # TODO: 06/07/24 - J is only zero when N = 1 and the triplet branch is F3
         # Hanson - Spectroscopy and Optical Diagnostics for Gases, p. 170
+
+        if j_qn == 0:
+            f3 = -2 * lamda + b_v * x + 2 * b_v
 
         match branch_idx:
             case 1:

@@ -1,6 +1,6 @@
 # module main
 """
-A simulation of the Schumann--Runge bands of molecular oxygen written in Python.
+A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 """
 
 from dataclasses import dataclass
@@ -228,7 +228,7 @@ class VibrationalBand:
 
         return lines
 
-    def get_allowed_branches(self, n_qn_up, n_qn_lo):
+    def get_allowed_branches(self, n_qn_up: int, n_qn_lo: int):
         """
         Determines the selection rules for Hund's case (b).
         """
@@ -250,90 +250,71 @@ class VibrationalBand:
         # R branch
         if delta_n_qn == 1:
             lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "R"))
+        # Q branch (doesn't exist for the Schumann-Runge bands of O2 due to the allowed transitions
+        # for the electronic states)
+        if delta_n_qn == 0:
+            lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "Q"))
         # P branch
         elif delta_n_qn == -1:
             lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "P"))
 
         return lines
 
-    def get_branch_idx(self, n_qn_up, n_qn_lo, branch_range, branch_name):
+    def get_branch_idx(self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str):
         """
         Returns the rotational lines within a given branch.
         """
 
+        def add_line(branch_idx_up: int, branch_idx_lo: int, is_satellite: bool):
+            """
+            Helper to create and append a rotational line.
+            """
+
+            print(f"{n_qn_up} {n_qn_lo}: {branch_name} {branch_idx_up} {branch_idx_lo}")
+
+            lines.append(
+                RotationalLine(
+                    sim=self.sim,
+                    band=self,
+                    n_qn_up=n_qn_up,
+                    n_qn_lo=n_qn_lo,
+                    j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
+                    j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
+                    branch_idx_up=branch_idx_up,
+                    branch_idx_lo=branch_idx_lo,
+                    branch_name=branch_name,
+                    is_satellite=is_satellite,
+                )
+            )
+
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
-        # TODO: 10/15/24 - Handle special case rules for the N' = 0 case for satellite bands (PQ12
-        #                  and PQ13 bands should be the only ones to appear)
+        # NOTE: 10/16/24 - Every transition has 6 total lines (3 main + 3 satellite) except for the
+        #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite)
 
         lines = []
 
+        # Handle the special case where N' = 0 (only the P1, PQ12, and PQ13 lines exist)
+        if n_qn_up == 0:
+            if branch_name == "P":
+                add_line(1, 1, False)
+            for branch_idx_lo in (2, 3):
+                add_line(1, branch_idx_lo, True)
+
+            return lines
+
+        # Handle regular cases for other N'
         for branch_idx_up in branch_range:
             for branch_idx_lo in branch_range:
-                # Main branches
-                # R1, R2, R3, P1, P2, P3
+                # Main branches: R1, R2, R3, P1, P2, P3
                 if branch_idx_up == branch_idx_lo:
-                    # When N' = 0, only the P1 transition within the F1 band exists
-                    if n_qn_up == 0:
-                        if branch_idx_up == 1:
-                            lines.append(
-                                RotationalLine(
-                                    sim=self.sim,
-                                    band=self,
-                                    n_qn_up=n_qn_up,
-                                    n_qn_lo=n_qn_lo,
-                                    j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
-                                    j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
-                                    branch_idx_up=branch_idx_up,
-                                    branch_idx_lo=branch_idx_lo,
-                                    branch_name=branch_name,
-                                )
-                            )
-                    else:
-                        lines.append(
-                            RotationalLine(
-                                sim=self.sim,
-                                band=self,
-                                n_qn_up=n_qn_up,
-                                n_qn_lo=n_qn_lo,
-                                j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
-                                j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
-                                branch_idx_up=branch_idx_up,
-                                branch_idx_lo=branch_idx_lo,
-                                branch_name=branch_name,
-                            )
-                        )
-                # Satellite branches
-                # RQ31, RQ32, RQ21
-                if (branch_idx_up > branch_idx_lo) & (branch_name == "A"):
-                    lines.append(
-                        RotationalLine(
-                            sim=self.sim,
-                            band=self,
-                            n_qn_up=n_qn_up,
-                            n_qn_lo=n_qn_lo,
-                            j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
-                            j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
-                            branch_idx_up=branch_idx_up,
-                            branch_idx_lo=branch_idx_lo,
-                            branch_name=branch_name,
-                        )
-                    )
-                # PQ13, PQ23, PQ12
-                elif (branch_idx_up < branch_idx_lo) & (branch_name == "A"):
-                    lines.append(
-                        RotationalLine(
-                            sim=self.sim,
-                            band=self,
-                            n_qn_up=n_qn_up,
-                            n_qn_lo=n_qn_lo,
-                            j_qn_up=n2j_qn(n_qn_up, branch_idx_up),
-                            j_qn_lo=n2j_qn(n_qn_lo, branch_idx_lo),
-                            branch_idx_up=branch_idx_up,
-                            branch_idx_lo=branch_idx_lo,
-                            branch_name=branch_name,
-                        )
-                    )
+                    add_line(branch_idx_up, branch_idx_lo, False)
+                # Satellite branches: RQ31, RQ32, RQ21
+                elif (branch_name == "R") and (branch_idx_up > branch_idx_lo):
+                    add_line(branch_idx_up, branch_idx_lo, True)
+                # Satellite branches: PQ13, PQ23, PQ12
+                elif (branch_name == "P") and (branch_idx_up < branch_idx_lo):
+                    add_line(branch_idx_up, branch_idx_lo, True)
 
         return lines
 
@@ -343,16 +324,16 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
     Converts from N to J.
     """
 
-    # Hund's case (b), spin multiplicity 3
-    # F1: J = N + 1
-    # F2: J = N
-    # F3: J = N - 1
+    # For Hund's case (b), spin multiplicity 3
     match branch_idx:
         case 1:
+            # F1: J = N + 1
             return n_qn + 1
         case 2:
+            # F2: J = N
             return n_qn
         case 3:
+            # F3: J = N - 1
             return n_qn - 1
         case _:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
@@ -373,6 +354,7 @@ class RotationalLine:
     branch_idx_up: int
     branch_idx_lo: int
     branch_name: str
+    is_satellite: bool
 
     def wavenumber(self) -> float:
         """
@@ -423,10 +405,8 @@ class RotationalLine:
             b_v * x + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
         )
 
-        # TODO: 06/07/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
-        # Hougen - The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15
-        # TODO: 06/07/24 - J is only zero when N = 1 and the triplet branch is F3
-        # Hanson - Spectroscopy and Optical Diagnostics for Gases, p. 170
+        # NOTE: 10/15/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
+        #       (Hougen: The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15)
 
         if j_qn == 0:
             f3 = -2 * lamda + b_v * x + 2 * b_v

@@ -270,7 +270,7 @@ class VibrationalBand:
             Helper to create and append a rotational line.
             """
 
-            print(f"{n_qn_up} {n_qn_lo}: {branch_name} {branch_idx_up} {branch_idx_lo}")
+            # print(f"{n_qn_up} {n_qn_lo}: {branch_name} {branch_idx_up} {branch_idx_lo}")
 
             lines.append(
                 RotationalLine(
@@ -355,6 +355,65 @@ class RotationalLine:
     branch_idx_lo: int
     branch_name: str
     is_satellite: bool
+
+    def intensity(self) -> float:
+        """
+        Returns the intensity.
+        """
+
+        return self.honl_london()
+
+    def honl_london(self) -> float:
+        """
+        Returns the Hönl-London factor (line strength).
+        """
+
+        # For emission, the relevant rotational quantum number is N'; for absorption, it's N''
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                n_qn = self.n_qn_up
+            case SimulationType.ABSORPTION:
+                n_qn = self.n_qn_lo
+
+        # Convert the properties of the current rotational line into a useful key
+        if self.is_satellite:
+            key = f"{self.branch_name}Q{self.branch_idx_up}{self.branch_idx_lo}"
+        else:
+            key = f"{self.branch_name}{self.branch_idx_up}"
+
+        # Factors are from Tatum - 1966: Hönl-London Factors for 3Σ±-3Σ± Transitions
+        factors: dict[SimulationType, dict[str, float]] = {
+            SimulationType.EMISSION: {
+                "P1": ((n_qn + 1) * (2 * n_qn + 5)) / (2 * n_qn + 3),
+                "R1": (n_qn * (2 * n_qn + 3)) / (2 * n_qn + 1),
+                "P2": (n_qn * (n_qn + 2)) / (n_qn + 1),
+                "R2": ((n_qn - 1) * (n_qn + 1)) / n_qn,
+                "P3": ((n_qn + 1) * (2 * n_qn - 1)) / (2 * n_qn + 1),
+                "R3": (n_qn * (2 * n_qn - 3)) / (2 * n_qn - 1),
+                "PQ12": 1 / (n_qn + 1),
+                "RQ21": 1 / n_qn,
+                "PQ13": 1 / ((n_qn + 1) * (2 * n_qn + 1) * (2 * n_qn + 3)),
+                "RQ31": 1 / (n_qn * (2 * n_qn - 1) * (2 * n_qn + 1)),
+                "PQ23": 1 / (n_qn + 1),
+                "RQ32": 1 / n_qn,
+            },
+            SimulationType.ABSORPTION: {
+                "P1": (n_qn * (2 * n_qn + 3)) / (2 * n_qn + 1),
+                "R1": ((n_qn + 1) * (2 * n_qn + 5)) / (2 * n_qn + 3),
+                "P2": ((n_qn - 1) * (n_qn + 1)) / n_qn,
+                "R2": (n_qn * (n_qn + 2)) / (n_qn + 1),
+                "P3": (n_qn * (2 * n_qn - 3)) / (2 * n_qn - 1),
+                "R3": ((n_qn + 1) * (2 * n_qn - 1)) / (2 * n_qn + 1),
+                "PQ12": 1 / n_qn,
+                "RQ21": 1 / (n_qn + 1),
+                "PQ13": 1 / (n_qn * (2 * n_qn - 1) * (2 * n_qn + 1)),
+                "RQ31": 1 / ((n_qn + 1) * (2 * n_qn + 1) * (2 * n_qn + 3)),
+                "PQ23": 1 / n_qn,
+                "RQ32": 1 / (n_qn + 1),
+            },
+        }
+
+        return factors[self.sim.sim_type][key]
 
     def wavenumber(self) -> float:
         """
@@ -453,11 +512,14 @@ def main() -> None:
     intensities: list[float] = []
     for line in sim.vib_bands[0].get_rotational_lines():
         wavenumbers.append(line.wavenumber())
-        intensities.append(1.0)
+        intensities.append(line.intensity())
+
+    intn = np.array(intensities)
+    intn /= intn.max()
 
     sample: np.ndarray = np.genfromtxt("../data/harvard.csv", delimiter=",", skip_header=1)
 
-    plt.stem(wavenumbers, intensities, markerfmt="")
+    plt.stem(wavenumbers, intn, markerfmt="")
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")
     plt.show()
 

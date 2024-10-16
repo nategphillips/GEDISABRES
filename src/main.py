@@ -9,7 +9,7 @@ from enum import Enum
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Avodagro constant  [1/mol]
+# Avodagro constant [1/mol]
 AVOGADRO: float = 6.02214076e23
 # Atomic masses [g/mol]
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
@@ -361,7 +361,13 @@ class RotationalLine:
         Returns the intensity.
         """
 
-        return self.honl_london()
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                wavenumber_factor = self.wavenumber() ** 4
+            case SimulationType.ABSORPTION:
+                wavenumber_factor = self.wavenumber()
+
+        return wavenumber_factor * self.honl_london()
 
     def honl_london(self) -> float:
         """
@@ -379,6 +385,8 @@ class RotationalLine:
         if self.is_satellite:
             key = f"{self.branch_name}Q{self.branch_idx_up}{self.branch_idx_lo}"
         else:
+            # For main branches, the upper and lower branches indicies are the same, so it doesn't
+            # matter which one is used here
             key = f"{self.branch_name}{self.branch_idx_up}"
 
         # Factors are from Tatum - 1966: Hönl-London Factors for 3Σ±-3Σ± Transitions
@@ -504,8 +512,8 @@ def main() -> None:
         state_lo=state_lo,
         vib_bands=vib_bands,
         rot_lvls=np.arange(0, 36),
-        temperature=273.15,
-        pressure=101.325,
+        temperature=300.0,
+        pressure=101325.0,
     )
 
     wavenumbers: list[float] = []

@@ -6,50 +6,10 @@ A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 from dataclasses import dataclass
 from enum import Enum
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-# Avodagro constant [1/mol]
-AVOGADRO: float = 6.02214076e23
-# Atomic masses [g/mol]
-ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
-# Molecular constants [1/cm]
-MOLECULAR_CONSTANTS: dict[str, dict[str, dict[str, float]]] = {
-    "O2": {
-        "X3Sg-": {
-            "T_e": 0.0,
-            "w_e": 1580.193,
-            "we_xe": 11.981,
-            "we_ye": 0.04747,
-            "we_ze": -0.001273,
-            "B_e": 1.4456,
-            "alpha_e": 0.01593,
-            "gamma_e": 0.0,
-            "delta_e": 0.0,
-            "D_e": 4.839e-6,
-            "beta_e": 0.0,
-            "H_e": 0.0,
-            "lamda": 1.9847511,
-            "gamma": -0.00842536,
-        },
-        "B3Su-": {
-            "T_e": 49793.28,
-            "w_e": 709.31,
-            "we_xe": 10.65,
-            "we_ye": -0.139,
-            "we_ze": 0.0,
-            "B_e": 0.81902,
-            "alpha_e": 0.01206,
-            "gamma_e": -5.56e-4,
-            "delta_e": 0.0,
-            "D_e": 4.55e-6,
-            "beta_e": 0.22e-6,
-            "H_e": 0.0,
-            "lamda": 1.5,
-            "gamma": -0.04,
-        },
-    }
-}
+import constants as cn
 
 
 class Atom:
@@ -59,7 +19,7 @@ class Atom:
 
     def __init__(self, name: str) -> None:
         self.name: str = name
-        self.mass: float = self.lookup_mass(name) / AVOGADRO / 1e3
+        self.mass: float = self.lookup_mass(name) / cn.AVOGD / 1e3
 
     @staticmethod
     def lookup_mass(name: str) -> float:
@@ -67,10 +27,10 @@ class Atom:
         Returns the atomic mass in [g/mol].
         """
 
-        if name not in ATOMIC_MASSES:
+        if name not in cn.ATOMIC_MASSES:
             raise ValueError(f"Atom `{name}` not supported.")
 
-        return ATOMIC_MASSES[name]
+        return cn.ATOMIC_MASSES[name]
 
 
 class Molecule:
@@ -112,12 +72,12 @@ class ElectronicState:
         Returns a dictionary of molecular constants for the specified electronic state in [1/cm].
         """
 
-        if molecule not in MOLECULAR_CONSTANTS:
+        if molecule not in cn.MOLECULAR_CONSTANTS:
             raise ValueError(f"Molecule `{molecule}` not supported.")
-        if state not in MOLECULAR_CONSTANTS[molecule]:
+        if state not in cn.MOLECULAR_CONSTANTS[molecule]:
             raise ValueError(f"State `{state}` in molecule `{molecule}` not supported.")
 
-        return MOLECULAR_CONSTANTS[molecule][state]
+        return cn.MOLECULAR_CONSTANTS[molecule][state]
 
     def is_allowed(self, n_qn: int) -> bool:
         """
@@ -423,70 +383,144 @@ class RotationalLine:
 
         return factors[self.sim.sim_type][key]
 
-    def wavenumber(self) -> float:
-        """
-        Returns the wavenumber in [1/cm].
-        """
-
-        # Herzberg p. 168, eq. (IV, 24)
-
-        return (
-            self.band.band_origin()
-            + self.rotational_term(
-                self.sim.state_up, self.j_qn_up, self.band.v_qn_up, self.branch_idx_up
-            )
-            - self.rotational_term(
-                self.sim.state_lo, self.j_qn_lo, self.band.v_qn_lo, self.branch_idx_lo
-            )
-        )
-
     def rotational_term(
-        self, state: ElectronicState, j_qn: int, v_qn: int, branch_idx: int
+        self, state: ElectronicState, v_qn: int, j_qn: int, branch_idx: int
     ) -> float:
         """
-        Returns the rotational term value in [1/cm].
+        Testing new Hamiltonian from Cheung.
         """
 
-        # Rotational constants
-        # Herzberg pp. 107-109, eqs. (III, 117-127)
+        # TODO: 10/17/24 - Change molecular constant data for the ground state to reflect the
+        #       conventions in Cheung
+        #       Yu      | Cheung
+        #       --------|------------
+        #       D       | -D
+        #       lamda_D | lamda_D / 2
+        #       gamma_D | gamma_D / 2
 
-        b_v: float = (
-            state.constants["B_e"]
-            - state.constants["alpha_e"] * (v_qn + 0.5)
-            + state.constants["gamma_e"] * (v_qn + 0.5) ** 2
-            + state.constants["delta_e"] * (v_qn + 0.5) ** 3
+        match state.name:
+            case "B3Su-":
+                lookup = cn.CONSTS_UP
+            case "X3Sg-":
+                lookup = cn.CONSTS_LO
+
+        b: float = lookup["B"][v_qn]
+        d: float = lookup["D"][v_qn]
+        l: float = lookup["lamda"][v_qn]
+        g: float = lookup["gamma"][v_qn]
+        ld: float = lookup["lamda_D"][v_qn]
+        gd: float = lookup["gamma_D"][v_qn]
+
+        x: int = j_qn * (j_qn + 1)
+
+        # Hamiltonian matrix elements
+        h11: float = (
+            b * (x + 2)
+            - d * (x**2 + 8 * x + 4)
+            - 4 / 3 * l
+            - 2 * g
+            - 4 / 3 * ld * (x + 2)
+            - 4 * gd * (x + 1)
         )
-        lamda: float = state.constants["lamda"]
-        gamma: float = state.constants["gamma"]
+        h12: float = -2 * np.sqrt(x) * (b - 2 * d * (x + 1) - g / 2 - 2 / 3 * ld - gd / 2 * (x + 4))
+        h21: float = h12
+        h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
 
-        # Shorthand notation for the rotational quantum number
-        x = j_qn * (j_qn + 1)
-
-        # Schlapp, 1936 - Fine Structure in the 3Σ Ground State of the Oxygen Molecule
-        # From matrix elements - "precise" values
-        f1: float = (
-            b_v * x + b_v - lamda - np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
-        )
-        f2: float = b_v * x
-        f3: float = (
-            b_v * x + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
-        )
-
-        # NOTE: 10/15/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
-        #       (Hougen: The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15)
-
-        if j_qn == 0:
-            f3 = -2 * lamda + b_v * x + 2 * b_v
+        hamiltonian: np.ndarray = np.array([[h11, h12], [h21, h22]])
+        f1, f3 = np.linalg.eigvals(hamiltonian)
 
         match branch_idx:
             case 1:
                 return f1
             case 2:
-                return f2
+                return b * x - d * x**2 + 2 / 3 * l - g + 2 / 3 * x * ld - x * gd
             case 3:
                 return f3
             case _:
                 raise ValueError(f"Invalid branch index: {branch_idx}")
+
+    def wavenumber(self) -> float:
+        """
+        Testing new Hamiltonian from Cheung.
+        """
+        energy_offset: float = (
+            2 / 3 * cn.CONSTS_UP["lamda"][self.band.v_qn_up]
+            - cn.CONSTS_UP["gamma"][self.band.v_qn_up]
+        )
+
+        return (
+            cn.CONSTS_UP["TG"][self.band.v_qn_up]
+            + energy_offset
+            + self.rotational_term(
+                self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
+            )
+            - self.rotational_term(
+                self.sim.state_lo, self.band.v_qn_lo, self.j_qn_lo, self.branch_idx_lo
+            )
+        )
+
+    # def wavenumber(self) -> float:
+    #     """
+    #     Returns the wavenumber in [1/cm].
+    #     """
+
+    #     # Herzberg p. 168, eq. (IV, 24)
+
+    #     return (
+    #         self.band.band_origin()
+    #         + self.rotational_term(
+    #             self.sim.state_up, self.j_qn_up, self.band.v_qn_up, self.branch_idx_up
+    #         )
+    #         - self.rotational_term(
+    #             self.sim.state_lo, self.j_qn_lo, self.band.v_qn_lo, self.branch_idx_lo
+    #         )
+    #     )
+
+    # def rotational_term(self, state: ElectronicState, j_qn: int, v_qn: int, branch_idx: int) -> float:
+    #     """
+    #     Returns the rotational term value in [1/cm].
+    #     """
+
+    #     # Rotational constants
+    #     # Herzberg pp. 107-109, eqs. (III, 117-127)
+
+    #     b_v: float = (
+    #         state.constants["B_e"]
+    #         - state.constants["alpha_e"] * (v_qn + 0.5)
+    #         + state.constants["gamma_e"] * (v_qn + 0.5) ** 2
+    #         + state.constants["delta_e"] * (v_qn + 0.5) ** 3
+    #     )
+    #     lamda: float = state.constants["lamda"]
+    #     gamma: float = state.constants["gamma"]
+
+    #     # Shorthand notation for the rotational quantum number
+    #     x = j_qn * (j_qn + 1)
+
+    #     # Schlapp, 1936 - Fine Structure in the 3Σ Ground State of the Oxygen Molecule
+    #     # From matrix elements - "precise" values
+    #     f1: float = (
+    #         b_v * x + b_v - lamda - np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
+    #     )
+    #     f2: float = b_v * x
+    #     f3: float = (
+    #         b_v * x + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
+    #     )
+
+    #     # NOTE: 10/15/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
+    #     #       (Hougen: The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15)
+
+    #     if j_qn == 0:
+    #         f3 = -2 * lamda + b_v * x + 2 * b_v
+
+    #     match branch_idx:
+    #         case 1:
+    #             return f1
+    #         case 2:
+    #             return f2
+    #         case 3:
+    #             return f3
+    #         case _:
+    #             raise ValueError(f"Invalid branch index: {branch_idx}")
 
 
 def main() -> None:
@@ -525,7 +559,7 @@ def main() -> None:
     intn = np.array(intensities)
     intn /= intn.max()
 
-    sample: np.ndarray = np.genfromtxt("../data/harvard.csv", delimiter=",", skip_header=1)
+    sample: np.ndarray = np.genfromtxt("../data/samples/harvard.csv", delimiter=",", skip_header=1)
 
     plt.stem(wavenumbers, intn, markerfmt="")
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")

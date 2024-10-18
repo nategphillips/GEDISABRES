@@ -3,11 +3,11 @@
 A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 """
 
-from dataclasses import dataclass
 from enum import Enum
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 import constants as cn
 
@@ -19,10 +19,10 @@ class Atom:
 
     def __init__(self, name: str) -> None:
         self.name: str = name
-        self.mass: float = self.lookup_mass(name) / cn.AVOGD / 1e3
+        self.mass: float = self.get_mass(name) / cn.AVOGD / 1e3
 
     @staticmethod
-    def lookup_mass(name: str) -> float:
+    def get_mass(name: str) -> float:
         """
         Returns the atomic mass in [g/mol].
         """
@@ -79,20 +79,17 @@ class ElectronicState:
         self.name: str = name
         self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
-        self.constants: dict[str, float] = self.lookup_constants(molecule.name, name)
+        self.constants: dict[str, dict[int, float]] = self.get_constants(molecule.name, name)
 
     @staticmethod
-    def lookup_constants(molecule: str, state: str) -> dict[str, float]:
+    def get_constants(molecule: str, state: str) -> dict[str, dict[int, float]]:
         """
         Returns a dictionary of molecular constants for the specified electronic state in [1/cm].
         """
 
-        if molecule not in cn.MOLECULAR_CONSTANTS:
-            raise ValueError(f"Molecule `{molecule}` not supported.")
-        if state not in cn.MOLECULAR_CONSTANTS[molecule]:
-            raise ValueError(f"State `{state}` in molecule `{molecule}` not supported.")
+        # TODO: 10/18/24 - Add errors here if the molecule or state is not supported
 
-        return cn.MOLECULAR_CONSTANTS[molecule][state]
+        return pd.read_csv(f"../data/constants/{molecule}/{state}.csv").to_dict()
 
     def is_allowed(self, n_qn: int) -> bool:
         """
@@ -121,19 +118,19 @@ class Simulation:
         molecule: Molecule,
         state_up: ElectronicState,
         state_lo: ElectronicState,
-        vib_bands: list[tuple[int, int]],
         rot_lvls: np.ndarray,
         temperature: float,
         pressure: float,
+        vib_bands: list[tuple[int, int]],
     ) -> None:
         self.sim_type: SimulationType = sim_type
         self.molecule: Molecule = molecule
         self.state_up: ElectronicState = state_up
         self.state_lo: ElectronicState = state_lo
-        self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
         self.rot_lvls: np.ndarray = rot_lvls
         self.temperature: float = temperature
         self.pressure: float = pressure
+        self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
 
     def get_vib_bands(self, vib_bands: list[tuple[int, int]]):
         """
@@ -155,49 +152,32 @@ class VibrationalBand:
         self.sim: Simulation = sim
         self.v_qn_up: int = v_qn_up
         self.v_qn_lo: int = v_qn_lo
+        self.band_origin: float = self.get_band_origin()
+        self.lines: list[RotationalLine] = self.get_rotational_lines()
+        self.rot_part: float = self.get_rotational_partition_function()
 
-    def rotational_partition_function(self) -> float:
-        """
-        Returns the rotational partition function.
-        """
-
-        q_r: float = 0.0
-
-        for line in self.get_rotational_lines():
-            q_r += line.rotational_boltzmann_factor()
-
-        return q_r / self.sim.molecule.symmetry_parameter
-
-    def band_origin(self) -> float:
+    def get_band_origin(self) -> float:
         """
         Returns the band origin in [1/cm].
         """
 
-        # Herzberg p. 151, eq. (IV, 12)
+        # Herzberg p. 168, eq. (IV, 24)
 
-        electronic_energy: float = (
-            self.sim.state_up.constants["T_e"] - self.sim.state_lo.constants["T_e"]
+        upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
+
+        # Converts Cheung's definition of the band origin (T) to Herzberg's definition (nu_0)
+        energy_offset: float = (
+            2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
 
-        vibrational_energy: float = self.vibrational_term(
-            self.sim.state_up, self.v_qn_up
-        ) - self.vibrational_term(self.sim.state_lo, self.v_qn_lo)
+        return upper_state["T"][self.v_qn_up] + energy_offset
 
-        return electronic_energy + vibrational_energy
-
-    def vibrational_term(self, state: ElectronicState, v_qn: int) -> float:
+    def get_rotational_partition_function(self) -> float:
         """
-        Returns the vibrational term value in [1/cm].
+        Returns the rotational partition function.
         """
 
-        # Herzberg p. 149, eq. (IV, 10)
-
-        return (
-            state.constants["w_e"] * (v_qn + 0.5)
-            - state.constants["we_xe"] * (v_qn + 0.5) ** 2
-            + state.constants["we_ye"] * (v_qn + 0.5) ** 3
-            + state.constants["we_ze"] * (v_qn + 0.5) ** 4
-        )
+        return sum(line.rotational_boltzmann_factor for line in self.lines)
 
     def get_rotational_lines(self):
         """
@@ -211,11 +191,11 @@ class VibrationalBand:
                 # Ensure the rotational selection rules corresponding to each electronic state are
                 # properly followed
                 if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(n_qn_lo):
-                    lines.extend(self.get_allowed_branches(n_qn_up, n_qn_lo))
+                    lines.extend(self.allowed_branches(n_qn_up, n_qn_lo))
 
         return lines
 
-    def get_allowed_branches(self, n_qn_up: int, n_qn_lo: int):
+    def allowed_branches(self, n_qn_up: int, n_qn_lo: int):
         """
         Determines the selection rules for Hund's case (b).
         """
@@ -236,18 +216,18 @@ class VibrationalBand:
 
         # R branch
         if delta_n_qn == 1:
-            lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "R"))
-        # Q branch (doesn't exist for the Schumann-Runge bands of O2 due to the allowed transitions
-        # for the electronic states)
+            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "R"))
+        # Q branch
         if delta_n_qn == 0:
-            lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "Q"))
+            # Note that the Q branch doesn't exist for the Schumann-Runge bands of O2
+            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "Q"))
         # P branch
         elif delta_n_qn == -1:
-            lines.extend(self.get_branch_idx(n_qn_up, n_qn_lo, branch_range, "P"))
+            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "P"))
 
         return lines
 
-    def get_branch_idx(self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str):
+    def branch_index(self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str):
         """
         Returns the rotational lines within a given branch.
         """
@@ -326,24 +306,43 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
 
 
-@dataclass
 class RotationalLine:
     """
     Represents a rotational line within a vibrational band.
     """
 
-    sim: Simulation
-    band: VibrationalBand
-    n_qn_up: int
-    n_qn_lo: int
-    j_qn_up: int
-    j_qn_lo: int
-    branch_idx_up: int
-    branch_idx_lo: int
-    branch_name: str
-    is_satellite: bool
+    def __init__(
+        self,
+        sim: Simulation,
+        band: VibrationalBand,
+        n_qn_up: int,
+        n_qn_lo: int,
+        j_qn_up: int,
+        j_qn_lo: int,
+        branch_idx_up: int,
+        branch_idx_lo: int,
+        branch_name: str,
+        is_satellite: bool,
+    ) -> None:
+        self.sim: Simulation = sim
+        self.band: VibrationalBand = band
+        self.n_qn_up: int = n_qn_up
+        self.n_qn_lo: int = n_qn_lo
+        self.j_qn_up: int = j_qn_up
+        self.j_qn_lo: int = j_qn_lo
+        self.branch_idx_up: int = branch_idx_up
+        self.branch_idx_lo: int = branch_idx_lo
+        self.branch_name: str = branch_name
+        self.is_satellite: bool = is_satellite
+        self.wavenumber: float = self.get_wavenumber()
+        self.honl_london_factor: float = self.get_honl_london_factor()
+        self.rotational_boltzmann_factor: float = self.get_rotational_boltzmann_factor()
+        # TODO: 10/18/24 - This doesn't work because of a circular dependency: the line needs the
+        #       rotational partition function from the band, which in turn needs the Boltzmann
+        #       factor for each line
+        # self.intensity: float = self.get_intensity()
 
-    def rotational_boltzmann_factor(self) -> float:
+    def get_rotational_boltzmann_factor(self) -> float:
         """
         Returns the rotational Boltzmann factor, that is: (2J + 1) * exp(-F(J) * h * c / (k * T)).
         This is different than the rotational Boltzmann fraction, which is the Boltzmann factor
@@ -369,7 +368,7 @@ class RotationalLine:
             / (cn.BOLTZ * self.sim.temperature)
         )
 
-    def intensity(self) -> float:
+    def get_intensity(self) -> float:
         """
         Returns the intensity.
         """
@@ -380,18 +379,16 @@ class RotationalLine:
         match self.sim.sim_type:
             case SimulationType.EMISSION:
                 j_qn = self.j_qn_up
-                wavenumber_factor = self.wavenumber() ** 4
+                wavenumber_factor = self.wavenumber**4
             case SimulationType.ABSORPTION:
                 j_qn = self.j_qn_lo
-                wavenumber_factor = self.wavenumber()
+                wavenumber_factor = self.wavenumber
 
-        boltzmann_fraction: float = (
-            self.rotational_boltzmann_factor() / self.band.rotational_partition_function()
-        )
+        boltzmann_fraction: float = self.rotational_boltzmann_factor / self.band.rot_part
 
-        return wavenumber_factor * self.honl_london_factor() / (2 * j_qn + 1) * boltzmann_fraction
+        return wavenumber_factor * self.honl_london_factor / (2 * j_qn + 1) * boltzmann_fraction
 
-    def honl_london_factor(self) -> float:
+    def get_honl_london_factor(self) -> float:
         """
         Returns the Hönl-London factor (line strength).
         """
@@ -460,11 +457,7 @@ class RotationalLine:
         #       lamda_D | lamda_D / 2
         #       gamma_D | gamma_D / 2
 
-        match state.name:
-            case "B3Su-":
-                lookup = cn.CONSTS_UP
-            case "X3Sg-":
-                lookup = cn.CONSTS_LO
+        lookup: dict = state.constants
 
         b: float = lookup["B"][v_qn]
         d: float = lookup["D"][v_qn]
@@ -501,7 +494,7 @@ class RotationalLine:
             case _:
                 raise ValueError(f"Invalid branch index: {branch_idx}")
 
-    def wavenumber(self) -> float:
+    def get_wavenumber(self) -> float:
         """
         Testing new Hamiltonian from Cheung.
         """
@@ -509,16 +502,9 @@ class RotationalLine:
         # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
         #       pp. 168-169
 
-        # Converts Cheung's definition of the band origin (T) to Herzberg's definition (nu_0)
-        energy_offset: float = (
-            2 / 3 * cn.CONSTS_UP["lamda"][self.band.v_qn_up]
-            - cn.CONSTS_UP["gamma"][self.band.v_qn_up]
-        )
-
         # Herzberg p. 168, eq. (IV, 24)
         return (
-            cn.CONSTS_UP["T"][self.band.v_qn_up]
-            + energy_offset
+            self.band.band_origin
             + self.rotational_term(
                 self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
             )
@@ -526,69 +512,6 @@ class RotationalLine:
                 self.sim.state_lo, self.band.v_qn_lo, self.j_qn_lo, self.branch_idx_lo
             )
         )
-
-    # def wavenumber(self) -> float:
-    #     """
-    #     Returns the wavenumber in [1/cm].
-    #     """
-
-    #     # Herzberg p. 168, eq. (IV, 24)
-
-    #     return (
-    #         self.band.band_origin()
-    #         + self.rotational_term(
-    #             self.sim.state_up, self.j_qn_up, self.band.v_qn_up, self.branch_idx_up
-    #         )
-    #         - self.rotational_term(
-    #             self.sim.state_lo, self.j_qn_lo, self.band.v_qn_lo, self.branch_idx_lo
-    #         )
-    #     )
-
-    # def rotational_term(self, state: ElectronicState, j_qn: int, v_qn: int, branch_idx: int) -> float:
-    #     """
-    #     Returns the rotational term value in [1/cm].
-    #     """
-
-    #     # Rotational constants
-    #     # Herzberg pp. 107-109, eqs. (III, 117-127)
-
-    #     b_v: float = (
-    #         state.constants["B_e"]
-    #         - state.constants["alpha_e"] * (v_qn + 0.5)
-    #         + state.constants["gamma_e"] * (v_qn + 0.5) ** 2
-    #         + state.constants["delta_e"] * (v_qn + 0.5) ** 3
-    #     )
-    #     lamda: float = state.constants["lamda"]
-    #     gamma: float = state.constants["gamma"]
-
-    #     # Shorthand notation for the rotational quantum number
-    #     x = j_qn * (j_qn + 1)
-
-    #     # Schlapp, 1936 - Fine Structure in the 3Σ Ground State of the Oxygen Molecule
-    #     # From matrix elements - "precise" values
-    #     f1: float = (
-    #         b_v * x + b_v - lamda - np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
-    #     )
-    #     f2: float = b_v * x
-    #     f3: float = (
-    #         b_v * x + b_v - lamda + np.sqrt((b_v - lamda) ** 2 + (b_v - gamma / 2) ** 2 * 4 * x)
-    #     )
-
-    #     # NOTE: 10/15/24 - For J = 0, the energy is -2 * lamd + b * rot_qn * (rot_qn + 1) + 2 * b
-    #     #       (Hougen: The Calculation of Rotational Energy Levels in Diatomic Molecules, p. 15)
-
-    #     if j_qn == 0:
-    #         f3 = -2 * lamda + b_v * x + 2 * b_v
-
-    #     match branch_idx:
-    #         case 1:
-    #             return f1
-    #         case 2:
-    #             return f2
-    #         case 3:
-    #             return f3
-    #         case _:
-    #             raise ValueError(f"Invalid branch index: {branch_idx}")
 
 
 def main() -> None:
@@ -612,17 +535,17 @@ def main() -> None:
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        vib_bands=vib_bands,
         rot_lvls=np.arange(0, 50),
         temperature=300.0,
         pressure=101325.0,
+        vib_bands=vib_bands,
     )
 
     wavenumbers: list[float] = []
     intensities: list[float] = []
-    for line in sim.vib_bands[0].get_rotational_lines():
-        wavenumbers.append(line.wavenumber())
-        intensities.append(line.intensity())
+    for line in sim.vib_bands[0].lines:
+        wavenumbers.append(line.wavenumber)
+        intensities.append(line.get_intensity())
 
     intn = np.array(intensities)
     intn /= intn.max()

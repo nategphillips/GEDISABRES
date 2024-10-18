@@ -509,7 +509,7 @@ class RotationalLine:
         # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
         #       pp. 168-169
 
-        # Converts Cheung's definition of the band origin (T_0) to Herzberg's definition (nu_0)
+        # Converts Cheung's definition of the band origin (T) to Herzberg's definition (nu_0)
         energy_offset: float = (
             2 / 3 * cn.CONSTS_UP["lamda"][self.band.v_qn_up]
             - cn.CONSTS_UP["gamma"][self.band.v_qn_up]
@@ -517,7 +517,7 @@ class RotationalLine:
 
         # Herzberg p. 168, eq. (IV, 24)
         return (
-            cn.CONSTS_UP["T_0"][self.band.v_qn_up]
+            cn.CONSTS_UP["T"][self.band.v_qn_up]
             + energy_offset
             + self.rotational_term(
                 self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up

@@ -131,6 +131,7 @@ class Simulation:
         self.temperature: float = temperature
         self.pressure: float = pressure
         self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
+        self.vib_part: float = self.get_vibrational_partition_function()
 
     def get_vib_bands(self, vib_bands: list[tuple[int, int]]):
         """
@@ -141,6 +142,16 @@ class Simulation:
             VibrationalBand(sim=self, v_qn_up=vib_band[0], v_qn_lo=vib_band[1])
             for vib_band in vib_bands
         ]
+
+    def get_vibrational_partition_function(self) -> float:
+        """
+        Returns the vibrational partition function.
+        """
+
+        # TODO: 10/18/24 - This isn't correct since the user might only be simulating a single band;
+        #       instead, the sum should be calculated up to a certain vibrational quantum number
+
+        return sum(band.vibrational_boltzmann_factor for band in self.vib_bands)
 
 
 class VibrationalBand:
@@ -155,6 +166,26 @@ class VibrationalBand:
         self.band_origin: float = self.get_band_origin()
         self.lines: list[RotationalLine] = self.get_rotational_lines()
         self.rot_part: float = self.get_rotational_partition_function()
+        self.vibrational_boltzmann_factor: float = self.get_vibrational_boltzmann_factor()
+
+    def get_vibrational_boltzmann_factor(self) -> float:
+        """
+        Returns the vibrational Boltzmann factor, that is: exp(-G(v) * h * c / (k * T)).
+        This is different than the vibrational Boltzmann fraction, which is the Boltzmann factor
+        divided by the total vibrational partition function.
+        """
+
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                state = self.sim.state_up
+                v_qn = self.v_qn_up
+            case SimulationType.ABSORPTION:
+                state = self.sim.state_lo
+                v_qn = self.v_qn_lo
+
+        return np.exp(
+            -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.sim.temperature)
+        )
 
     def get_band_origin(self) -> float:
         """
@@ -176,6 +207,9 @@ class VibrationalBand:
         """
         Returns the rotational partition function.
         """
+
+        # TODO: 10/18/24 - This isn't correct if the number of rotational lines is low. Think about
+        #       using the simplified partition function for the high-temperature limit instead.
 
         return sum(line.rotational_boltzmann_factor for line in self.lines)
 
@@ -286,26 +320,6 @@ class VibrationalBand:
         return lines
 
 
-def n2j_qn(n_qn: int, branch_idx: int) -> int:
-    """
-    Converts from N to J.
-    """
-
-    # For Hund's case (b), spin multiplicity 3
-    match branch_idx:
-        case 1:
-            # F1: J = N + 1
-            return n_qn + 1
-        case 2:
-            # F2: J = N
-            return n_qn
-        case 3:
-            # F3: J = N - 1
-            return n_qn - 1
-        case _:
-            raise ValueError(f"Unknown branch index: {branch_idx}.")
-
-
 class RotationalLine:
     """
     Represents a rotational line within a vibrational band.
@@ -342,6 +356,52 @@ class RotationalLine:
         #       factor for each line
         # self.intensity: float = self.get_intensity()
 
+    def get_wavenumber(self) -> float:
+        """
+        Returns the wavenumber.
+        """
+
+        # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
+        #       pp. 168-169
+
+        # Herzberg p. 168, eq. (IV, 24)
+        return (
+            self.band.band_origin
+            + rotational_term(
+                self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
+            )
+            - rotational_term(
+                self.sim.state_lo, self.band.v_qn_lo, self.j_qn_lo, self.branch_idx_lo
+            )
+        )
+
+    def get_intensity(self) -> float:
+        """
+        Returns the intensity.
+        """
+
+        # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
+        #       pp. 126-127, pp. 200-201, and pp. 382-383
+
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                j_qn = self.j_qn_up
+                wavenumber_factor = self.wavenumber**4
+            case SimulationType.ABSORPTION:
+                j_qn = self.j_qn_lo
+                wavenumber_factor = self.wavenumber
+
+        rot_boltz_frac: float = self.rotational_boltzmann_factor / self.band.rot_part
+        vib_boltz_frac: float = self.band.vibrational_boltzmann_factor / self.sim.vib_part
+
+        return (
+            wavenumber_factor
+            * rot_boltz_frac
+            * vib_boltz_frac
+            * self.honl_london_factor
+            / (2 * j_qn + 1)
+        )
+
     def get_rotational_boltzmann_factor(self) -> float:
         """
         Returns the rotational Boltzmann factor, that is: (2J + 1) * exp(-F(J) * h * c / (k * T)).
@@ -362,31 +422,11 @@ class RotationalLine:
                 branch_idx = self.branch_idx_lo
 
         return (2 * j_qn + 1) * np.exp(
-            -self.rotational_term(state, v_qn, j_qn, branch_idx)
+            -rotational_term(state, v_qn, j_qn, branch_idx)
             * cn.PLANC
             * cn.LIGHT
             / (cn.BOLTZ * self.sim.temperature)
         )
-
-    def get_intensity(self) -> float:
-        """
-        Returns the intensity.
-        """
-
-        # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
-        #       pp. 126-127, pp. 200-201, and pp. 382-383
-
-        match self.sim.sim_type:
-            case SimulationType.EMISSION:
-                j_qn = self.j_qn_up
-                wavenumber_factor = self.wavenumber**4
-            case SimulationType.ABSORPTION:
-                j_qn = self.j_qn_lo
-                wavenumber_factor = self.wavenumber
-
-        boltzmann_fraction: float = self.rotational_boltzmann_factor / self.band.rot_part
-
-        return wavenumber_factor * self.honl_london_factor / (2 * j_qn + 1) * boltzmann_fraction
 
     def get_honl_london_factor(self) -> float:
         """
@@ -442,76 +482,84 @@ class RotationalLine:
 
         return factors[self.sim.sim_type][key]
 
-    def rotational_term(
-        self, state: ElectronicState, v_qn: int, j_qn: int, branch_idx: int
-    ) -> float:
-        """
-        Testing new Hamiltonian from Cheung.
-        """
 
-        # TODO: 10/17/24 - Change molecular constant data for the ground state to reflect the
-        #       conventions in Cheung
-        #       Yu      | Cheung
-        #       --------|------------
-        #       D       | -D
-        #       lamda_D | lamda_D / 2
-        #       gamma_D | gamma_D / 2
+def vibrational_term(state: ElectronicState, v_qn: int) -> float:
+    """
+    Returns the vibrational term value.
+    """
 
-        lookup: dict = state.constants
+    return state.constants["G"][v_qn]
 
-        b: float = lookup["B"][v_qn]
-        d: float = lookup["D"][v_qn]
-        l: float = lookup["lamda"][v_qn]
-        g: float = lookup["gamma"][v_qn]
-        ld: float = lookup["lamda_D"][v_qn]
-        gd: float = lookup["gamma_D"][v_qn]
 
-        x: int = j_qn * (j_qn + 1)
+def rotational_term(state: ElectronicState, v_qn: int, j_qn: int, branch_idx: int) -> float:
+    """
+    Returns the rotational term value.
+    """
 
-        # Hamiltonian matrix elements
-        h11: float = (
-            b * (x + 2)
-            - d * (x**2 + 8 * x + 4)
-            - 4 / 3 * l
-            - 2 * g
-            - 4 / 3 * ld * (x + 2)
-            - 4 * gd * (x + 1)
-        )
-        h12: float = -2 * np.sqrt(x) * (b - 2 * d * (x + 1) - g / 2 - 2 / 3 * ld - gd / 2 * (x + 4))
-        h21: float = h12
-        h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
+    # TODO: 10/17/24 - Change molecular constant data for the ground state to reflect the
+    #       conventions in Cheung
+    #       Yu      | Cheung
+    #       --------|------------
+    #       D       | -D
+    #       lamda_D | lamda_D / 2
+    #       gamma_D | gamma_D / 2
 
-        hamiltonian: np.ndarray = np.array([[h11, h12], [h21, h22]])
-        f1, f3 = np.linalg.eigvals(hamiltonian)
+    lookup: dict = state.constants
 
-        match branch_idx:
-            case 1:
-                return f1
-            case 2:
-                return b * x - d * x**2 + 2 / 3 * l - g + 2 / 3 * x * ld - x * gd
-            case 3:
-                return f3
-            case _:
-                raise ValueError(f"Invalid branch index: {branch_idx}")
+    b: float = lookup["B"][v_qn]
+    d: float = lookup["D"][v_qn]
+    l: float = lookup["lamda"][v_qn]
+    g: float = lookup["gamma"][v_qn]
+    ld: float = lookup["lamda_D"][v_qn]
+    gd: float = lookup["gamma_D"][v_qn]
 
-    def get_wavenumber(self) -> float:
-        """
-        Testing new Hamiltonian from Cheung.
-        """
+    x: int = j_qn * (j_qn + 1)
 
-        # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
-        #       pp. 168-169
+    # Hamiltonian matrix elements
+    h11: float = (
+        b * (x + 2)
+        - d * (x**2 + 8 * x + 4)
+        - 4 / 3 * l
+        - 2 * g
+        - 4 / 3 * ld * (x + 2)
+        - 4 * gd * (x + 1)
+    )
+    h12: float = -2 * np.sqrt(x) * (b - 2 * d * (x + 1) - g / 2 - 2 / 3 * ld - gd / 2 * (x + 4))
+    h21: float = h12
+    h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
 
-        # Herzberg p. 168, eq. (IV, 24)
-        return (
-            self.band.band_origin
-            + self.rotational_term(
-                self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
-            )
-            - self.rotational_term(
-                self.sim.state_lo, self.band.v_qn_lo, self.j_qn_lo, self.branch_idx_lo
-            )
-        )
+    hamiltonian: np.ndarray = np.array([[h11, h12], [h21, h22]])
+    f1, f3 = np.linalg.eigvals(hamiltonian)
+
+    match branch_idx:
+        case 1:
+            return f1
+        case 2:
+            return b * x - d * x**2 + 2 / 3 * l - g + 2 / 3 * x * ld - x * gd
+        case 3:
+            return f3
+        case _:
+            raise ValueError(f"Invalid branch index: {branch_idx}")
+
+
+def n2j_qn(n_qn: int, branch_idx: int) -> int:
+    """
+    Converts from N to J.
+    """
+
+    # For Hund's case (b), spin multiplicity 3
+    match branch_idx:
+        case 1:
+            # F1: J = N + 1
+            return n_qn + 1
+        case 2:
+            # F2: J = N
+            return n_qn
+        case 3:
+            # F3: J = N - 1
+            return n_qn - 1
+        case _:
+            raise ValueError(f"Unknown branch index: {branch_idx}.")
 
 
 def main() -> None:

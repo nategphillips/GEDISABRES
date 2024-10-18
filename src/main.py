@@ -44,6 +44,21 @@ class Molecule:
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
         self.reduced_mass: float = self.atom_1.mass * self.atom_2.mass / self.mass
+        self.symmetry_parameter: int = self.get_symmetry_parameter(atom_1, atom_2)
+
+    @staticmethod
+    def get_symmetry_parameter(atom_1: Atom, atom_2: Atom) -> int:
+        """
+        Returns the symmetry parameter of the molecule.
+        """
+
+        # Hanson p. 17
+        # For homonuclear diatomic molecules like O2, the symmetry parameter is 2
+        if atom_1.name == atom_2.name:
+            return 2
+
+        # For heteronuclear diatomics, it's 1
+        return 1
 
 
 class SimulationType(Enum):
@@ -140,6 +155,18 @@ class VibrationalBand:
         self.sim: Simulation = sim
         self.v_qn_up: int = v_qn_up
         self.v_qn_lo: int = v_qn_lo
+
+    def rotational_partition_function(self) -> float:
+        """
+        Returns the rotational partition function.
+        """
+
+        q_r: float = 0.0
+
+        for line in self.get_rotational_lines():
+            q_r += line.rotational_boltzmann_factor()
+
+        return q_r / self.sim.molecule.symmetry_parameter
 
     def band_origin(self) -> float:
         """
@@ -316,20 +343,55 @@ class RotationalLine:
     branch_name: str
     is_satellite: bool
 
+    def rotational_boltzmann_factor(self) -> float:
+        """
+        Returns the rotational Boltzmann factor, that is: (2J + 1) * exp(-F(J) * h * c / (k * T)).
+        This is different than the rotational Boltzmann fraction, which is the Boltzmann factor
+        divided by the total rotational partition function.
+        """
+
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                state = self.sim.state_up
+                v_qn = self.band.v_qn_up
+                j_qn = self.j_qn_up
+                branch_idx = self.branch_idx_up
+            case SimulationType.ABSORPTION:
+                state = self.sim.state_lo
+                v_qn = self.band.v_qn_lo
+                j_qn = self.j_qn_lo
+                branch_idx = self.branch_idx_lo
+
+        return (2 * j_qn + 1) * np.exp(
+            -self.rotational_term(state, v_qn, j_qn, branch_idx)
+            * cn.PLANC
+            * cn.LIGHT
+            / (cn.BOLTZ * self.sim.temperature)
+        )
+
     def intensity(self) -> float:
         """
         Returns the intensity.
         """
 
+        # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
+        #       pp. 126-127, pp. 200-201, and pp. 382-383
+
         match self.sim.sim_type:
             case SimulationType.EMISSION:
+                j_qn = self.j_qn_up
                 wavenumber_factor = self.wavenumber() ** 4
             case SimulationType.ABSORPTION:
+                j_qn = self.j_qn_lo
                 wavenumber_factor = self.wavenumber()
 
-        return wavenumber_factor * self.honl_london()
+        boltzmann_fraction: float = (
+            self.rotational_boltzmann_factor() / self.band.rotational_partition_function()
+        )
 
-    def honl_london(self) -> float:
+        return wavenumber_factor * self.honl_london_factor() / (2 * j_qn + 1) * boltzmann_fraction
+
+    def honl_london_factor(self) -> float:
         """
         Returns the Hönl-London factor (line strength).
         """
@@ -443,13 +505,19 @@ class RotationalLine:
         """
         Testing new Hamiltonian from Cheung.
         """
+
+        # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
+        #       pp. 168-169
+
+        # Converts Cheung's definition of the band origin (T_0) to Herzberg's definition (nu_0)
         energy_offset: float = (
             2 / 3 * cn.CONSTS_UP["lamda"][self.band.v_qn_up]
             - cn.CONSTS_UP["gamma"][self.band.v_qn_up]
         )
 
+        # Herzberg p. 168, eq. (IV, 24)
         return (
-            cn.CONSTS_UP["TG"][self.band.v_qn_up]
+            cn.CONSTS_UP["T_0"][self.band.v_qn_up]
             + energy_offset
             + self.rotational_term(
                 self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
@@ -545,7 +613,7 @@ def main() -> None:
         state_up=state_up,
         state_lo=state_lo,
         vib_bands=vib_bands,
-        rot_lvls=np.arange(0, 36),
+        rot_lvls=np.arange(0, 50),
         temperature=300.0,
         pressure=101325.0,
     )
@@ -559,7 +627,9 @@ def main() -> None:
     intn = np.array(intensities)
     intn /= intn.max()
 
-    sample: np.ndarray = np.genfromtxt("../data/samples/harvard.csv", delimiter=",", skip_header=1)
+    sample: np.ndarray = np.genfromtxt(
+        "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
+    )
 
     plt.stem(wavenumbers, intn, markerfmt="")
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")

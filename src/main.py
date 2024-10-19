@@ -5,11 +5,41 @@ A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
 
 from enum import Enum
 
+from cycler import cycler
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 import constants as cn
+
+
+plot_colors: dict[str, str] = {"background": "#1e1e2e", "text": "#cdd6f4"}
+line_colors: list[str] = [
+    "#cba6f7",
+    "#f38ba8",
+    "#fab387",
+    "#f9e2af",
+    "#a6e3a1",
+    "#89dceb",
+    "#89b4fa",
+]
+
+plt.rcParams.update(
+    {
+        "figure.facecolor": plot_colors["background"],
+        "figure.edgecolor": plot_colors["background"],
+        "axes.facecolor": plot_colors["background"],
+        "axes.edgecolor": plot_colors["text"],
+        "axes.labelcolor": plot_colors["text"],
+        "grid.color": plot_colors["text"],
+        "text.color": plot_colors["text"],
+        "xtick.color": plot_colors["text"],
+        "ytick.color": plot_colors["text"],
+        "font.size": 12,
+    }
+)
+
+plt.rcParams["axes.prop_cycle"] = cycler(color=line_colors)
 
 
 class Atom:

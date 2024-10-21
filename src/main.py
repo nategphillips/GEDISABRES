@@ -119,7 +119,7 @@ class ElectronicState:
 
         # TODO: 10/18/24 - Add errors here if the molecule or state is not supported
 
-        return pd.read_csv(f"../data/constants/{molecule}/{state}.csv").to_dict()
+        return pd.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict()
 
     def is_allowed(self, n_qn: int) -> bool:
         """
@@ -162,6 +162,21 @@ class Simulation:
         self.pressure: float = pressure
         self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
         self.vib_part: float = self.get_vibrational_partition_function()
+        self.franck_condon: np.ndarray = self.get_franck_condon()
+
+    def get_franck_condon(self) -> np.ndarray:
+        """
+        Returns a table of Franck-Condon factors for the associated electronic transition. Rows
+        correspond to the upper state vibrational quantum number (v'), while columns correspond to
+        the lower state vibrational quantum number (v'').
+        """
+
+        # TODO: 10/21/24 - Add error checking here
+
+        return np.loadtxt(
+            f"../data/{self.molecule.name}/franck-condon/{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
+            delimiter=",",
+        )
 
     def get_vib_bands(self, vib_bands: list[tuple[int, int]]):
         """
@@ -430,6 +445,7 @@ class RotationalLine:
             * vib_boltz_frac
             * self.honl_london_factor
             / (2 * j_qn + 1)
+            * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
         )
 
     def get_rotational_boltzmann_factor(self) -> float:
@@ -606,7 +622,7 @@ def main() -> None:
         name="X3Sg-", spin_multiplicity=3, molecule=molecule
     )
 
-    vib_bands: list[tuple[int, int]] = [(2, 0)]
+    vib_bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
     sim: Simulation = Simulation(
         sim_type=SimulationType.ABSORPTION,
@@ -621,9 +637,10 @@ def main() -> None:
 
     wavenumbers: list[float] = []
     intensities: list[float] = []
-    for line in sim.vib_bands[0].lines:
-        wavenumbers.append(line.wavenumber)
-        intensities.append(line.get_intensity())
+    for band in sim.vib_bands:
+        for line in band.lines:
+            wavenumbers.append(line.wavenumber)
+            intensities.append(line.get_intensity())
 
     intn = np.array(intensities)
     intn /= intn.max()
@@ -632,8 +649,8 @@ def main() -> None:
         "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
     )
 
-    plt.stem(wavenumbers, intn, markerfmt="")
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")
+    plt.stem(wavenumbers, intn, markerfmt="")
     plt.show()
 
 

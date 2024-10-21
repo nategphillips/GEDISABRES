@@ -1,2 +1,20 @@
-.venv
+# Python
 *.pyc
+.venv
+
+# LaTeX
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+*.bcf
+*.lof
+*.lot
+*.run.xml
+*.bbl
+*.blg
+*.pgf-plot.*
+*.pdf

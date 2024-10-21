@@ -9,6 +9,7 @@ from cycler import cycler
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.special import wofz  # pylint: disable=no-name-in-module
 
 import constants as cn
 
@@ -73,6 +74,8 @@ class Molecule:
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
+        # FIXME: 10/21/24 - This is wrong: in the Hanson book, the reduced mass uses the masses of
+        #        two molecules, not two atoms (can likely move to the FWHM parameters function)
         self.reduced_mass: float = self.atom_1.mass * self.atom_2.mass / self.mass
         self.symmetry_parameter: int = self.get_symmetry_parameter(atom_1, atom_2)
 
@@ -110,6 +113,17 @@ class ElectronicState:
         self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
         self.constants: dict[str, dict[int, float]] = self.get_constants(molecule.name, name)
+        self.cross_section: float = self.get_cross_section(molecule.atom_1, molecule.atom_2)
+
+    @staticmethod
+    def get_cross_section(atom_1: Atom, atom_2: Atom) -> float:
+        """
+        Returns the cross-section of the molecule in [m^2].
+        """
+
+        # TODO: 10/21/24 - Placeholder, need to add the radius of the molecule in each electronic
+        #       state to the constants
+        return np.pi * (2 * 1.2e-10) ** 2
 
     @staticmethod
     def get_constants(molecule: str, state: str) -> dict[str, dict[int, float]]:
@@ -163,6 +177,19 @@ class Simulation:
         self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
         self.vib_part: float = self.get_vibrational_partition_function()
         self.franck_condon: np.ndarray = self.get_franck_condon()
+        self.einstein: np.ndarray = self.get_einstein()
+
+    def get_einstein(self) -> np.ndarray:
+        """
+        Returns a table of Einstein coefficients for spontaneous emission: A_{v'v''}. Rows
+        correspond to the upper state vibrational quantum number (v'), while columns correspond to
+        the lower state vibrational quantum number (v'').
+        """
+
+        return np.loadtxt(
+            f"../data/{self.molecule.name}/einstein/{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
+            delimiter=",",
+        )
 
     def get_franck_condon(self) -> np.ndarray:
         """
@@ -212,6 +239,23 @@ class VibrationalBand:
         self.lines: list[RotationalLine] = self.get_rotational_lines()
         self.rot_part: float = self.get_rotational_partition_function()
         self.vibrational_boltzmann_factor: float = self.get_vibrational_boltzmann_factor()
+
+    def wavenumbers_line(self) -> np.ndarray:
+        return np.array([line.wavenumber for line in self.lines])
+
+    def intensities_line(self) -> np.ndarray:
+        return np.array([line.get_intensity() for line in self.lines])
+
+    def wavenumbers_conv(self) -> np.ndarray:
+        wns_line: np.ndarray = self.wavenumbers_line()
+
+        # TODO: 10/21/24 - Allow the granularity to be selected by the user, think about using
+        #       linear interpolation to reduce computational time
+        # Generate a fine-grained x-axis using existing wavenumber data
+        return np.linspace(wns_line.min(), wns_line.max(), 100000)
+
+    def intensities_conv(self) -> np.ndarray:
+        return convolve_brod(self.lines, self.wavenumbers_conv())
 
     def get_vibrational_boltzmann_factor(self) -> float:
         """
@@ -400,6 +444,54 @@ class RotationalLine:
         #       rotational partition function from the band, which in turn needs the Boltzmann
         #       factor for each line
         # self.intensity: float = self.get_intensity()
+
+    def fwhm_params(self) -> tuple[float, float]:
+        """
+        Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
+        """
+
+        # TODO: 10/21/24 - Look over this, seems weird still
+        # The sum of the Einstein A coefficients for all downward transitions from the two levels of
+        # the transitions i and j
+        i: int = self.band.v_qn_up
+        a_ik: float = 0.0
+        for k in range(0, i):
+            a_ik += self.sim.einstein[i][k]
+
+        j: int = self.band.v_qn_lo
+        a_jk: float = 0.0
+        for k in range(0, j):
+            a_jk += self.sim.einstein[j][k]
+
+        # Natural broadening in [1/s]
+        natural: float = (a_ik + a_jk) / (2 * np.pi)
+
+        # Collisional (pressure) broadening in [1/s]
+        # TODO: 10/21/24 - Not sure which electronic state should be used for the cross-section
+        collisional: float = (
+            self.sim.pressure
+            * self.sim.state_lo.cross_section
+            * np.sqrt(
+                8 / (np.pi * self.sim.molecule.reduced_mass * cn.BOLTZ * self.sim.temperature)
+            )
+            / np.pi
+        )
+
+        # Doppler (thermal) broadening in [1/cm]
+        # The speed of light is converted from [cm/s] to [m/s] to ensure units work out
+        doppler: float = self.wavenumber * np.sqrt(
+            8
+            * cn.BOLTZ
+            * self.sim.temperature
+            * np.log(2)
+            / (self.sim.molecule.mass * (cn.LIGHT / 1e2) ** 2)
+        )
+
+        # FIXME: 10/21/24 - Temporarily adding a 0.3 here to simulate the effects of predissociation
+        # Convert the Lorentzian broadening parameters from [1/s] to [1/cm]
+        lorentzian: float = (natural + collisional) / cn.LIGHT + 0.3
+
+        return doppler, lorentzian
 
     def get_wavenumber(self) -> float:
         """
@@ -608,6 +700,38 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
 
 
+def broadening_fn(wavenumbers: np.ndarray, line: RotationalLine):
+    """
+    Returns the contribution of a single rotational line to the total spectra using a Voigt
+    probability density function.
+    """
+
+    gaussian, lorentzian = line.fwhm_params()
+
+    faddeeva: np.ndarray = ((wavenumbers - line.wavenumber) + 1j * lorentzian) / (
+        gaussian * np.sqrt(2)
+    )
+
+    return np.real(wofz(faddeeva)) / (gaussian * np.sqrt(2 * np.pi))
+
+
+def convolve_brod(lines: list[RotationalLine], wavenumbers_conv: np.ndarray) -> np.ndarray:
+    """
+    Convolves a discrete number of spectral lines into a continuous spectra by applying a broadening
+    function.
+    """
+
+    # TODO: 10/21/24 - Go over this and all the broadening functions to make sure they're being
+    #       computed efficiently, not sure if this is the best way to do it
+
+    intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
+
+    for line in lines:
+        intensities_conv += line.get_intensity() * broadening_fn(wavenumbers_conv, line)
+
+    return intensities_conv
+
+
 def main() -> None:
     """
     Entry point.
@@ -622,7 +746,7 @@ def main() -> None:
         name="X3Sg-", spin_multiplicity=3, molecule=molecule
     )
 
-    vib_bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
+    vib_bands: list[tuple[int, int]] = [(2, 0)]
 
     sim: Simulation = Simulation(
         sim_type=SimulationType.ABSORPTION,
@@ -635,12 +759,8 @@ def main() -> None:
         vib_bands=vib_bands,
     )
 
-    wavenumbers: list[float] = []
-    intensities: list[float] = []
-    for band in sim.vib_bands:
-        for line in band.lines:
-            wavenumbers.append(line.wavenumber)
-            intensities.append(line.get_intensity())
+    wavenumbers = sim.vib_bands[0].wavenumbers_conv()
+    intensities = sim.vib_bands[0].intensities_conv()
 
     intn = np.array(intensities)
     intn /= intn.max()
@@ -650,7 +770,8 @@ def main() -> None:
     )
 
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")
-    plt.stem(wavenumbers, intn, markerfmt="")
+    # plt.stem(wavenumbers, intn, markerfmt="")
+    plt.plot(wavenumbers, intn)
     plt.show()
 
 

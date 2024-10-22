@@ -75,22 +75,22 @@ class Molecule:
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
         # FIXME: 10/21/24 - This is wrong: in the Hanson book, the reduced mass uses the masses of
-        #        two molecules, not two atoms (can likely move to the FWHM parameters function)
+        #        the two molecules interacting with one another, not the two atoms that form the
+        #        molecule.
         self.reduced_mass: float = self.atom_1.mass * self.atom_2.mass / self.mass
-        self.symmetry_parameter: int = self.get_symmetry_parameter(atom_1, atom_2)
+        self.symmetry_param: int = self.get_symmetry_param(atom_1, atom_2)
 
     @staticmethod
-    def get_symmetry_parameter(atom_1: Atom, atom_2: Atom) -> int:
+    def get_symmetry_param(atom_1: Atom, atom_2: Atom) -> int:
         """
         Returns the symmetry parameter of the molecule.
         """
 
-        # Hanson p. 17
-        # For homonuclear diatomic molecules like O2, the symmetry parameter is 2
+        # For homonuclear diatomic molecules like O2, the symmetry parameter is 2.
         if atom_1.name == atom_2.name:
             return 2
 
-        # For heteronuclear diatomics, it's 1
+        # For heteronuclear diatomics, it's 1.
         return 1
 
 
@@ -122,7 +122,7 @@ class ElectronicState:
         """
 
         # TODO: 10/21/24 - Placeholder, need to add the radius of the molecule in each electronic
-        #       state to the constants
+        #       state to the constants.
         return np.pi * (2 * 1.2e-10) ** 2
 
     @staticmethod
@@ -131,7 +131,7 @@ class ElectronicState:
         Returns a dictionary of molecular constants for the specified electronic state in [1/cm].
         """
 
-        # TODO: 10/18/24 - Add errors here if the molecule or state is not supported
+        # TODO: 10/18/24 - Add errors here if the molecule or state is not supported.
 
         return pd.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict()
 
@@ -142,10 +142,10 @@ class ElectronicState:
         """
 
         if self.name == "X3Sg-":
-            # For X3Sg-, only the rotational levels with odd N can be populated
+            # For X3Σg-, only the rotational levels with odd N can be populated.
             return bool(n_qn % 2 == 1)
         if self.name == "B3Su-":
-            # For B3Su-, only the rotational levels with even N can be populated
+            # For B3Σu-, only the rotational levels with even N can be populated.
             return bool(n_qn % 2 == 0)
 
         raise ValueError(f"State {self.name} not supported.")
@@ -174,10 +174,10 @@ class Simulation:
         self.rot_lvls: np.ndarray = rot_lvls
         self.temperature: float = temperature
         self.pressure: float = pressure
-        self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
-        self.vib_part: float = self.get_vibrational_partition_function()
+        self.vib_part: float = self.get_vib_partition_fn()
         self.franck_condon: np.ndarray = self.get_franck_condon()
         self.einstein: np.ndarray = self.get_einstein()
+        self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
 
     def get_einstein(self) -> np.ndarray:
         """
@@ -198,7 +198,7 @@ class Simulation:
         the lower state vibrational quantum number (v'').
         """
 
-        # TODO: 10/21/24 - Add error checking here
+        # TODO: 10/21/24 - Add error checking here.
 
         return np.loadtxt(
             f"../data/{self.molecule.name}/franck-condon/{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
@@ -215,15 +215,34 @@ class Simulation:
             for vib_band in vib_bands
         ]
 
-    def get_vibrational_partition_function(self) -> float:
+    def get_vib_partition_fn(self) -> float:
         """
         Returns the vibrational partition function.
         """
 
-        # TODO: 10/18/24 - This isn't correct since the user might only be simulating a single band;
-        #       instead, the sum should be calculated up to a certain vibrational quantum number
+        # NOTE: 10/22/24 - The maximum vibrational quantum number is dictated by the tabulated data
+        #       available.
+        match self.sim_type:
+            case SimulationType.EMISSION:
+                state = self.state_up
+                v_qn_max = len(self.state_up.constants["G"])
+            case SimulationType.ABSORPTION:
+                state = self.state_lo
+                v_qn_max = len(self.state_lo.constants["G"])
+        print(v_qn_max)
 
-        return sum(band.vibrational_boltzmann_factor for band in self.vib_bands)
+        q_v: float = 0.0
+
+        # NOTE: 10/22/24 - The vibrational partition function is always computed using a set number
+        #       of vibrational bands to ensure an accurate estimate of the state sum is obtained.
+        #       This approach is used to ensure the sum is calculated correctly regardless of the
+        #       number of vibrational bands simulated by the user.
+        for v_qn in range(0, v_qn_max):
+            q_v += np.exp(
+                -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temperature)
+            )
+
+        return q_v
 
 
 class VibrationalBand:
@@ -236,32 +255,31 @@ class VibrationalBand:
         self.v_qn_up: int = v_qn_up
         self.v_qn_lo: int = v_qn_lo
         self.band_origin: float = self.get_band_origin()
-        self.lines: list[RotationalLine] = self.get_rotational_lines()
-        self.rot_part: float = self.get_rotational_partition_function()
-        self.vibrational_boltzmann_factor: float = self.get_vibrational_boltzmann_factor()
+        self.rot_part: float = self.get_rot_partition_fn()
+        self.vib_boltz_frac: float = self.get_vib_boltz_frac()
+        self.rot_lines: list[RotationalLine] = self.get_rot_lines()
 
     def wavenumbers_line(self) -> np.ndarray:
-        return np.array([line.wavenumber for line in self.lines])
+        return np.array([line.wavenumber for line in self.rot_lines])
 
     def intensities_line(self) -> np.ndarray:
-        return np.array([line.get_intensity() for line in self.lines])
+        return np.array([line.intensity for line in self.rot_lines])
 
     def wavenumbers_conv(self) -> np.ndarray:
         wns_line: np.ndarray = self.wavenumbers_line()
 
         # TODO: 10/21/24 - Allow the granularity to be selected by the user, think about using
-        #       linear interpolation to reduce computational time
-        # Generate a fine-grained x-axis using existing wavenumber data
+        #       linear interpolation to reduce computational time.
+
+        # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min(), wns_line.max(), 100000)
 
     def intensities_conv(self) -> np.ndarray:
-        return convolve_brod(self.lines, self.wavenumbers_conv())
+        return convolve_brod(self.rot_lines, self.wavenumbers_conv())
 
-    def get_vibrational_boltzmann_factor(self) -> float:
+    def get_vib_boltz_frac(self) -> float:
         """
-        Returns the vibrational Boltzmann factor, that is: exp(-G(v) * h * c / (k * T)).
-        This is different than the vibrational Boltzmann fraction, which is the Boltzmann factor
-        divided by the total vibrational partition function.
+        Returns the vibrational Boltzmann fraction N_v / N.
         """
 
         match self.sim.sim_type:
@@ -272,8 +290,14 @@ class VibrationalBand:
                 state = self.sim.state_lo
                 v_qn = self.v_qn_lo
 
-        return np.exp(
-            -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.sim.temperature)
+        return (
+            np.exp(
+                -vibrational_term(state, v_qn)
+                * cn.PLANC
+                * cn.LIGHT
+                / (cn.BOLTZ * self.sim.temperature)
+            )
+            / self.sim.vib_part
         )
 
     def get_band_origin(self) -> float:
@@ -285,24 +309,53 @@ class VibrationalBand:
 
         upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
 
-        # Converts Cheung's definition of the band origin (T) to Herzberg's definition (nu_0)
+        # Convert Cheung's definition of the band origin (T) to Herzberg's definition (nu_0).
         energy_offset: float = (
             2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
 
         return upper_state["T"][self.v_qn_up] + energy_offset
 
-    def get_rotational_partition_function(self) -> float:
+    def get_rot_partition_fn(self) -> float:
         """
         Returns the rotational partition function.
         """
 
-        # TODO: 10/18/24 - This isn't correct if the number of rotational lines is low. Think about
-        #       using the simplified partition function for the high-temperature limit instead.
+        match self.sim.sim_type:
+            case SimulationType.EMISSION:
+                state = self.sim.state_up
+                v_qn = self.v_qn_up
+            case SimulationType.ABSORPTION:
+                state = self.sim.state_lo
+                v_qn = self.v_qn_lo
 
-        return sum(line.rotational_boltzmann_factor for line in self.lines)
+        q_r: float = 0.0
 
-    def get_rotational_lines(self):
+        # NOTE: 10/22/24 - The rotational partition function is always computed using the same
+        #       number of lines. At reasonable temperatures (~300 K), only around 50 rotational
+        #       lines contribute to the state sum. However, at high temperatures (~3000 K), at least
+        #       100 lines need to be considered to obtain an accurate estimate of the state sum.
+        #       This approach is used to ensure the sum is calculated correctly regardless of the
+        #       number of rotational lines simulated by the user.
+        for j_qn in range(201):
+            # TODO: 10/22/24 - Not sure which branch index should be used here. The triplet energies
+            #       are all close together, so it shouldn't matter too much.
+            q_r += (2 * j_qn + 1) * np.exp(
+                -rotational_term(state, v_qn, j_qn, 2)
+                * cn.PLANC
+                * cn.LIGHT
+                / (cn.BOLTZ * self.sim.temperature)
+            )
+
+        # NOTE: 10/22/24 - Alternatively, the high-temperature approximation can be used instead of
+        #       the direct sum approach. This also works well.
+        # q_r = cn.BOLTZ * self.sim.temperature / (cn.PLANC * cn.LIGHT * state.constants["B"][v_qn])
+
+        # The state sum must be divided by the symmetry parameter to account for identical
+        # rotational orientations in space.
+        return q_r / self.sim.molecule.symmetry_param
+
+    def get_rot_lines(self):
         """
         Returns a list of all allowed rotational lines.
         """
@@ -312,7 +365,7 @@ class VibrationalBand:
         for n_qn_up in self.sim.rot_lvls:
             for n_qn_lo in self.sim.rot_lvls:
                 # Ensure the rotational selection rules corresponding to each electronic state are
-                # properly followed
+                # properly followed.
                 if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(n_qn_lo):
                     lines.extend(self.allowed_branches(n_qn_up, n_qn_lo))
 
@@ -323,13 +376,13 @@ class VibrationalBand:
         Determines the selection rules for Hund's case (b).
         """
 
-        # ∆N = ±1, ∆N = 0 is forbidden for Σ-Σ transitions
+        # For Σ-Σ transitions, the rotational selection rules are ∆N = ±1, ∆N ≠ 0.
         # Herzberg p. 244, eq. (V, 44)
 
         lines = []
 
         # Determine how many lines should be present in the fine structure of the molecule due to
-        # the effects of spin multiplicity
+        # the effects of spin multiplicity.
         if self.sim.state_up.spin_multiplicity == self.sim.state_lo.spin_multiplicity:
             branch_range = range(1, self.sim.state_up.spin_multiplicity + 1)
         else:
@@ -342,7 +395,7 @@ class VibrationalBand:
             lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "R"))
         # Q branch
         if delta_n_qn == 0:
-            # Note that the Q branch doesn't exist for the Schumann-Runge bands of O2
+            # Note that the Q branch doesn't exist for the Schumann-Runge bands of O2.
             lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "Q"))
         # P branch
         elif delta_n_qn == -1:
@@ -359,8 +412,6 @@ class VibrationalBand:
             """
             Helper to create and append a rotational line.
             """
-
-            # print(f"{n_qn_up} {n_qn_lo}: {branch_name} {branch_idx_up} {branch_idx_lo}")
 
             lines.append(
                 RotationalLine(
@@ -380,11 +431,11 @@ class VibrationalBand:
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
         # NOTE: 10/16/24 - Every transition has 6 total lines (3 main + 3 satellite) except for the
-        #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite)
+        #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite).
 
         lines = []
 
-        # Handle the special case where N' = 0 (only the P1, PQ12, and PQ13 lines exist)
+        # Handle the special case where N' = 0 (only the P1, PQ12, and PQ13 lines exist).
         if n_qn_up == 0:
             if branch_name == "P":
                 add_line(1, 1, False)
@@ -393,7 +444,7 @@ class VibrationalBand:
 
             return lines
 
-        # Handle regular cases for other N'
+        # Handle regular cases for other N'.
         for branch_idx_up in branch_range:
             for branch_idx_lo in branch_range:
                 # Main branches: R1, R2, R3, P1, P2, P3
@@ -439,20 +490,18 @@ class RotationalLine:
         self.is_satellite: bool = is_satellite
         self.wavenumber: float = self.get_wavenumber()
         self.honl_london_factor: float = self.get_honl_london_factor()
-        self.rotational_boltzmann_factor: float = self.get_rotational_boltzmann_factor()
-        # TODO: 10/18/24 - This doesn't work because of a circular dependency: the line needs the
-        #       rotational partition function from the band, which in turn needs the Boltzmann
-        #       factor for each line
-        # self.intensity: float = self.get_intensity()
+        self.rot_boltz_frac: float = self.get_rot_boltz_frac()
+        self.intensity: float = self.get_intensity()
 
     def fwhm_params(self) -> tuple[float, float]:
         """
         Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
         """
 
-        # TODO: 10/21/24 - Look over this, seems weird still
+        # TODO: 10/21/24 - Look over this, seems weird still.
+
         # The sum of the Einstein A coefficients for all downward transitions from the two levels of
-        # the transitions i and j
+        # the transitions i and j.
         i: int = self.band.v_qn_up
         a_ik: float = 0.0
         for k in range(0, i):
@@ -463,11 +512,12 @@ class RotationalLine:
         for k in range(0, j):
             a_jk += self.sim.einstein[j][k]
 
-        # Natural broadening in [1/s]
+        # Natural broadening in [1/s].
         natural: float = (a_ik + a_jk) / (2 * np.pi)
 
-        # Collisional (pressure) broadening in [1/s]
-        # TODO: 10/21/24 - Not sure which electronic state should be used for the cross-section
+        # TODO: 10/21/24 - Not sure which electronic state should be used for the cross-section.
+
+        # Collisional (pressure) broadening in [1/s].
         collisional: float = (
             self.sim.pressure
             * self.sim.state_lo.cross_section
@@ -477,8 +527,8 @@ class RotationalLine:
             / np.pi
         )
 
-        # Doppler (thermal) broadening in [1/cm]
-        # The speed of light is converted from [cm/s] to [m/s] to ensure units work out
+        # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
+        # [cm/s] to [m/s] to ensure that the units work out correctly.
         doppler: float = self.wavenumber * np.sqrt(
             8
             * cn.BOLTZ
@@ -488,7 +538,8 @@ class RotationalLine:
         )
 
         # FIXME: 10/21/24 - Temporarily adding a 0.3 here to simulate the effects of predissociation
-        # Convert the Lorentzian broadening parameters from [1/s] to [1/cm]
+
+        # Convert the Lorentzian broadening parameters from [1/s] to [1/cm].
         lorentzian: float = (natural + collisional) / cn.LIGHT + 0.3
 
         return doppler, lorentzian
@@ -499,7 +550,7 @@ class RotationalLine:
         """
 
         # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
-        #       pp. 168-169
+        #       pp. 168-169.
 
         # Herzberg p. 168, eq. (IV, 24)
         return (
@@ -518,7 +569,7 @@ class RotationalLine:
         """
 
         # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
-        #       pp. 126-127, pp. 200-201, and pp. 382-383
+        #       pp. 126-127, pp. 200-201, and pp. 382-383.
 
         match self.sim.sim_type:
             case SimulationType.EMISSION:
@@ -528,23 +579,18 @@ class RotationalLine:
                 j_qn = self.j_qn_lo
                 wavenumber_factor = self.wavenumber
 
-        rot_boltz_frac: float = self.rotational_boltzmann_factor / self.band.rot_part
-        vib_boltz_frac: float = self.band.vibrational_boltzmann_factor / self.sim.vib_part
-
         return (
             wavenumber_factor
-            * rot_boltz_frac
-            * vib_boltz_frac
+            * self.rot_boltz_frac
+            * self.band.vib_boltz_frac
             * self.honl_london_factor
             / (2 * j_qn + 1)
             * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
         )
 
-    def get_rotational_boltzmann_factor(self) -> float:
+    def get_rot_boltz_frac(self) -> float:
         """
-        Returns the rotational Boltzmann factor, that is: (2J + 1) * exp(-F(J) * h * c / (k * T)).
-        This is different than the rotational Boltzmann fraction, which is the Boltzmann factor
-        divided by the total rotational partition function.
+        Returns the rotational Boltzmann fraction N_J / N.
         """
 
         match self.sim.sim_type:
@@ -559,11 +605,15 @@ class RotationalLine:
                 j_qn = self.j_qn_lo
                 branch_idx = self.branch_idx_lo
 
-        return (2 * j_qn + 1) * np.exp(
-            -rotational_term(state, v_qn, j_qn, branch_idx)
-            * cn.PLANC
-            * cn.LIGHT
-            / (cn.BOLTZ * self.sim.temperature)
+        return (
+            (2 * j_qn + 1)
+            * np.exp(
+                -rotational_term(state, v_qn, j_qn, branch_idx)
+                * cn.PLANC
+                * cn.LIGHT
+                / (cn.BOLTZ * self.sim.temperature)
+            )
+            / self.band.rot_part
         )
 
     def get_honl_london_factor(self) -> float:
@@ -571,22 +621,22 @@ class RotationalLine:
         Returns the Hönl-London factor (line strength).
         """
 
-        # For emission, the relevant rotational quantum number is N'; for absorption, it's N''
+        # For emission, the relevant rotational quantum number is N'; for absorption, it's N''.
         match self.sim.sim_type:
             case SimulationType.EMISSION:
                 n_qn = self.n_qn_up
             case SimulationType.ABSORPTION:
                 n_qn = self.n_qn_lo
 
-        # Convert the properties of the current rotational line into a useful key
+        # Convert the properties of the current rotational line into a useful key.
         if self.is_satellite:
             key = f"{self.branch_name}Q{self.branch_idx_up}{self.branch_idx_lo}"
         else:
             # For main branches, the upper and lower branches indicies are the same, so it doesn't
-            # matter which one is used here
+            # matter which one is used here.
             key = f"{self.branch_name}{self.branch_idx_up}"
 
-        # Factors are from Tatum - 1966: Hönl-London Factors for 3Σ±-3Σ± Transitions
+        # These factors are from Tatum - 1966: Hönl-London Factors for 3Σ±-3Σ± Transitions.
         factors: dict[SimulationType, dict[str, float]] = {
             SimulationType.EMISSION: {
                 "P1": ((n_qn + 1) * (2 * n_qn + 5)) / (2 * n_qn + 3),
@@ -635,7 +685,7 @@ def rotational_term(state: ElectronicState, v_qn: int, j_qn: int, branch_idx: in
     """
 
     # TODO: 10/17/24 - Change molecular constant data for the ground state to reflect the
-    #       conventions in Cheung
+    #       conventions in Cheung.
     #       Yu      | Cheung
     #       --------|------------
     #       D       | -D
@@ -651,9 +701,11 @@ def rotational_term(state: ElectronicState, v_qn: int, j_qn: int, branch_idx: in
     ld: float = lookup["lamda_D"][v_qn]
     gd: float = lookup["gamma_D"][v_qn]
 
+    # The Hamiltonian from Cheung is written in Hund's case (a) representation, so J is used instead
+    # of N.
     x: int = j_qn * (j_qn + 1)
 
-    # Hamiltonian matrix elements
+    # The four Hamiltonian matrix elements given in Cheung.
     h11: float = (
         b * (x + 2)
         - d * (x**2 + 8 * x + 4)
@@ -685,7 +737,7 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
     Converts from N to J.
     """
 
-    # For Hund's case (b), spin multiplicity 3
+    # For Hund's case (b), spin multiplicity 3.
     match branch_idx:
         case 1:
             # F1: J = N + 1
@@ -722,12 +774,12 @@ def convolve_brod(lines: list[RotationalLine], wavenumbers_conv: np.ndarray) -> 
     """
 
     # TODO: 10/21/24 - Go over this and all the broadening functions to make sure they're being
-    #       computed efficiently, not sure if this is the best way to do it
+    #       computed efficiently, not sure if this is the best way to do it.
 
     intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
 
     for line in lines:
-        intensities_conv += line.get_intensity() * broadening_fn(wavenumbers_conv, line)
+        intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line)
 
     return intensities_conv
 
@@ -753,25 +805,27 @@ def main() -> None:
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        rot_lvls=np.arange(0, 50),
+        rot_lvls=np.arange(0, 36),
         temperature=300.0,
         pressure=101325.0,
         vib_bands=vib_bands,
     )
 
-    wavenumbers = sim.vib_bands[0].wavenumbers_conv()
-    intensities = sim.vib_bands[0].intensities_conv()
+    wns_line = sim.vib_bands[0].wavenumbers_line()
+    ins_line = sim.vib_bands[0].intensities_line()
+    wns_conv = sim.vib_bands[0].wavenumbers_conv()
+    ins_conv = sim.vib_bands[0].intensities_conv()
 
-    intn = np.array(intensities)
-    intn /= intn.max()
+    ins_line /= ins_line.max()
+    ins_conv /= ins_conv.max()
 
     sample: np.ndarray = np.genfromtxt(
         "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
     )
 
     plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")
-    # plt.stem(wavenumbers, intn, markerfmt="")
-    plt.plot(wavenumbers, intn)
+    plt.stem(wns_line, ins_line, markerfmt="")
+    plt.plot(wns_conv, ins_conv)
     plt.show()
 
 

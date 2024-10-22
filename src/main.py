@@ -74,10 +74,6 @@ class Molecule:
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
-        # FIXME: 10/21/24 - This is wrong: in the Hanson book, the reduced mass uses the masses of
-        #        the two molecules interacting with one another, not the two atoms that form the
-        #        molecule.
-        self.reduced_mass: float = self.atom_1.mass * self.atom_2.mass / self.mass
         self.symmetry_param: int = self.get_symmetry_param(atom_1, atom_2)
 
     @staticmethod
@@ -113,17 +109,6 @@ class ElectronicState:
         self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
         self.constants: dict[str, dict[int, float]] = self.get_constants(molecule.name, name)
-        self.cross_section: float = self.get_cross_section(molecule.atom_1, molecule.atom_2)
-
-    @staticmethod
-    def get_cross_section(atom_1: Atom, atom_2: Atom) -> float:
-        """
-        Returns the cross-section of the molecule in [m^2].
-        """
-
-        # TODO: 10/21/24 - Placeholder, need to add the radius of the molecule in each electronic
-        #       state to the constants.
-        return np.pi * (2 * 1.2e-10) ** 2
 
     @staticmethod
     def get_constants(molecule: str, state: str) -> dict[str, dict[int, float]]:
@@ -229,7 +214,6 @@ class Simulation:
             case SimulationType.ABSORPTION:
                 state = self.state_lo
                 v_qn_max = len(self.state_lo.constants["G"])
-        print(v_qn_max)
 
         q_v: float = 0.0
 
@@ -492,6 +476,20 @@ class RotationalLine:
         self.honl_london_factor: float = self.get_honl_london_factor()
         self.rot_boltz_frac: float = self.get_rot_boltz_frac()
         self.intensity: float = self.get_intensity()
+        self.predissociation: float = self.get_predissociation()
+
+    def get_predissociation(self) -> float:
+        """
+        Placeholder predissociation method until a better one is found.
+        """
+
+        # TODO: 10/22/24 - Predissociation factors are different for each vibrational band. They
+        #       also vary with rotational quantum number and branch index. Figure out a way to store
+        #       and access the data in a sane manner.
+
+        thing = pd.read_csv(f"../data/{self.sim.molecule.name}/predissociation/cosby_2.csv")
+
+        return thing.loc[thing["N"] == self.n_qn_up, f"F{self.branch_idx_up}"].values[0]
 
     def fwhm_params(self) -> tuple[float, float]:
         """
@@ -517,13 +515,22 @@ class RotationalLine:
 
         # TODO: 10/21/24 - Not sure which electronic state should be used for the cross-section.
 
+        # NOTE: 10/22/24 - Both the cross-section and reduced mass refer to the interactions between
+        #       two *molecules*, not the two atoms that compose a molecule. For now, only
+        #       homogeneous gases are considered, so the diameter and masses of the two molecules
+        #       are identical. The internuclear distance is being used as the effective radius of
+        #       the molecule.
+        cross_section: float = (
+            np.pi
+            * (2 * cn.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][self.sim.state_lo.name]) ** 2
+        )
+        reduced_mass: float = self.sim.molecule.mass / 2
+
         # Collisional (pressure) broadening in [1/s].
         collisional: float = (
             self.sim.pressure
-            * self.sim.state_lo.cross_section
-            * np.sqrt(
-                8 / (np.pi * self.sim.molecule.reduced_mass * cn.BOLTZ * self.sim.temperature)
-            )
+            * cross_section
+            * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * self.sim.temperature))
             / np.pi
         )
 
@@ -537,10 +544,9 @@ class RotationalLine:
             / (self.sim.molecule.mass * (cn.LIGHT / 1e2) ** 2)
         )
 
-        # FIXME: 10/21/24 - Temporarily adding a 0.3 here to simulate the effects of predissociation
-
-        # Convert the Lorentzian broadening parameters from [1/s] to [1/cm].
-        lorentzian: float = (natural + collisional) / cn.LIGHT + 0.3
+        # Convert the natural and collisional broadening parameters from [1/s] to [1/cm] and add the
+        # effects of predissociation.
+        lorentzian: float = (natural + collisional) / cn.LIGHT + self.predissociation
 
         return doppler, lorentzian
 
@@ -805,7 +811,7 @@ def main() -> None:
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        rot_lvls=np.arange(0, 36),
+        rot_lvls=np.arange(0, 24),
         temperature=300.0,
         pressure=101325.0,
         vib_bands=vib_bands,
@@ -822,10 +828,17 @@ def main() -> None:
     sample: np.ndarray = np.genfromtxt(
         "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
     )
+    wns_samp = sample[:, 0]
+    ins_samp = sample[:, 1] / sample[:, 1].max()
 
-    plt.plot(sample[:, 0], sample[:, 1] / sample[:, 1].max(), color="orange")
+    ins_inrp: np.ndarray = np.interp(sample[:, 0], wns_conv, ins_conv)
+    residual = np.abs(ins_samp - ins_inrp)
+
+    plt.plot(wns_samp, ins_samp, color="orange")
     plt.stem(wns_line, ins_line, markerfmt="")
     plt.plot(wns_conv, ins_conv)
+    # Show residual below the main data for clarity.
+    plt.plot(wns_samp, -residual)
     plt.show()
 
 

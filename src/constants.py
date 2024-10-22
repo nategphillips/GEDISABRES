@@ -9,3 +9,9 @@ PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
+
+# Internuclear distance [m]
+# Data from NIST Chemistry WebBook
+INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
+    "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10}
+}

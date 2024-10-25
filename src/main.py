@@ -149,6 +149,7 @@ class Simulation:
         state_lo: ElectronicState,
         rot_lvls: np.ndarray,
         temp_trn: float,
+        temp_elc: float,
         temp_vib: float,
         temp_rot: float,
         pressure: float,
@@ -160,10 +161,13 @@ class Simulation:
         self.state_lo: ElectronicState = state_lo
         self.rot_lvls: np.ndarray = rot_lvls
         self.temp_trn: float = temp_trn
+        self.temp_elc: float = temp_elc
         self.temp_vib: float = temp_vib
         self.temp_rot: float = temp_rot
         self.pressure: float = pressure
+        self.elc_part: float = self.get_elc_partition_fn()
         self.vib_part: float = self.get_vib_partition_fn()
+        self.elc_boltz_frac: float = self.get_elc_boltz_frac()
         self.franck_condon: np.ndarray = self.get_franck_condon()
         self.einstein: np.ndarray = self.get_einstein()
         self.predissociation: dict[str, dict[int, float]] = self.get_predissociation()
@@ -236,11 +240,56 @@ class Simulation:
         #       This approach is used to ensure the sum is calculated correctly regardless of the
         #       number of vibrational bands simulated by the user.
         for v_qn in range(0, v_qn_max):
+            # NOTE: 10/25/24 - The zero-point vibrational energy is used as a reference to which all
+            #       other vibrational energies are measured. This ensures the state sum begins at a
+            #       value of 1 when v = 0.
             q_v += np.exp(
-                -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temp_vib)
+                -(vibrational_term(state, v_qn) - vibrational_term(state, 0))
+                * cn.PLANC
+                * cn.LIGHT
+                / (cn.BOLTZ * self.temp_vib)
             )
 
         return q_v
+
+    def get_elc_partition_fn(self) -> float:
+        """
+        Returns the electronic partition function.
+        """
+
+        energies: list[float] = list(cn.ELECTRONIC_ENERGIES[self.molecule.name].values())
+        degeneracies: list[int] = list(cn.ELECTRONIC_DEGENERACIES[self.molecule.name].values())
+
+        q_e: float = 0.0
+
+        # NOTE: 10/25/24 - This sum is basically unnecessary since the energies of electronic states
+        #       above the ground state are so high. This means that any contribution to the
+        #       electronic partition function from anything other than the ground state is
+        #       negligible.
+        for e, g in zip(energies, degeneracies):
+            q_e += g * np.exp(-e * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temp_elc))
+
+        return q_e
+
+    def get_elc_boltz_frac(self) -> float:
+        """
+        Returns the electronic Boltzmann fraction N_e / N.
+        """
+
+        match self.sim_type:
+            case SimulationType.EMISSION:
+                state = self.state_up.name
+            case SimulationType.ABSORPTION:
+                state = self.state_lo.name
+
+        energy: float = cn.ELECTRONIC_ENERGIES[self.molecule.name][state]
+        degeneracy: int = cn.ELECTRONIC_DEGENERACIES[self.molecule.name][state]
+
+        return (
+            degeneracy
+            * np.exp(-energy * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temp_elc))
+            / self.elc_part
+        )
 
 
 class VibrationalBand:
@@ -288,9 +337,11 @@ class VibrationalBand:
                 state = self.sim.state_lo
                 v_qn = self.v_qn_lo
 
+        # NOTE: 10/25/25 - Calculates the vibrational Boltzmann fraction with respect to the
+        #       zero-point vibrational energy to match the vibrational partition function.
         return (
             np.exp(
-                -vibrational_term(state, v_qn)
+                -(vibrational_term(state, v_qn) - vibrational_term(state, 0))
                 * cn.PLANC
                 * cn.LIGHT
                 / (cn.BOLTZ * self.sim.temp_vib)
@@ -318,6 +369,9 @@ class VibrationalBand:
         """
         Returns the rotational partition function.
         """
+
+        # TODO: 10/25/24 - Add nuclear effects to make this the effective rotational partition
+        #       function.
 
         match self.sim.sim_type:
             case SimulationType.EMISSION:
@@ -564,6 +618,9 @@ class RotationalLine:
 
         predissociation: float = a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
 
+        # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption,
+        #       the broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
+
         # Convert the natural and collisional broadening parameters from [1/s] to [1/cm] and add the
         # effects of predissociation.
         lorentzian: float = (natural + collisional) / cn.LIGHT + predissociation
@@ -609,6 +666,7 @@ class RotationalLine:
             wavenumber_factor
             * self.rot_boltz_frac
             * self.band.vib_boltz_frac
+            * self.sim.elc_boltz_frac
             * self.honl_london_factor
             / (2 * j_qn + 1)
             * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
@@ -826,15 +884,21 @@ def main() -> None:
 
     vib_bands: list[tuple[int, int]] = [(2, 0)]
 
+    # TODO: 10/25/24 - Have an option for switching between equilibrium and nonequilibrium
+    #       simulations easily.
+
+    temp: float = 300.0
+
     sim: Simulation = Simulation(
         sim_type=SimulationType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
         rot_lvls=np.arange(0, 40),
-        temp_trn=300.0,
-        temp_vib=300.0,
-        temp_rot=300.0,
+        temp_trn=temp,
+        temp_elc=temp,
+        temp_vib=temp,
+        temp_rot=temp,
         pressure=101325.0,
         vib_bands=vib_bands,
     )

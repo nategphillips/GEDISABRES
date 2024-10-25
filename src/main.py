@@ -256,7 +256,7 @@ class VibrationalBand:
         #       linear interpolation to reduce computational time.
 
         # Generate a fine-grained x-axis using existing wavenumber data.
-        return np.linspace(wns_line.min(), wns_line.max(), 100000)
+        return np.linspace(wns_line.min(), wns_line.max(), 10000)
 
     def intensities_conv(self) -> np.ndarray:
         return convolve_brod(self.rot_lines, self.wavenumbers_conv())

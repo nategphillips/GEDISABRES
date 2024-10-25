@@ -148,7 +148,9 @@ class Simulation:
         state_up: ElectronicState,
         state_lo: ElectronicState,
         rot_lvls: np.ndarray,
-        temperature: float,
+        temp_trn: float,
+        temp_vib: float,
+        temp_rot: float,
         pressure: float,
         vib_bands: list[tuple[int, int]],
     ) -> None:
@@ -157,7 +159,9 @@ class Simulation:
         self.state_up: ElectronicState = state_up
         self.state_lo: ElectronicState = state_lo
         self.rot_lvls: np.ndarray = rot_lvls
-        self.temperature: float = temperature
+        self.temp_trn: float = temp_trn
+        self.temp_vib: float = temp_vib
+        self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.vib_part: float = self.get_vib_partition_fn()
         self.franck_condon: np.ndarray = self.get_franck_condon()
@@ -223,7 +227,7 @@ class Simulation:
         #       number of vibrational bands simulated by the user.
         for v_qn in range(0, v_qn_max):
             q_v += np.exp(
-                -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temperature)
+                -vibrational_term(state, v_qn) * cn.PLANC * cn.LIGHT / (cn.BOLTZ * self.temp_vib)
             )
 
         return q_v
@@ -279,7 +283,7 @@ class VibrationalBand:
                 -vibrational_term(state, v_qn)
                 * cn.PLANC
                 * cn.LIGHT
-                / (cn.BOLTZ * self.sim.temperature)
+                / (cn.BOLTZ * self.sim.temp_vib)
             )
             / self.sim.vib_part
         )
@@ -328,7 +332,7 @@ class VibrationalBand:
                 -rotational_term(state, v_qn, j_qn, 2)
                 * cn.PLANC
                 * cn.LIGHT
-                / (cn.BOLTZ * self.sim.temperature)
+                / (cn.BOLTZ * self.sim.temp_rot)
             )
 
         # NOTE: 10/22/24 - Alternatively, the high-temperature approximation can be used instead of
@@ -526,11 +530,17 @@ class RotationalLine:
         )
         reduced_mass: float = self.sim.molecule.mass / 2
 
+        # TODO: 10/25/24 - Switched to using separate translational, vibrational, and rotational
+        #       temperatures for the possibility of simulating nonequilibrium flows. However, I'm
+        #       not sure which temperature to use with the two broadening parameters below. For now,
+        #       I've settled on translational since that makes the most sense to me (molecules
+        #       colliding with one another).
+
         # Collisional (pressure) broadening in [1/s].
         collisional: float = (
             self.sim.pressure
             * cross_section
-            * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * self.sim.temperature))
+            * np.sqrt(8 / (np.pi * reduced_mass * cn.BOLTZ * self.sim.temp_trn))
             / np.pi
         )
 
@@ -539,7 +549,7 @@ class RotationalLine:
         doppler: float = self.wavenumber * np.sqrt(
             8
             * cn.BOLTZ
-            * self.sim.temperature
+            * self.sim.temp_trn
             * np.log(2)
             / (self.sim.molecule.mass * (cn.LIGHT / 1e2) ** 2)
         )
@@ -617,7 +627,7 @@ class RotationalLine:
                 -rotational_term(state, v_qn, j_qn, branch_idx)
                 * cn.PLANC
                 * cn.LIGHT
-                / (cn.BOLTZ * self.sim.temperature)
+                / (cn.BOLTZ * self.sim.temp_rot)
             )
             / self.band.rot_part
         )
@@ -812,7 +822,9 @@ def main() -> None:
         state_up=state_up,
         state_lo=state_lo,
         rot_lvls=np.arange(0, 24),
-        temperature=300.0,
+        temp_trn=300.0,
+        temp_vib=300.0,
+        temp_rot=300.0,
         pressure=101325.0,
         vib_bands=vib_bands,
     )

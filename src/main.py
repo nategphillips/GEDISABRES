@@ -166,7 +166,17 @@ class Simulation:
         self.vib_part: float = self.get_vib_partition_fn()
         self.franck_condon: np.ndarray = self.get_franck_condon()
         self.einstein: np.ndarray = self.get_einstein()
+        self.predissociation: dict[str, dict[int, float]] = self.get_predissociation()
         self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
+
+    def get_predissociation(self) -> dict[str, dict[int, float]]:
+        """
+        Returns polynomial coefficients for computing predissociation linewidths.
+        """
+
+        return pd.read_csv(
+            f"../data/{self.molecule.name}/predissociation/lewis_coeffs.csv"
+        ).to_dict()
 
     def get_einstein(self) -> np.ndarray:
         """
@@ -480,20 +490,6 @@ class RotationalLine:
         self.honl_london_factor: float = self.get_honl_london_factor()
         self.rot_boltz_frac: float = self.get_rot_boltz_frac()
         self.intensity: float = self.get_intensity()
-        self.predissociation: float = self.get_predissociation()
-
-    def get_predissociation(self) -> float:
-        """
-        Placeholder predissociation method until a better one is found.
-        """
-
-        # TODO: 10/22/24 - Predissociation factors are different for each vibrational band. They
-        #       also vary with rotational quantum number and branch index. Figure out a way to store
-        #       and access the data in a sane manner.
-
-        thing = pd.read_csv(f"../data/{self.sim.molecule.name}/predissociation/cosby_2.csv")
-
-        return thing.loc[thing["N"] == self.n_qn_up, f"F{self.branch_idx_up}"].values[0]
 
     def fwhm_params(self) -> tuple[float, float]:
         """
@@ -554,9 +550,23 @@ class RotationalLine:
             / (self.sim.molecule.mass * (cn.LIGHT / 1e2) ** 2)
         )
 
+        # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986 for
+        #       the predissociation of all bands for now. The goal is to use experimental values
+        #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
+        #       Check this to make sure v' and J' should be used even in absorption.
+
+        a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
+        a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
+        a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
+        a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
+        a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
+        x: int = self.j_qn_up * (self.j_qn_up + 1)
+
+        predissociation: float = a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
+
         # Convert the natural and collisional broadening parameters from [1/s] to [1/cm] and add the
         # effects of predissociation.
-        lorentzian: float = (natural + collisional) / cn.LIGHT + self.predissociation
+        lorentzian: float = (natural + collisional) / cn.LIGHT + predissociation
 
         return doppler, lorentzian
 
@@ -821,7 +831,7 @@ def main() -> None:
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        rot_lvls=np.arange(0, 24),
+        rot_lvls=np.arange(0, 40),
         temp_trn=300.0,
         temp_vib=300.0,
         temp_rot=300.0,

@@ -357,13 +357,20 @@ class VibrationalBand:
         # Herzberg p. 168, eq. (IV, 24)
 
         upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
+        lower_state: dict[str, dict[int, float]] = self.sim.state_lo.constants
 
         # Convert Cheung's definition of the band origin (T) to Herzberg's definition (nu_0).
         energy_offset: float = (
             2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
 
-        return upper_state["T"][self.v_qn_up] + energy_offset
+        # TODO: 10/28/24 - Calculates the band origin with respect to the zero-point vibrational
+        #       energy. Check this against the old code to make sure it's working properly.
+        return (
+            upper_state["T"][self.v_qn_up]
+            + energy_offset
+            - (lower_state["G"][self.v_qn_lo] - lower_state["G"][0])
+        )
 
     def get_rot_partition_fn(self) -> float:
         """
@@ -545,6 +552,21 @@ class RotationalLine:
         self.rot_boltz_frac: float = self.get_rot_boltz_frac()
         self.intensity: float = self.get_intensity()
 
+    def predissociation(self) -> float:
+        # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986 for
+        #       the predissociation of all bands for now. The goal is to use experimental values
+        #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
+        #       Check this to make sure v' and J' should be used even in absorption.
+
+        a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
+        a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
+        a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
+        a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
+        a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
+        x: int = self.j_qn_up * (self.j_qn_up + 1)
+
+        return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
+
     def fwhm_params(self) -> tuple[float, float]:
         """
         Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
@@ -604,26 +626,12 @@ class RotationalLine:
             / (self.sim.molecule.mass * (cn.LIGHT / 1e2) ** 2)
         )
 
-        # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986 for
-        #       the predissociation of all bands for now. The goal is to use experimental values
-        #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
-        #       Check this to make sure v' and J' should be used even in absorption.
-
-        a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
-        a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
-        a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
-        a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
-        a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
-        x: int = self.j_qn_up * (self.j_qn_up + 1)
-
-        predissociation: float = a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
-
         # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption,
         #       the broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
 
         # Convert the natural and collisional broadening parameters from [1/s] to [1/cm] and add the
         # effects of predissociation.
-        lorentzian: float = (natural + collisional) / cn.LIGHT + predissociation
+        lorentzian: float = (natural + collisional) / cn.LIGHT + self.predissociation()
 
         return doppler, lorentzian
 

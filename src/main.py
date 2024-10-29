@@ -42,6 +42,8 @@ plt.rcParams.update(
 
 plt.rcParams["axes.prop_cycle"] = cycler(color=line_colors)
 
+GRANULARITY: int = 10000
+
 
 class Atom:
     """
@@ -172,6 +174,39 @@ class Simulation:
         self.einstein: np.ndarray = self.get_einstein()
         self.predissociation: dict[str, dict[int, float]] = self.get_predissociation()
         self.vib_bands: list[VibrationalBand] = self.get_vib_bands(vib_bands)
+
+    def all_line_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Combines the line data for all vibrational bands.
+        """
+
+        wavenumbers_line: np.ndarray = np.array([])
+        intensities_line: np.ndarray = np.array([])
+
+        for vib_band in self.vib_bands:
+            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
+            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
+
+        return wavenumbers_line, intensities_line
+
+    def all_conv_data(self) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Creates common axes for plotting the convolved data of all vibrational bands at once.
+        """
+
+        wavenumbers_line: np.ndarray = np.array([])
+        intensities_line: np.ndarray = np.array([])
+        lines: list[RotationalLine] = []
+
+        for vib_band in self.vib_bands:
+            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
+            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
+            lines.extend(vib_band.rot_lines)
+
+        wavenumbers_conv = np.linspace(wavenumbers_line.min(), wavenumbers_line.max(), GRANULARITY)
+        intensities_conv = convolve_brod(lines, wavenumbers_conv)
+
+        return wavenumbers_conv, intensities_conv
 
     def get_predissociation(self) -> dict[str, dict[int, float]]:
         """
@@ -315,11 +350,8 @@ class VibrationalBand:
     def wavenumbers_conv(self) -> np.ndarray:
         wns_line: np.ndarray = self.wavenumbers_line()
 
-        # TODO: 10/21/24 - Allow the granularity to be selected by the user, think about using
-        #       linear interpolation to reduce computational time.
-
         # Generate a fine-grained x-axis using existing wavenumber data.
-        return np.linspace(wns_line.min(), wns_line.max(), 10000)
+        return np.linspace(wns_line.min(), wns_line.max(), GRANULARITY)
 
     def intensities_conv(self) -> np.ndarray:
         return convolve_brod(self.rot_lines, self.wavenumbers_conv())
@@ -890,7 +922,7 @@ def main() -> None:
         name="X3Sg-", spin_multiplicity=3, molecule=molecule
     )
 
-    vib_bands: list[tuple[int, int]] = [(2, 0)]
+    vib_bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
     # TODO: 10/25/24 - Have an option for switching between equilibrium and nonequilibrium
     #       simulations easily.
@@ -911,26 +943,32 @@ def main() -> None:
         vib_bands=vib_bands,
     )
 
-    wns_line = sim.vib_bands[0].wavenumbers_line()
-    ins_line = sim.vib_bands[0].intensities_line()
-    wns_conv = sim.vib_bands[0].wavenumbers_conv()
-    ins_conv = sim.vib_bands[0].intensities_conv()
-
-    ins_line /= ins_line.max()
-    ins_conv /= ins_conv.max()
-
     sample: np.ndarray = np.genfromtxt(
         "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
     )
     wns_samp = sample[:, 0]
     ins_samp = sample[:, 1] / sample[:, 1].max()
 
-    ins_inrp: np.ndarray = np.interp(sample[:, 0], wns_conv, ins_conv)
+    plt.plot(wns_samp, ins_samp, color="white")
+
+    max_intensity = 0
+
+    for band in sim.vib_bands:
+        thingy = band.intensities_conv().max()
+
+        if band.intensities_conv().max() > max_intensity:
+            max_intensity = thingy
+
+        plt.plot(band.wavenumbers_conv(), band.intensities_conv() / max_intensity)
+
+    wns, ins = sim.all_conv_data()
+    ins /= ins.max()
+
+    plt.plot(wns, ins)
+
+    ins_inrp: np.ndarray = np.interp(sample[:, 0], wns, ins)
     residual = np.abs(ins_samp - ins_inrp)
 
-    plt.plot(wns_samp, ins_samp, color="orange")
-    plt.stem(wns_line, ins_line, markerfmt="")
-    plt.plot(wns_conv, ins_conv)
     # Show residual below the main data for clarity.
     plt.plot(wns_samp, -residual)
     plt.show()

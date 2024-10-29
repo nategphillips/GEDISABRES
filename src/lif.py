@@ -12,6 +12,10 @@ import scipy as sy
 import constants as cn
 import main as m
 
+MAX_TIME: float = 60e-9
+N_TIME: int = 1000
+N_FLUENCE: int = 100
+
 
 @dataclass
 class RateParams:
@@ -65,7 +69,9 @@ def rate_equations(
 
     n1, n2, n3 = n
 
-    overlap_integral: float = 3.0  # [cm]
+    # TODO: 10/29/24 - Implement the overlap integral between the transition and laser lineshapes.
+    overlap_integral: float = 1.5  # [cm]
+
     f_b: float = line.rot_boltz_frac
 
     i_l: float = laser_intensity(t, laser_params)
@@ -217,7 +223,7 @@ def run_simulation(
     line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
-    t: np.ndarray = np.linspace(0, 60e-9, 1000)
+    t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
 
     n1, n2, n3 = simulate(t, rate_params, laser_params, line)
 
@@ -231,16 +237,16 @@ def run_simulation(
 
     _, ax1 = plt.subplots()
     ax1.set_xlabel("Time, $t$ [s]")
-    ax1.set_ylabel("N1, N3, IL")
-    ax1.plot(t, n1, label="N1")
-    ax1.plot(t, n3, label="N3")
-    ax1.plot(t, il, label="IL")
+    ax1.set_ylabel("$N_{1}$, $N_{3}$, $I_{L}$")
+    ax1.plot(t, n1, label="$N_{1}$")
+    ax1.plot(t, n3, label="$N_{3}$")
+    ax1.plot(t, il, label="$I_{L}$")
     ax1.legend()
 
     ax2 = ax1.twinx()
-    ax2.set_ylabel("N2, SF")
-    ax2.plot(t, n2, label="N2")
-    ax2.plot(t, sf, label="SF")
+    ax2.set_ylabel("$N_{2}$, $S_{f}$")
+    ax2.plot(t, n2, label="$N_{2}$", linestyle="-.")
+    ax2.plot(t, sf, label="$S_{f}$", linestyle="-.")
     ax2.legend()
 
     plt.show()
@@ -268,9 +274,9 @@ def scan_fluences(
     sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
     line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
-    t: np.ndarray = np.linspace(0, 60e-9, 1000)
+    t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
 
-    fluences: np.ndarray = np.linspace(0, max_fluence)
+    fluences: np.ndarray = np.linspace(0, max_fluence, N_FLUENCE)
     signals: np.ndarray = np.zeros_like(fluences)
 
     for idx, fluence in enumerate(fluences):
@@ -284,6 +290,62 @@ def scan_fluences(
     return fluences, signals / signals.max()
 
 
+def n2_vs_time_and_fluence(
+    molecule: m.Molecule,
+    state_up: m.ElectronicState,
+    state_lo: m.ElectronicState,
+    temp: float,
+    pres: float,
+    v_qn_up: int,
+    v_qn_lo: int,
+    branch_name: str,
+    branch_idx_lo: int,
+    n_qn_lo: int,
+    pulse_center: float,
+    pulse_width: float,
+    max_fluence: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Scans over fluence values and returns the time-dependent populations.
+    """
+
+    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    rate_params: RateParams = get_rates(sim, line)
+    t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
+
+    fluences: np.ndarray = np.linspace(0, max_fluence, N_FLUENCE)
+    n2_populations: np.ndarray = np.zeros((len(fluences), len(t)))
+
+    for idx, fluence in enumerate(fluences):
+        laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
+        _, n2, _ = simulate(t, rate_params, laser_params, line)
+        n2_populations[idx, :] = n2
+
+    return fluences, t, n2_populations
+
+
+def plot_n2_vs_time_and_fluence(
+    fluences: np.ndarray, t: np.ndarray, n2_populations: np.ndarray
+) -> None:
+    """
+    Plots a heatmap showing the population of state N2 as a function of time and fluence.
+    """
+
+    plt.figure(figsize=(8, 6))
+    t, f = np.meshgrid(t, fluences)
+
+    contour = plt.contourf(t, f, n2_populations, levels=50, cmap="magma")
+
+    cbar = plt.colorbar(contour)
+    cbar.set_label("$N_{2}$")
+
+    plt.xlabel("Time, $t$ [s]")
+    plt.ylabel("Laser Fluence, $\\Phi$ [J/m$^{2}$]")
+
+    plt.show()
+
+
 def main() -> None:
     """
     Entry point.
@@ -293,15 +355,20 @@ def main() -> None:
     state_up: m.ElectronicState = m.ElectronicState("B3Su-", 3, molecule)
     state_lo: m.ElectronicState = m.ElectronicState("X3Sg-", 3, molecule)
 
+    # NOTE: 10/29/24 - For now, laser fluence should be specified in [J/cm^2].
+
     run_simulation(
         molecule, state_up, state_lo, 300, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 25e-3
+    )
+    run_simulation(
+        molecule, state_up, state_lo, 300, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 1000e-3
     )
 
     jay_27_p9x: np.ndarray = np.array([0, 1.8, 3.6, 6, 12, 24, 42.5]) / 1e3
     jay_27_p9y: np.ndarray = np.array([0, 0.08, 0.15, 0.27, 0.47, 0.7, 1])
     plt.scatter(jay_27_p9x, jay_27_p9y)
     f, sf = scan_fluences(
-        molecule, state_up, state_lo, 1800, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 42.5e-3
+        molecule, state_up, state_lo, 1800, 101325, 2, 7, "P", 1, 9, 30e-9, 20e-9, 42.5e-3
     )
     plt.plot(f, sf)
 
@@ -316,6 +383,11 @@ def main() -> None:
     plt.xlabel("Laser Fluence, $\\Phi$ [J/m$^{2}$]")
     plt.ylabel("Signal, $S_{f}$ [a.u.]")
     plt.show()
+
+    fluences, t, n2_populations = n2_vs_time_and_fluence(
+        molecule, state_up, state_lo, 300, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 1000e-3
+    )
+    plot_n2_vs_time_and_fluence(fluences, t, n2_populations)
 
 
 if __name__ == "__main__":

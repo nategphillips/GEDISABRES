@@ -1,4 +1,9 @@
 # module lif
+"""
+A three-level LIF model for the Schumann-Runge bands of molecular oxygen.
+"""
+
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,130 +13,118 @@ import constants as cn
 import main as m
 
 
-def laser_intensity(t: np.ndarray, pulse_center: float, pulse_width: float, fluence: float):
+@dataclass
+class RateParams:
+    """
+    Holds parameters related to the rate equations.
+    """
+
+    a_21: float
+    b_12: float
+    b_21: float
+    w_c: float
+    w_d: float
+    w_f: float
+    w_q: float
+
+
+@dataclass
+class LaserParams:
+    """
+    Holds parameters related to the laser.
+    """
+
+    pulse_center: float
+    pulse_width: float
+    fluence: float
+
+
+def laser_intensity(t: float | np.ndarray, laser_params: LaserParams):
+    """
+    Returns the laser intensity.
+    """
+
     return (
-        fluence
-        / pulse_width
+        laser_params.fluence
+        / laser_params.pulse_width
         * np.sqrt(4 * np.log(2) / np.pi)
-        * np.exp(-4 * np.log(2) * ((t - pulse_center) / pulse_width) ** 2)
+        * np.exp(-4 * np.log(2) * ((t - laser_params.pulse_center) / laser_params.pulse_width) ** 2)
     )
 
 
 def rate_equations(
     n: list[float],
-    t: np.ndarray,
-    f_b: float,
-    w_c: float,
-    w_d: float,
-    w_f: float,
-    w_q: float,
-    a_21: float,
-    b_12: float,
-    b_21: float,
-    pulse_center: float,
-    pulse_width: float,
-    fluence: float,
-):
+    t: float,
+    rate_params: RateParams,
+    laser_params: LaserParams,
+    line: m.RotationalLine,
+) -> list[float]:
+    """
+    The rate equations governing the three-level LIF system.
+    """
+
     n1, n2, n3 = n
 
     overlap_integral: float = 3.0  # [cm]
+    f_b: float = line.rot_boltz_frac
 
-    i_l: float = laser_intensity(t, pulse_center, pulse_width, fluence)
-    w_la: float = i_l * b_12 * overlap_integral / cn.LIGHT
-    w_le: float = i_l * b_21 * overlap_integral / cn.LIGHT
+    i_l: float = laser_intensity(t, laser_params)
+    w_la: float = i_l * rate_params.b_12 * overlap_integral / cn.LIGHT
+    w_le: float = i_l * rate_params.b_21 * overlap_integral / cn.LIGHT
 
-    dn1_dt: float = -w_la * n1 + n2 * (w_le + a_21) + w_c * (n3 - n1)
-    dn2_dt: float = w_la * n1 - n2 * (w_le + w_d + a_21 + w_f + w_q)
-    dn3_dt: float = -w_c * f_b / (1 - f_b) * (n3 - n1)
+    dn1_dt: float = -w_la * n1 + n2 * (w_le + rate_params.a_21) + rate_params.w_c * (n3 - n1)
+    dn2_dt: float = w_la * n1 - n2 * (
+        w_le + rate_params.w_d + rate_params.a_21 + rate_params.w_f + rate_params.w_q
+    )
+    dn3_dt: float = -rate_params.w_c * f_b / (1 - f_b) * (n3 - n1)
 
     return [dn1_dt, dn2_dt, dn3_dt]
 
 
 def simulate(
-    line, a21_coeffs, v_up, v_lo, laser_energy, laser_area, pres, temp, pulse_center, pulse_width
-):
-    g_l: int = 3
-    g_u: int = 1
-    j_qn: int = line.j_qn_lo
-    f_b: float = line.rot_boltz_frac
-    s_j: float = line.honl_london_factor
-    nu: float = line.wavenumber  # [1/cm]
-    nu_d: float = line.predissociation()  # [1/cm]
-    w_d: float = 2 * np.pi * cn.LIGHT * nu_d  # [1/s]
-    a_21: float = a21_coeffs[v_up][v_lo] * s_j / (2 * j_qn + 1)  # [1/s]
-    w_f: float = np.sum(a21_coeffs[v_up]) * s_j / (2 * j_qn + 1)  # [1/s]
-    b_12: float = a_21 / (8 * np.pi * cn.PLANC * cn.LIGHT * nu**3) * g_u / g_l  # [cm/J]
-    b_21: float = b_12 * g_l / g_u  # [cm/J]
+    t: np.ndarray, rate_params: RateParams, laser_params: LaserParams, line: m.RotationalLine
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Returns the population densities of the three states as a function of time.
+    """
 
-    fluence: float = laser_energy / laser_area
-
-    # These two use pressure in atm
-    w_c: float = 7.78e9 * (pres / 101325) * np.sqrt(300 / temp)  # [1/s]
-    w_q: float = 7.8e9 * (pres / 101325) * np.sqrt(300 / temp)  # [1/s]
-
-    # print(f"w_c: {w_c:.4e}")
-    # print(f"w_d: {w_d:.4e}")
-    # print(f"w_f: {w_f:.4e}")
-    # print(f"w_q: {w_q:.4e}")
-    # print(f"a_21: {a_21:.4e}")
-    # print(f"b_12: {b_12:.4e}")
-    # print(f"b_21: {b_21:.4e}")
-
-    t: np.ndarray = np.linspace(0, 60e-9, 1000)
     n: list[float] = [1.0, 0.0, 1.0]
 
-    solution = sy.integrate.odeint(
-        rate_equations,
-        n,
-        t,
-        args=(f_b, w_c, w_d, w_f, w_q, a_21, b_12, b_21, pulse_center, pulse_width, fluence),
+    solution: np.ndarray = sy.integrate.odeint(
+        rate_equations, n, t, args=(rate_params, laser_params, line)
     )
 
-    n1 = solution[:, 0]
-    n2 = solution[:, 1]
-    n3 = solution[:, 2]
+    n1: np.ndarray = solution[:, 0]
+    n2: np.ndarray = solution[:, 1]
+    n3: np.ndarray = solution[:, 2]
 
-    s_f = sy.integrate.cumulative_trapezoid(w_f * n2, t, initial=0)
-
-    return s_f.max()
-
-    # s_f /= n2.max()
-
-    # i_l = laser_intensity(t, pulse_center, pulse_width, fluence)
-    # i_l /= i_l.max()
-
-    # _, ax1 = plt.subplots()
-
-    # ax1.set_xlabel("Time [s]")
-    # ax1.set_ylabel("N1, N3, IL")
-    # ax1.plot(t, n1, label="N1")
-    # ax1.plot(t, n3, label="N3")
-    # ax1.plot(t, i_l, label="IL")
-
-    # ax2 = ax1.twinx()
-    # ax2.set_ylabel("N2, SF")
-    # ax2.plot(t, n2, label="N2")
-    # ax2.plot(t, s_f, label="SF")
-
-    # plt.legend()
-    # plt.show()
+    return n1, n2, n3
 
 
-def get_signal(v_up, v_lo, branch_name, branch_idx_lo, n_qn_lo, energy_range, temp):
-    molecule = m.Molecule(name="O2", atom_1=m.Atom("O"), atom_2=m.Atom("O"))
+def get_signal(t: np.ndarray, n2: np.ndarray, rate_params: RateParams) -> np.ndarray:
+    """
+    Returns the LIF signal as a function of time.
+    """
 
-    state_up = m.ElectronicState(name="B3Su-", spin_multiplicity=3, molecule=molecule)
-    state_lo = m.ElectronicState(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
+    return rate_params.w_f * sy.integrate.cumulative_trapezoid(n2, t, initial=0)
 
-    # User settings
-    pres = 101325.0  # [Pa]
-    pulse_center: float = 30e-9  # [s]
-    pulse_width: float = 20e-9  # [s]
-    laser_area: float = 1.0  # [cm^2]
 
-    vib_bands: list[tuple[int, int]] = [(v_up, v_lo)]
+def get_sim(
+    molecule: m.Molecule,
+    state_up: m.ElectronicState,
+    state_lo: m.ElectronicState,
+    temp: float,
+    pres: float,
+    v_qn_up: int,
+    v_qn_lo: int,
+) -> m.Simulation:
+    """
+    Returns a simulation object with the desired parameters.
+    """
 
-    sim = m.Simulation(
+    vib_bands: list[tuple[int, int]] = [(v_qn_up, v_qn_lo)]
+
+    return m.Simulation(
         sim_type=m.SimulationType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -145,67 +138,183 @@ def get_signal(v_up, v_lo, branch_name, branch_idx_lo, n_qn_lo, energy_range, te
         vib_bands=vib_bands,
     )
 
-    for desired_line in sim.vib_bands[0].rot_lines:
-        if (
-            desired_line.branch_name == branch_name
-            and desired_line.branch_idx_lo == branch_idx_lo
-            and desired_line.n_qn_lo == n_qn_lo
-            and not desired_line.is_satellite
-        ):
-            line = desired_line
 
-    a21_coeffs = np.loadtxt(
-        f"../data/{molecule.name}/einstein/{state_up.name}_to_{state_lo.name}_allison.csv",
+def get_line(
+    sim: m.Simulation, branch_name: str, branch_idx_lo: int, n_qn_lo: int
+) -> m.RotationalLine:
+    """
+    Returns a rotational line with the desired parameters.
+    """
+
+    for line in sim.vib_bands[0].rot_lines:
+        if (
+            line.branch_name == branch_name
+            and line.branch_idx_lo == branch_idx_lo
+            and line.n_qn_lo == n_qn_lo
+            and not line.is_satellite
+        ):
+            return line
+
+    raise ValueError("No matching rotational line found.")
+
+
+def get_rates(sim: m.Simulation, line: m.RotationalLine) -> RateParams:
+    """
+    Returns the rate parameters.
+    """
+
+    # Electronic degeneracies
+    g_l: int = 3
+    g_u: int = 1
+
+    a21_coeffs: np.ndarray = np.loadtxt(
+        f"../data/{sim.molecule.name}/einstein/{sim.state_up.name}_to_{sim.state_lo.name}_allison.csv",
         delimiter=",",
     )
 
-    signals = []
+    # Only a single vibrational band will be simulated at a time
+    v_qn_up: int = sim.vib_bands[0].v_qn_up
+    v_qn_lo: int = sim.vib_bands[0].v_qn_lo
 
-    for laser_energy in energy_range:
-        signal = simulate(
-            line,
-            a21_coeffs,
-            v_up,
-            v_lo,
-            laser_energy,
-            laser_area,
-            pres,
-            temp,
-            pulse_center,
-            pulse_width,
-        )
-        signals.append(signal)
+    j_qn: int = line.j_qn_lo
+    s_j: float = line.honl_london_factor
+    nu_d: float = line.predissociation()  # [1/cm]
+    w_d: float = 2 * np.pi * cn.LIGHT * nu_d  # [1/s]
+    a_21: float = a21_coeffs[v_qn_up][v_qn_lo] * s_j / (2 * j_qn + 1)  # [1/s]
+    w_f: float = np.sum(a21_coeffs[v_qn_up]) * s_j / (2 * j_qn + 1)  # [1/s]
+    nu: float = line.wavenumber  # [1/cm]
+    b_12: float = a_21 / (8 * np.pi * cn.PLANC * cn.LIGHT * nu**3) * g_u / g_l  # [cm/J]
+    b_21: float = b_12 * g_l / g_u  # [cm/J]
 
-    return signals
+    # These two use pressure in atm
+    # Use rotational temperature here since that's what's measured with LIF
+    w_c: float = 7.78e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_rot)  # [1/s]
+    w_q: float = 7.8e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_rot)  # [1/s]
+
+    return RateParams(a_21, b_12, b_21, w_c, w_d, w_f, w_q)
+
+
+def run_simulation(
+    molecule: m.Molecule,
+    state_up: m.ElectronicState,
+    state_lo: m.ElectronicState,
+    temp: float,
+    pres: float,
+    v_qn_up: int,
+    v_qn_lo: int,
+    branch_name: str,
+    branch_idx_lo: int,
+    n_qn_lo: int,
+    pulse_center: float,
+    pulse_width: float,
+    fluence: float,
+) -> None:
+    """
+    Plots the population densities, signal, and laser intensity as functions of time.
+    """
+
+    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    rate_params: RateParams = get_rates(sim, line)
+    laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
+    t: np.ndarray = np.linspace(0, 60e-9, 1000)
+
+    n1, n2, n3 = simulate(t, rate_params, laser_params, line)
+
+    # Normalize signal w.r.t N2
+    sf = get_signal(t, n2, rate_params)
+    sf /= n2.max()
+
+    # Normalize laser w.r.t. itself
+    il = laser_intensity(t, laser_params)
+    il /= il.max()
+
+    _, ax1 = plt.subplots()
+    ax1.set_xlabel("Time, $t$ [s]")
+    ax1.set_ylabel("N1, N3, IL")
+    ax1.plot(t, n1, label="N1")
+    ax1.plot(t, n3, label="N3")
+    ax1.plot(t, il, label="IL")
+    ax1.legend()
+
+    ax2 = ax1.twinx()
+    ax2.set_ylabel("N2, SF")
+    ax2.plot(t, n2, label="N2")
+    ax2.plot(t, sf, label="SF")
+    ax2.legend()
+
+    plt.show()
+
+
+def scan_fluences(
+    molecule: m.Molecule,
+    state_up: m.ElectronicState,
+    state_lo: m.ElectronicState,
+    temp: float,
+    pres: float,
+    v_qn_up: int,
+    v_qn_lo: int,
+    branch_name: str,
+    branch_idx_lo: int,
+    n_qn_lo: int,
+    pulse_center: float,
+    pulse_width: float,
+    max_fluence: float,
+):
+    """
+    Scans over fluence values and returns the resulting singals.
+    """
+
+    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    rate_params: RateParams = get_rates(sim, line)
+    t: np.ndarray = np.linspace(0, 60e-9, 1000)
+
+    fluences: np.ndarray = np.linspace(0, max_fluence)
+    signals: np.ndarray = np.zeros_like(fluences)
+
+    for idx, fluence in enumerate(fluences):
+        laser_params = LaserParams(pulse_center, pulse_width, fluence)
+
+        _, n2, _ = simulate(t, rate_params, laser_params, line)
+
+        signal = get_signal(t, n2, rate_params)
+        signals[idx] = signal.max()
+
+    return fluences, signals / signals.max()
 
 
 def main() -> None:
-    # 1800 K
-    jay_27_p9x = np.array([0, 1.8, 3.6, 6, 12, 24, 42.5]) / 1e3
-    jay_27_p9y = np.array([0, 0.08, 0.15, 0.27, 0.47, 0.7, 1])
+    """
+    Entry point.
+    """
+
+    molecule: m.Molecule = m.Molecule("O2", m.Atom("O"), m.Atom("O"))
+    state_up: m.ElectronicState = m.ElectronicState("B3Su-", 3, molecule)
+    state_lo: m.ElectronicState = m.ElectronicState("X3Sg-", 3, molecule)
+
+    run_simulation(
+        molecule, state_up, state_lo, 300, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 25e-3
+    )
+
+    jay_27_p9x: np.ndarray = np.array([0, 1.8, 3.6, 6, 12, 24, 42.5]) / 1e3
+    jay_27_p9y: np.ndarray = np.array([0, 0.08, 0.15, 0.27, 0.47, 0.7, 1])
     plt.scatter(jay_27_p9x, jay_27_p9y)
-    energy1 = np.linspace(jay_27_p9x[0], jay_27_p9x[-1])
-    signal1 = get_signal(2, 7, "P", 1, 9, energy1, 1800)
-    plt.plot(energy1, signal1 / max(signal1))
+    f, sf = scan_fluences(
+        molecule, state_up, state_lo, 1800, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 42.5e-3
+    )
+    plt.plot(f, sf)
 
-    # 1800 K
-    jay_06_r17x = np.array([0, 2, 3.8, 7, 12.1, 23, 43]) / 1e3
-    jay_06_r17y = np.array([0, 0.025, 0.06, 0.12, 0.27, 0.55, 1])
+    jay_06_r17x: np.ndarray = np.array([0, 2, 3.8, 7, 12.1, 23, 43]) / 1e3
+    jay_06_r17y: np.ndarray = np.array([0, 0.025, 0.06, 0.12, 0.27, 0.55, 1])
     plt.scatter(jay_06_r17x, jay_06_r17y)
-    energy2 = np.linspace(jay_06_r17x[0], jay_06_r17x[-1])
-    signal2 = get_signal(0, 6, "R", 1, 17, energy2, 1800)
-    plt.plot(energy2, signal2 / max(signal2))
+    f, sf = scan_fluences(
+        molecule, state_up, state_lo, 1800, 101325, 0, 6, "R", 1, 17, 30e-9, 20e-9, 43e-3
+    )
+    plt.plot(f, sf)
 
-    # # 1475 K
-    # jay_06_r17x2 = np.array([0, 60, 75, 95, 125, 525, 625, 750, 860, 1020]) / 1e3
-    # jay_06_r17y2 = np.array([0, 0.28, 0.35, 0.32, 0.54, 1.62, 1.86, 2.05, 2.35, 2.6]) / 2.6
-    # plt.scatter(jay_06_r17x2, jay_06_r17y2)
-    # energy3 = np.linspace(jay_06_r17x2[0], jay_06_r17x2[-1])
-    # signal3 = get_signal(0, 6, "R", 1, 17, energy3, 1475)
-    # plt.plot(energy3, signal3 / max(signal3))
-
-    plt.xlabel("Laser Energy [J]")
-    plt.ylabel("Signal")
+    plt.xlabel("Laser Fluence, $\\Phi$ [J/m$^{2}$]")
+    plt.ylabel("Signal, $S_{f}$ [a.u.]")
     plt.show()
 
 

@@ -237,14 +237,14 @@ def run_simulation(
 
     _, ax1 = plt.subplots()
     ax1.set_xlabel("Time, $t$ [s]")
-    ax1.set_ylabel("$N_{1}$, $N_{3}$, $I_{L}$")
+    ax1.set_ylabel("$N_{1}$, $N_{3}$, $I_{L}$, Normalized")
     ax1.plot(t, n1, label="$N_{1}$")
     ax1.plot(t, n3, label="$N_{3}$")
     ax1.plot(t, il, label="$I_{L}$")
     ax1.legend()
 
     ax2 = ax1.twinx()
-    ax2.set_ylabel("$N_{2}$, $S_{f}$")
+    ax2.set_ylabel("$N_{2}$, $S_{f}$, Normalized")
     ax2.plot(t, n2, label="$N_{2}$", linestyle="-.")
     ax2.plot(t, sf, label="$S_{f}$", linestyle="-.")
     ax2.legend()
@@ -332,7 +332,6 @@ def plot_n2_vs_time_and_fluence(
     Plots a heatmap showing the population of state N2 as a function of time and fluence.
     """
 
-    plt.figure(figsize=(8, 6))
     t, f = np.meshgrid(t, fluences)
 
     contour = plt.contourf(t, f, n2_populations, levels=50, cmap="magma")
@@ -341,7 +340,7 @@ def plot_n2_vs_time_and_fluence(
     cbar.set_label("$N_{2}$")
 
     plt.xlabel("Time, $t$ [s]")
-    plt.ylabel("Laser Fluence, $\\Phi$ [J/m$^{2}$]")
+    plt.ylabel("Laser Fluence, $\\Phi$ [J/cm$^{2}$]")
 
     plt.show()
 
@@ -370,7 +369,7 @@ def main() -> None:
     f, sf = scan_fluences(
         molecule, state_up, state_lo, 1800, 101325, 2, 7, "P", 1, 9, 30e-9, 20e-9, 42.5e-3
     )
-    plt.plot(f, sf)
+    plt.plot(f, sf, label="(2 ,7)")
 
     jay_06_r17x: np.ndarray = np.array([0, 2, 3.8, 7, 12.1, 23, 43]) / 1e3
     jay_06_r17y: np.ndarray = np.array([0, 0.025, 0.06, 0.12, 0.27, 0.55, 1])
@@ -378,10 +377,11 @@ def main() -> None:
     f, sf = scan_fluences(
         molecule, state_up, state_lo, 1800, 101325, 0, 6, "R", 1, 17, 30e-9, 20e-9, 43e-3
     )
-    plt.plot(f, sf)
+    plt.plot(f, sf, label="(0, 6)")
 
-    plt.xlabel("Laser Fluence, $\\Phi$ [J/m$^{2}$]")
+    plt.xlabel("Laser Fluence, $\\Phi$ [J/cm$^{2}$]")
     plt.ylabel("Signal, $S_{f}$ [a.u.]")
+    plt.legend()
     plt.show()
 
     fluences, t, n2_populations = n2_vs_time_and_fluence(

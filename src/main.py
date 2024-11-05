@@ -342,18 +342,36 @@ class VibrationalBand:
         self.rot_lines: list[RotationalLine] = self.get_rot_lines()
 
     def wavenumbers_line(self) -> np.ndarray:
+        """
+        Returns an array of wavenumbers, one for each line.
+        """
+
         return np.array([line.wavenumber for line in self.rot_lines])
 
     def intensities_line(self) -> np.ndarray:
+        """
+        Returns an array of intensities, one for each line.
+        """
+
         return np.array([line.intensity for line in self.rot_lines])
 
     def wavenumbers_conv(self) -> np.ndarray:
+        """
+        Returns an array of convolved wavenumbers.
+        """
+
+        # The individual line wavenumbers are only used to find the minimum and maximum bounds of
+        # the spectrum since the spectrum itself is no longer quantized.
         wns_line: np.ndarray = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min(), wns_line.max(), GRANULARITY)
 
     def intensities_conv(self) -> np.ndarray:
+        """
+        Returns an array of convolved intensities.
+        """
+
         return convolve_brod(self.rot_lines, self.wavenumbers_conv())
 
     def get_vib_boltz_frac(self) -> float:
@@ -391,13 +409,21 @@ class VibrationalBand:
         upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
         lower_state: dict[str, dict[int, float]] = self.sim.state_lo.constants
 
-        # Convert Cheung's definition of the band origin (T) to Herzberg's definition (nu_0).
+        # NOTE: 11/05/24 - In the Cheung paper, the electronic energy is defined differently than in
+        #       Herzberg's book. The conversion specified by Cheung on p. 5 is
+        #       nu_0 = T + 2 / 3 * lamda - gamma.
+
         energy_offset: float = (
             2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
 
-        # TODO: 10/28/24 - Calculates the band origin with respect to the zero-point vibrational
-        #       energy. Check this against the old code to make sure it's working properly.
+        # NOTE: 11/05/24 - The band origin as defined by Herzberg is nu_0 = nu_e + nu_v, and is
+        #       different for each vibrational transition. The T values in Cheung include the
+        #       vibrational term for each level, i.e. T = T_e + G. The ground state has no
+        #       electronic energy, so it is not subtracted. In Cheung's data, the term values
+        #       provided are measured above the zeroth vibrational level of the ground state. This
+        #       means that the lower state zero-point vibrational energy must be used.
+
         return (
             upper_state["T"][self.v_qn_up]
             + energy_offset
@@ -430,7 +456,8 @@ class VibrationalBand:
         #       number of rotational lines simulated by the user.
         for j_qn in range(201):
             # TODO: 10/22/24 - Not sure which branch index should be used here. The triplet energies
-            #       are all close together, so it shouldn't matter too much.
+            #       are all close together, so it shouldn't matter too much. Averaging could work,
+            #       but I'm not sure if this is necessary.
             q_r += (2 * j_qn + 1) * np.exp(
                 -rotational_term(state, v_qn, j_qn, 2)
                 * cn.PLANC
@@ -585,6 +612,10 @@ class RotationalLine:
         self.intensity: float = self.get_intensity()
 
     def predissociation(self) -> float:
+        """
+        Returns the predissociation broadening for a line in [1/cm].
+        """
+
         # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986 for
         #       the predissociation of all bands for now. The goal is to use experimental values
         #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
@@ -621,24 +652,29 @@ class RotationalLine:
         # Natural broadening in [1/s].
         natural: float = (a_ik + a_jk) / (2 * np.pi)
 
-        # TODO: 10/21/24 - Not sure which electronic state should be used for the cross-section.
+        # NOTE: 11/05/24 - In most cases, the amount of electronically excited molecules in the gas
+        #       is essentially zero, meaning that most molecules are in the ground state. Therefore,
+        #       the ground state radius is used to compute the cross-section. An even more accurate
+        #       approach would be to multiply the radius in each state by its Boltzmann fraction and
+        #       add them together.
+
+        cross_section: float = (
+            np.pi
+            * (2 * cn.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][self.sim.state_lo.name]) ** 2
+        )
 
         # NOTE: 10/22/24 - Both the cross-section and reduced mass refer to the interactions between
         #       two *molecules*, not the two atoms that compose a molecule. For now, only
         #       homogeneous gases are considered, so the diameter and masses of the two molecules
         #       are identical. The internuclear distance is being used as the effective radius of
-        #       the molecule.
-        cross_section: float = (
-            np.pi
-            * (2 * cn.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][self.sim.state_lo.name]) ** 2
-        )
+        #       the molecule. For homogeneous gases, the reduced mass is just half the molecular
+        #       mass (remember, this is for molecule-molecule interactions).
+
         reduced_mass: float = self.sim.molecule.mass / 2
 
-        # TODO: 10/25/24 - Switched to using separate translational, vibrational, and rotational
-        #       temperatures for the possibility of simulating nonequilibrium flows. However, I'm
-        #       not sure which temperature to use with the two broadening parameters below. For now,
-        #       I've settled on translational since that makes the most sense to me (molecules
-        #       colliding with one another).
+        # NOTE: 11/05/24 - The translational tempearature is used for collisional and Doppler
+        #       broadening since both effects are direct consequences of the thermal velocity of
+        #       molecules.
 
         # Collisional (pressure) broadening in [1/s].
         collisional: float = (
@@ -808,14 +844,6 @@ def rotational_term(state: ElectronicState, v_qn: int, j_qn: int, branch_idx: in
     Returns the rotational term value.
     """
 
-    # TODO: 10/17/24 - Change molecular constant data for the ground state to reflect the
-    #       conventions in Cheung.
-    #       Yu      | Cheung
-    #       --------|------------
-    #       D       | -D
-    #       lamda_D | lamda_D / 2
-    #       gamma_D | gamma_D / 2
-
     lookup: dict = state.constants
 
     b: float = lookup["B"][v_qn]
@@ -824,6 +852,22 @@ def rotational_term(state: ElectronicState, v_qn: int, j_qn: int, branch_idx: in
     g: float = lookup["gamma"][v_qn]
     ld: float = lookup["lamda_D"][v_qn]
     gd: float = lookup["gamma_D"][v_qn]
+
+    # NOTE: 11/05/24 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
+    #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
+    #       elements are used to solve for the energy eigenvalues, the constants from Yu are changed
+    #       to fit the convention used by Cheung. See the table below for details.
+    #
+    #       Cheung  | Yu
+    #       --------|------------
+    #       D       | -D
+    #       lamda_D | 2 * lamda_D
+    #       gamma_D | 2 * gamma_D
+
+    if state.name == "X3Sg-":
+        d *= -1
+        ld *= 2
+        gd *= 2
 
     # The Hamiltonian from Cheung is written in Hund's case (a) representation, so J is used instead
     # of N.
@@ -876,19 +920,20 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
 
 
-def broadening_fn(wavenumbers: np.ndarray, line: RotationalLine):
+def broadening_fn(wavenumbers: np.ndarray, line: RotationalLine) -> np.ndarray:
     """
     Returns the contribution of a single rotational line to the total spectra using a Voigt
     probability density function.
     """
 
+    # Each line has its own broadening parameters.
     gaussian, lorentzian = line.fwhm_params()
 
-    faddeeva: np.ndarray = ((wavenumbers - line.wavenumber) + 1j * lorentzian) / (
-        gaussian * np.sqrt(2)
-    )
+    # Compute the argument of the complex Faddeeva function.
+    z: np.ndarray = ((wavenumbers - line.wavenumber) + 1j * lorentzian) / (gaussian * np.sqrt(2))
 
-    return np.real(wofz(faddeeva)) / (gaussian * np.sqrt(2 * np.pi))
+    # The probability density function for the Voigt profile.
+    return np.real(wofz(z)) / (gaussian * np.sqrt(2 * np.pi))
 
 
 def convolve_brod(lines: list[RotationalLine], wavenumbers_conv: np.ndarray) -> np.ndarray:
@@ -902,6 +947,8 @@ def convolve_brod(lines: list[RotationalLine], wavenumbers_conv: np.ndarray) -> 
 
     intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
 
+    # Add the effects of each line to the continuous spectra by computing its broadening function
+    # multiplied by its intensity and adding it to the total intensity.
     for line in lines:
         intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line)
 
@@ -951,23 +998,30 @@ def main() -> None:
 
     plt.plot(wns_samp, ins_samp, color="white")
 
-    max_intensity = 0
+    max_total: float = 0.0
 
     for band in sim.vib_bands:
-        thingy = band.intensities_conv().max()
+        # Get the maximum intensity for each band in the simulation.
+        max_band: float = band.intensities_conv().max()
 
-        if band.intensities_conv().max() > max_intensity:
-            max_intensity = thingy
+        # Find the maximum intensity across all bands.
+        if band.intensities_conv().max() > max_total:
+            max_total = max_band
 
-        plt.plot(band.wavenumbers_conv(), band.intensities_conv() / max_intensity)
+    # Plot all bands normalized to one while conserving the relative intensities between bands.
+    for band in sim.vib_bands:
+        plt.plot(band.wavenumbers_conv(), band.intensities_conv() / max_total)
 
+    # Convolve all bands together and normalize to one.
     wns, ins = sim.all_conv_data()
     ins /= ins.max()
 
     plt.plot(wns, ins)
 
+    # Interpolate simulated data to have the same number of points as the experimental data and
+    # compute the residual.
     ins_inrp: np.ndarray = np.interp(sample[:, 0], wns, ins)
-    residual = np.abs(ins_samp - ins_inrp)
+    residual: np.ndarray = np.abs(ins_samp - ins_inrp)
 
     # Show residual below the main data for clarity.
     plt.plot(wns_samp, -residual)

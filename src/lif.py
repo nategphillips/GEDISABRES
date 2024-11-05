@@ -9,8 +9,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sy
 
-import constants as cn
-import main as m
+from atom import Atom
+import constants
+from line import Line
+from molecule import Molecule
+from sim import Sim
+from simtype import SimType
+from state import State
 
 MAX_TIME: float = 60e-9
 N_TIME: int = 1000
@@ -61,7 +66,7 @@ def rate_equations(
     t: float,
     rate_params: RateParams,
     laser_params: LaserParams,
-    line: m.RotationalLine,
+    line: Line,
 ) -> list[float]:
     """
     The rate equations governing the three-level LIF system.
@@ -75,8 +80,8 @@ def rate_equations(
     f_b: float = line.rot_boltz_frac
 
     i_l: float = laser_intensity(t, laser_params)
-    w_la: float = i_l * rate_params.b_12 * overlap_integral / cn.LIGHT
-    w_le: float = i_l * rate_params.b_21 * overlap_integral / cn.LIGHT
+    w_la: float = i_l * rate_params.b_12 * overlap_integral / constants.LIGHT
+    w_le: float = i_l * rate_params.b_21 * overlap_integral / constants.LIGHT
 
     dn1_dt: float = -w_la * n1 + n2 * (w_le + rate_params.a_21) + rate_params.w_c * (n3 - n1)
     dn2_dt: float = w_la * n1 - n2 * (
@@ -88,7 +93,7 @@ def rate_equations(
 
 
 def simulate(
-    t: np.ndarray, rate_params: RateParams, laser_params: LaserParams, line: m.RotationalLine
+    t: np.ndarray, rate_params: RateParams, laser_params: LaserParams, line: Line
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Returns the population densities of the three states as a function of time.
@@ -116,22 +121,22 @@ def get_signal(t: np.ndarray, n2: np.ndarray, rate_params: RateParams) -> np.nda
 
 
 def get_sim(
-    molecule: m.Molecule,
-    state_up: m.ElectronicState,
-    state_lo: m.ElectronicState,
+    molecule: Molecule,
+    state_up: State,
+    state_lo: State,
     temp: float,
     pres: float,
     v_qn_up: int,
     v_qn_lo: int,
-) -> m.Simulation:
+) -> Sim:
     """
     Returns a simulation object with the desired parameters.
     """
 
     vib_bands: list[tuple[int, int]] = [(v_qn_up, v_qn_lo)]
 
-    return m.Simulation(
-        sim_type=m.SimulationType.ABSORPTION,
+    return Sim(
+        sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
@@ -145,9 +150,7 @@ def get_sim(
     )
 
 
-def get_line(
-    sim: m.Simulation, branch_name: str, branch_idx_lo: int, n_qn_lo: int
-) -> m.RotationalLine:
+def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
     """
     Returns a rotational line with the desired parameters.
     """
@@ -164,7 +167,7 @@ def get_line(
     raise ValueError("No matching rotational line found.")
 
 
-def get_rates(sim: m.Simulation, line: m.RotationalLine) -> RateParams:
+def get_rates(sim: Sim, line: Line) -> RateParams:
     """
     Returns the rate parameters.
     """
@@ -185,11 +188,13 @@ def get_rates(sim: m.Simulation, line: m.RotationalLine) -> RateParams:
     j_qn: int = line.j_qn_lo
     s_j: float = line.honl_london_factor
     nu_d: float = line.predissociation()  # [1/cm]
-    w_d: float = 2 * np.pi * cn.LIGHT * nu_d  # [1/s]
+    w_d: float = 2 * np.pi * constants.LIGHT * nu_d  # [1/s]
     a_21: float = a21_coeffs[v_qn_up][v_qn_lo] * s_j / (2 * j_qn + 1)  # [1/s]
     w_f: float = np.sum(a21_coeffs[v_qn_up]) * s_j / (2 * j_qn + 1)  # [1/s]
     nu: float = line.wavenumber  # [1/cm]
-    b_12: float = a_21 / (8 * np.pi * cn.PLANC * cn.LIGHT * nu**3) * g_u / g_l  # [cm/J]
+    b_12: float = (
+        a_21 / (8 * np.pi * constants.PLANC * constants.LIGHT * nu**3) * g_u / g_l
+    )  # [cm/J]
     b_21: float = b_12 * g_l / g_u  # [cm/J]
 
     # These two use pressure in atm
@@ -201,9 +206,9 @@ def get_rates(sim: m.Simulation, line: m.RotationalLine) -> RateParams:
 
 
 def run_simulation(
-    molecule: m.Molecule,
-    state_up: m.ElectronicState,
-    state_lo: m.ElectronicState,
+    molecule: Molecule,
+    state_up: State,
+    state_lo: State,
     temp: float,
     pres: float,
     v_qn_up: int,
@@ -219,8 +224,8 @@ def run_simulation(
     Plots the population densities, signal, and laser intensity as functions of time.
     """
 
-    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
     t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
@@ -253,9 +258,9 @@ def run_simulation(
 
 
 def scan_fluences(
-    molecule: m.Molecule,
-    state_up: m.ElectronicState,
-    state_lo: m.ElectronicState,
+    molecule: Molecule,
+    state_up: State,
+    state_lo: State,
     temp: float,
     pres: float,
     v_qn_up: int,
@@ -271,8 +276,8 @@ def scan_fluences(
     Scans over fluence values and returns the resulting singals.
     """
 
-    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
 
@@ -291,9 +296,9 @@ def scan_fluences(
 
 
 def n2_vs_time_and_fluence(
-    molecule: m.Molecule,
-    state_up: m.ElectronicState,
-    state_lo: m.ElectronicState,
+    molecule: Molecule,
+    state_up: State,
+    state_lo: State,
     temp: float,
     pres: float,
     v_qn_up: int,
@@ -309,8 +314,8 @@ def n2_vs_time_and_fluence(
     Scans over fluence values and returns the time-dependent populations.
     """
 
-    sim: m.Simulation = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: m.RotationalLine = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     t: np.ndarray = np.linspace(0, MAX_TIME, N_TIME)
 
@@ -350,9 +355,9 @@ def main() -> None:
     Entry point.
     """
 
-    molecule: m.Molecule = m.Molecule("O2", m.Atom("O"), m.Atom("O"))
-    state_up: m.ElectronicState = m.ElectronicState("B3Su-", 3, molecule)
-    state_lo: m.ElectronicState = m.ElectronicState("X3Sg-", 3, molecule)
+    molecule: Molecule = Molecule("O2", Atom("O"), Atom("O"))
+    state_up: State = State("B3Su-", 3, molecule)
+    state_lo: State = State("X3Sg-", 3, molecule)
 
     # NOTE: 10/29/24 - For now, laser fluence should be specified in [J/cm^2].
 

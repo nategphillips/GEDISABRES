@@ -118,8 +118,6 @@ class ElectronicState:
         Returns a dictionary of molecular constants for the specified electronic state in [1/cm].
         """
 
-        # TODO: 10/18/24 - Add errors here if the molecule or state is not supported.
-
         return pd.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict()
 
     def is_allowed(self, n_qn: int) -> bool:
@@ -235,8 +233,6 @@ class Simulation:
         correspond to the upper state vibrational quantum number (v'), while columns correspond to
         the lower state vibrational quantum number (v'').
         """
-
-        # TODO: 10/21/24 - Add error checking here.
 
         return np.loadtxt(
             f"../data/{self.molecule.name}/franck-condon/{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
@@ -412,7 +408,6 @@ class VibrationalBand:
         # NOTE: 11/05/24 - In the Cheung paper, the electronic energy is defined differently than in
         #       Herzberg's book. The conversion specified by Cheung on p. 5 is
         #       nu_0 = T + 2 / 3 * lamda - gamma.
-
         energy_offset: float = (
             2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
@@ -423,7 +418,6 @@ class VibrationalBand:
         #       electronic energy, so it is not subtracted. In Cheung's data, the term values
         #       provided are measured above the zeroth vibrational level of the ground state. This
         #       means that the lower state zero-point vibrational energy must be used.
-
         return (
             upper_state["T"][self.v_qn_up]
             + energy_offset
@@ -657,7 +651,6 @@ class RotationalLine:
         #       the ground state radius is used to compute the cross-section. An even more accurate
         #       approach would be to multiply the radius in each state by its Boltzmann fraction and
         #       add them together.
-
         cross_section: float = (
             np.pi
             * (2 * cn.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][self.sim.state_lo.name]) ** 2
@@ -669,7 +662,6 @@ class RotationalLine:
         #       are identical. The internuclear distance is being used as the effective radius of
         #       the molecule. For homogeneous gases, the reduced mass is just half the molecular
         #       mass (remember, this is for molecule-molecule interactions).
-
         reduced_mass: float = self.sim.molecule.mass / 2
 
         # NOTE: 11/05/24 - The translational tempearature is used for collisional and Doppler
@@ -942,9 +934,6 @@ def convolve_brod(lines: list[RotationalLine], wavenumbers_conv: np.ndarray) -> 
     function.
     """
 
-    # TODO: 10/21/24 - Go over this and all the broadening functions to make sure they're being
-    #       computed efficiently, not sure if this is the best way to do it.
-
     intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
 
     # Add the effects of each line to the continuous spectra by computing its broadening function
@@ -971,8 +960,8 @@ def main() -> None:
 
     vib_bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
-    # TODO: 10/25/24 - Have an option for switching between equilibrium and nonequilibrium
-    #       simulations easily.
+    # TODO: 10/25/24 - Implement an option for switching between equilibrium and nonequilibrium
+    #       simulations.
 
     temp: float = 300.0
 

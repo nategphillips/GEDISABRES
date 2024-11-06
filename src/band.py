@@ -32,21 +32,21 @@ class Band:
         self.band_origin: float = self.get_band_origin()
         self.rot_part: float = self.get_rot_partition_fn()
         self.vib_boltz_frac: float = self.get_vib_boltz_frac()
-        self.rot_lines: list[Line] = self.get_rot_lines()
+        self.lines: list[Line] = self.get_lines()
 
     def wavenumbers_line(self) -> np.ndarray:
         """
         Returns an array of wavenumbers, one for each line.
         """
 
-        return np.array([line.wavenumber for line in self.rot_lines])
+        return np.array([line.wavenumber for line in self.lines])
 
     def intensities_line(self) -> np.ndarray:
         """
         Returns an array of intensities, one for each line.
         """
 
-        return np.array([line.intensity for line in self.rot_lines])
+        return np.array([line.intensity for line in self.lines])
 
     def wavenumbers_conv(self) -> np.ndarray:
         """
@@ -65,7 +65,7 @@ class Band:
         Returns an array of convolved intensities.
         """
 
-        return convolve.convolve_brod(self.rot_lines, self.wavenumbers_conv())
+        return convolve.convolve_brod(self.lines, self.wavenumbers_conv())
 
     def get_vib_boltz_frac(self) -> float:
         """
@@ -164,7 +164,7 @@ class Band:
         # rotational orientations in space.
         return q_r / self.sim.molecule.symmetry_param
 
-    def get_rot_lines(self):
+    def get_lines(self):
         """
         Returns a list of all allowed rotational lines.
         """

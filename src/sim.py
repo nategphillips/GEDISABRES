@@ -34,7 +34,7 @@ class Sim:
         temp_vib: float,
         temp_rot: float,
         pressure: float,
-        vib_bands: list[tuple[int, int]],
+        bands: list[tuple[int, int]],
     ) -> None:
         self.sim_type: SimType = sim_type
         self.molecule: Molecule = molecule
@@ -52,7 +52,7 @@ class Sim:
         self.franck_condon: np.ndarray = self.get_franck_condon()
         self.einstein: np.ndarray = self.get_einstein()
         self.predissociation: dict[str, dict[int, float]] = self.get_predissociation()
-        self.vib_bands: list[Band] = self.get_vib_bands(vib_bands)
+        self.bands: list[Band] = self.get_bands(bands)
 
     def all_line_data(self) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -62,9 +62,9 @@ class Sim:
         wavenumbers_line: np.ndarray = np.array([])
         intensities_line: np.ndarray = np.array([])
 
-        for vib_band in self.vib_bands:
-            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
-            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
+        for band in self.bands:
+            wavenumbers_line = np.concatenate((wavenumbers_line, band.wavenumbers_line()))
+            intensities_line = np.concatenate((intensities_line, band.intensities_line()))
 
         return wavenumbers_line, intensities_line
 
@@ -77,10 +77,10 @@ class Sim:
         intensities_line: np.ndarray = np.array([])
         lines: list[Line] = []
 
-        for vib_band in self.vib_bands:
-            wavenumbers_line = np.concatenate((wavenumbers_line, vib_band.wavenumbers_line()))
-            intensities_line = np.concatenate((intensities_line, vib_band.intensities_line()))
-            lines.extend(vib_band.rot_lines)
+        for band in self.bands:
+            wavenumbers_line = np.concatenate((wavenumbers_line, band.wavenumbers_line()))
+            intensities_line = np.concatenate((intensities_line, band.intensities_line()))
+            lines.extend(band.lines)
 
         wavenumbers_conv = np.linspace(
             wavenumbers_line.min(), wavenumbers_line.max(), params.GRANULARITY
@@ -122,12 +122,12 @@ class Sim:
             delimiter=",",
         )
 
-    def get_vib_bands(self, vib_bands: list[tuple[int, int]]):
+    def get_bands(self, bands: list[tuple[int, int]]):
         """
         Returns the selected vibrational bands within the simulation.
         """
 
-        return [Band(sim=self, v_qn_up=vib_band[0], v_qn_lo=vib_band[1]) for vib_band in vib_bands]
+        return [Band(sim=self, v_qn_up=band[0], v_qn_lo=band[1]) for band in bands]
 
     def get_vib_partition_fn(self) -> float:
         """

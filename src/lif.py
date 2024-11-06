@@ -133,7 +133,7 @@ def get_sim(
     Returns a simulation object with the desired parameters.
     """
 
-    vib_bands: list[tuple[int, int]] = [(v_qn_up, v_qn_lo)]
+    bands: list[tuple[int, int]] = [(v_qn_up, v_qn_lo)]
 
     return Sim(
         sim_type=SimType.ABSORPTION,
@@ -146,7 +146,7 @@ def get_sim(
         temp_vib=temp,
         temp_rot=temp,
         pressure=pres,
-        vib_bands=vib_bands,
+        bands=bands,
     )
 
 
@@ -155,7 +155,7 @@ def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Li
     Returns a rotational line with the desired parameters.
     """
 
-    for line in sim.vib_bands[0].rot_lines:
+    for line in sim.bands[0].lines:
         if (
             line.branch_name == branch_name
             and line.branch_idx_lo == branch_idx_lo
@@ -182,8 +182,8 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     )
 
     # Only a single vibrational band will be simulated at a time
-    v_qn_up: int = sim.vib_bands[0].v_qn_up
-    v_qn_lo: int = sim.vib_bands[0].v_qn_lo
+    v_qn_up: int = sim.bands[0].v_qn_up
+    v_qn_lo: int = sim.bands[0].v_qn_lo
 
     j_qn: int = line.j_qn_lo
     s_j: float = line.honl_london_factor

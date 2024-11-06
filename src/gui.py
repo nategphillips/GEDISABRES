@@ -103,7 +103,18 @@ class GUI:
         Create widgets.
         """
 
+        # FRAMES -----------------------------------------------------------------------------------
+
         # Main frames for input boxes, entries, combo boxes, the table, and the plot.
+        self.frame_above: ttk.Frame = ttk.Frame(self.root)
+        self.frame_above.pack(side=tk.TOP, fill=tk.X)
+
+        self.frame_above_bands: ttk.Frame = ttk.Frame(self.frame_above)
+        self.frame_above_bands.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+
+        self.frame_above_run: ttk.Frame = ttk.Frame(self.frame_above)
+        self.frame_above_run.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=5)
+
         self.frame_input: ttk.Frame = ttk.Frame(self.root)
         self.frame_input.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
@@ -122,52 +133,92 @@ class GUI:
         self.frame_plot: ttk.Frame = ttk.Frame(self.frame_main)
         self.frame_plot.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        # Entries for temperature, pressure, and bands.
-        self.temperature = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-        ttk.Label(self.frame_input_entries, text="Temperature [K]:").grid(
-            row=0, column=0, padx=5, pady=5, sticky="w"
+        # ABOVE ------------------------------------------------------------------------------------
+
+        # Entry for choosing bands.
+        self.band_ranges = tk.StringVar(value=DEFAULT_BANDS)
+        ttk.Label(self.frame_above_bands, text="Band Ranges (format: v'-v''):").grid(
+            row=0, column=0, padx=5, pady=5
         )
-        ttk.Entry(self.frame_input_entries, textvariable=self.temperature).grid(
-            row=0, column=1, padx=5, pady=5
+        ttk.Entry(self.frame_above_bands, textvariable=self.band_ranges, width=50).grid(
+            row=0, column=1, columnspan=3, padx=5, pady=5
         )
 
+        # Button for running the simulation.
+        ttk.Button(self.frame_above_run, text="Run Simulation", command=self.run_simulation).grid(
+            row=0, column=0, padx=5, pady=5
+        )
+
+        # ENTRIES ----------------------------------------------------------------------------------
+
+        # Show the entry for equilibrium temperature by default.
+        self.temp = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
+
+        self.label_temp = ttk.Label(self.frame_input_entries, text="Temperature [K]:")
+        self.label_temp.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.entry_temp = ttk.Entry(self.frame_input_entries, textvariable=self.temp)
+        self.entry_temp.grid(row=0, column=1, padx=5, pady=5)
+
+        # Nonequilibrium entries, all of which are hidden by default.
+        self.temp_trn = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
+        self.temp_elc = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
+        self.temp_vib = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
+        self.temp_rot = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
+
+        self.label_temp_trn = ttk.Label(self.frame_input_entries, text="Translational Temp [K]:")
+        self.entry_temp_trn = ttk.Entry(self.frame_input_entries, textvariable=self.temp_trn)
+        self.label_temp_elc = ttk.Label(self.frame_input_entries, text="Electronic Temp [K]:")
+        self.entry_temp_elc = ttk.Entry(self.frame_input_entries, textvariable=self.temp_elc)
+        self.label_temp_vib = ttk.Label(self.frame_input_entries, text="Vibrational Temp [K]:")
+        self.entry_temp_vib = ttk.Entry(self.frame_input_entries, textvariable=self.temp_vib)
+        self.label_temp_rot = ttk.Label(self.frame_input_entries, text="Rotational Temp [K]:")
+        self.entry_temp_rot = ttk.Entry(self.frame_input_entries, textvariable=self.temp_rot)
+
+        # Entries for pressure and bands.
         self.pressure = tk.DoubleVar(value=DEFAULT_PRESSURE)
         ttk.Label(self.frame_input_entries, text="Pressure [Pa]:").grid(
-            row=0, column=2, padx=5, pady=5, sticky="w"
-        )
-        ttk.Entry(self.frame_input_entries, textvariable=self.pressure).grid(
-            row=0, column=3, padx=5, pady=5
-        )
-
-        self.band_ranges = tk.StringVar(value=DEFAULT_BANDS)
-        ttk.Label(self.frame_input_entries, text="Band Ranges (format: v'-v''):").grid(
             row=1, column=0, padx=5, pady=5, sticky="w"
         )
-        ttk.Entry(self.frame_input_entries, textvariable=self.band_ranges, width=50).grid(
-            row=1, column=1, columnspan=3, padx=5, pady=5
+        ttk.Entry(self.frame_input_entries, textvariable=self.pressure).grid(
+            row=1, column=1, padx=5, pady=5
         )
 
-        # Combo boxes for simulation and plot type.
-        self.simulation = tk.StringVar(value=DEFAULT_SIMTYPE)
-        ttk.Label(self.frame_input_combos, text="Simulation Type:").grid(
+        # COMBOS -----------------------------------------------------------------------------------
+
+        # Combo boxes for temperature mode, simulation type, and plot type.
+        self.temp_type = tk.StringVar(value="Equilibrium")
+        ttk.Label(self.frame_input_combos, text="Temperature Type:").grid(
             row=0, column=0, padx=5, pady=5, sticky="w"
         )
+        mode_combobox = ttk.Combobox(
+            self.frame_input_combos,
+            textvariable=self.temp_type,
+            values=("Equilibrium", "Nonequilibrium"),
+        )
+        mode_combobox.grid(row=0, column=1, padx=5, pady=5)
+
+        # Updates the visible boxes based on the mode the user selects.
+        mode_combobox.bind("<<ComboboxSelected>>", self.update_temperature_entries)
+
+        self.sim_type = tk.StringVar(value=DEFAULT_SIMTYPE)
+        ttk.Label(self.frame_input_combos, text="Simulation Type:").grid(
+            row=1, column=0, padx=5, pady=5, sticky="w"
+        )
         ttk.Combobox(
-            self.frame_input_combos, textvariable=self.simulation, values=("Absorption", "Emission")
-        ).grid(row=0, column=1, padx=5, pady=5)
+            self.frame_input_combos, textvariable=self.sim_type, values=("Absorption", "Emission")
+        ).grid(row=1, column=1, padx=5, pady=5)
 
         self.plot_type = tk.StringVar(value=DEFAULT_PLOTTYPE)
         ttk.Label(self.frame_input_combos, text="Plot Type:").grid(
-            row=0, column=2, padx=5, pady=5, sticky="w"
+            row=2, column=0, padx=5, pady=5, sticky="w"
         )
         ttk.Combobox(
             self.frame_input_combos,
             textvariable=self.plot_type,
             values=("Line", "Line Info", "Convolve Separate", "Convolve All"),
-        ).grid(row=0, column=3, padx=5, pady=5)
+        ).grid(row=2, column=1, padx=5, pady=5)
 
-        # Button for running the simulation.
-        ttk.Button(self.frame_input, text="Run Simulation", command=self.run_simulation).pack()
+        # TABLE ------------------------------------------------------------------------------------
 
         # Notebook (tabs) for holding multiple tables, one for each specified vibrational band.
         self.notebook = ttk.Notebook(self.frame_table)
@@ -185,6 +236,8 @@ class GUI:
         )
         table.show()
         self.notebook.add(tab_frame, text="v'-v''")
+
+        # PLOT -------------------------------------------------------------------------------------
 
         # Draw the initial figure and axes with no data present.
         self.fig: Figure
@@ -204,6 +257,32 @@ class GUI:
             "Convolve Separate": plot.plot_conv_sep,
             "Convolve All": plot.plot_conv_all,
         }
+
+    def update_temperature_entries(self, event=None):
+        if self.temp_type.get() == "Nonequilibrium":
+            # Remove equilibrium entry.
+            self.label_temp.grid_forget()
+            self.entry_temp.grid_forget()
+
+            # Place all nonequilibrium entries.
+            self.label_temp_elc.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+            self.entry_temp_elc.grid(row=0, column=1, padx=5, pady=5)
+            self.label_temp_vib.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+            self.entry_temp_vib.grid(row=0, column=3, padx=5, pady=5)
+            self.label_temp_rot.grid(row=0, column=4, padx=5, pady=5, sticky="w")
+            self.entry_temp_rot.grid(row=0, column=5, padx=5, pady=5)
+        else:
+            # Remove all nonequilibrium entries.
+            self.label_temp_elc.grid_forget()
+            self.entry_temp_elc.grid_forget()
+            self.label_temp_vib.grid_forget()
+            self.entry_temp_vib.grid_forget()
+            self.label_temp_rot.grid_forget()
+            self.entry_temp_rot.grid_forget()
+
+            # Place equilibrium entry.
+            self.label_temp.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+            self.entry_temp.grid(row=0, column=1, padx=5, pady=5)
 
     def parse_band_ranges(self) -> list[tuple[int, int]]:
         """
@@ -243,11 +322,18 @@ class GUI:
         # - Make another tab for LIF calculations.
         # - Create options to save and load simulations.
 
-        # Grab the temperature, pressure, and simulation type directly from the input fields.
-        temp: float = self.temperature.get()
+        # First check which mode the simulation is in and set the temperatures accordingly.
+        temp_trn = temp_elc = temp_vib = temp_rot = self.temp.get()
+        if self.temp_type.get() == "Nonequilibrium":
+            temp_trn = self.temp_trn.get()
+            temp_elc = self.temp_elc.get()
+            temp_vib = self.temp_vib.get()
+            temp_rot = self.temp_rot.get()
+
+        # Grab the pressure data directly from the input fields.
         pres: float = self.pressure.get()
         # Convert the simulation type to uppercase to use as a key for the SimType enum.
-        sim_type: str = self.simulation.get().upper()
+        sim_type: str = self.sim_type.get().upper()
         # Get the list of upper and lower vibrational bands from the user input.
         bands: list[tuple[int, int]] = self.parse_band_ranges()
 
@@ -262,10 +348,10 @@ class GUI:
             state_up=state_up,
             state_lo=state_lo,
             rot_lvls=np.arange(0, 40),
-            temp_trn=temp,
-            temp_elc=temp,
-            temp_vib=temp,
-            temp_rot=temp,
+            temp_trn=temp_trn,
+            temp_elc=temp_elc,
+            temp_vib=temp_vib,
+            temp_rot=temp_rot,
             pressure=pres,
             bands=bands,
         )

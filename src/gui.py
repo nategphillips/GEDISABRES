@@ -24,6 +24,7 @@ import plot
 from sim import Sim
 from simtype import SimType
 from state import State
+import utils
 
 # NOTE: 11/04/24 - I think an internal function within pandastable is using .fillna or a related
 # function that emits "FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is
@@ -361,11 +362,11 @@ class GUI:
         # Grab the pressure data directly from the input fields.
         pres: float = self.pressure.get()
         # Convert the simulation type to uppercase to use as a key for the SimType enum.
-        sim_type: str = self.sim_type.get().upper()
+        sim_type: SimType = SimType[self.sim_type.get().upper()]
         # Get the list of upper and lower vibrational bands from the user input.
         bands: list[tuple[int, int]] = self.parse_band_ranges()
         # Maximum number of rotational lines to simulate.
-        num_lines: int = self.num_lines.get()
+        rot_lvls: np.ndarray = np.arange(0, self.num_lines.get())
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
 
@@ -373,11 +374,11 @@ class GUI:
         state_lo: State = State(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
 
         sim: Sim = Sim(
-            sim_type=SimType[sim_type],
+            sim_type=sim_type,
             molecule=molecule,
             state_up=state_up,
             state_lo=state_lo,
-            rot_lvls=np.arange(0, num_lines),
+            rot_lvls=rot_lvls,
             temp_trn=temp_trn,
             temp_elc=temp_elc,
             temp_vib=temp_vib,
@@ -413,7 +414,7 @@ class GUI:
         for i, band in enumerate(bands):
             data: list[dict[str, float | int | str]] = [
                 {
-                    "Wavelength": 1.0 / line.wavenumber * 1e7,
+                    "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                     "Wavenumber": line.wavenumber,
                     "Intensity": line.intensity,
                     "J'": line.j_qn_up,

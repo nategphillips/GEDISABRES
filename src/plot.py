@@ -8,20 +8,7 @@ from matplotlib.axes import Axes
 
 from line import Line
 from sim import Sim
-
-
-def wavenum_to_wavelen(x) -> np.ndarray:
-    """
-    Converts wavenumbers to wavelengths and vice versa.
-    """
-
-    x = np.array(x, float)
-    near_zero: np.ndarray = np.isclose(x, 0)
-
-    x[near_zero] = np.inf
-    x[~near_zero] = 1 / x[~near_zero]
-
-    return x * 1e7
+import utils
 
 
 def plot_line(axs: Axes, sim: Sim, colors: list[str]) -> None:
@@ -30,7 +17,7 @@ def plot_line(axs: Axes, sim: Sim, colors: list[str]) -> None:
     """
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_line: np.ndarray = wavenum_to_wavelen(band.wavenumbers_line())
+        wavelengths_line: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_line())
         intensities_line: np.ndarray = band.intensities_line()
 
         axs.stem(
@@ -51,15 +38,13 @@ def plot_line_info(axs: Axes, sim: Sim, colors: list[str]) -> None:
     plot_line(axs, sim, colors)
 
     for band in sim.bands:
-        wavenumbers_line: np.ndarray = band.wavenumbers_line()
-        wavelengths_line: np.ndarray = wavenum_to_wavelen(wavenumbers_line)
-        intensities_line: np.ndarray = band.intensities_line()
-        lines: list[Line] = band.lines
+        # Only select non-satellite lines to reduce the amount of data on screen.
+        lines: list[Line] = [line for line in band.lines if not line.is_satellite]
 
-        for idx, line in enumerate(lines):
+        for line in lines:
             axs.text(
-                wavelengths_line[idx],
-                intensities_line[idx],
+                utils.wavenum_to_wavelen(line.wavenumber),
+                line.intensity,
                 f"${line.branch_name}_{{{line.branch_idx_up}{line.branch_idx_lo}}}$",
             )
 
@@ -70,7 +55,7 @@ def plot_conv_sep(axs: Axes, sim: Sim, colors: list[str]) -> None:
     """
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_conv: np.ndarray = wavenum_to_wavelen(band.wavenumbers_conv())
+        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv())
         intensities_conv: np.ndarray = band.intensities_conv()
 
         axs.plot(
@@ -87,6 +72,6 @@ def plot_conv_all(axs: Axes, sim: Sim, colors: list[str]) -> None:
     """
 
     wavenumbers_conv, intensities_conv = sim.all_conv_data()
-    wavelengths_conv: np.ndarray = wavenum_to_wavelen(wavenumbers_conv)
+    wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(wavenumbers_conv)
 
     axs.plot(wavelengths_conv, intensities_conv, colors[0], label=f"{sim.molecule.name} conv all")

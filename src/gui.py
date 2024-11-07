@@ -4,8 +4,9 @@ Testing GUI functionality.
 """
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog
 from tkinter import messagebox
+from tkinter import ttk
 from typing import Callable
 import warnings
 
@@ -174,6 +175,10 @@ class GUI:
             row=0, column=2, padx=5, pady=5
         )
 
+        ttk.Button(self.frame_above_run, text="Open File", command=self.plot_sample_file).grid(
+            row=0, column=3, padx=5, pady=5
+        )
+
         # ENTRIES ----------------------------------------------------------------------------------
 
         # Show the entry for equilibrium temperature by default.
@@ -283,7 +288,22 @@ class GUI:
             "Convolve All": plot.plot_conv_all,
         }
 
-    def update_temperature_entries(self, event=None):
+    def plot_sample_file(self) -> None:
+        """
+        Opens a dialog to select and plot a sample file.
+        """
+
+        filename: str = filedialog.askopenfilename(initialdir=".")
+
+        data: np.ndarray = np.genfromtxt(filename, delimiter=",", skip_header=1)
+
+        plot.plot_sample(self.axs, data)
+
+    def update_temperature_entries(self, event=None) -> None:
+        """
+        Switches between equilibrium and nonequilibrium temperature modes.
+        """
+
         if self.temp_type.get() == "Nonequilibrium":
             # Remove equilibrium entry.
             self.label_temp.grid_forget()

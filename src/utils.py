@@ -4,7 +4,7 @@ Contains useful utility functions.
 """
 
 
-def n2j_qn(n_qn: int, branch_idx: int) -> int:
+def n_to_j(n_qn: int, branch_idx: int) -> int:
     """
     Converts from N to J.
     """
@@ -22,3 +22,11 @@ def n2j_qn(n_qn: int, branch_idx: int) -> int:
             return n_qn - 1
         case _:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
+
+
+def wavenum_to_wavelen(x):
+    """
+    Converts wavenumbers to wavelengths and vice versa.
+    """
+
+    return 1.0 / x * 1e7

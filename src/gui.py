@@ -37,6 +37,8 @@ pd.set_option("future.no_silent_downcasting", True)
 # pandastable, see: https://github.com/dmnfarrell/pandastable/issues/251.
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
+DEFAULT_LINES: int = 40
+
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
 DEFAULT_PRESSURE: float = 101325.0  # [Pa]
 
@@ -50,7 +52,20 @@ def set_axis_labels(ax: Axes) -> None:
     Sets the main x-label to wavelength and adds a secondary wavenumber x-axis.
     """
 
-    secax = ax.secondary_xaxis("top", functions=(plot.wavenum_to_wavelen, plot.wavenum_to_wavelen))
+    def conversion_fn(x):
+        """
+        A robust conversion from wavenumbers to wavelength that avoids divide by zero errors.
+        """
+
+        x = np.array(x, float)
+        near_zero: np.ndarray = np.isclose(x, 0)
+
+        x[near_zero] = np.inf
+        x[~near_zero] = 1 / x[~near_zero]
+
+        return x * 1e7
+
+    secax = ax.secondary_xaxis("top", functions=(conversion_fn, conversion_fn))
     secax.set_xlabel("Wavenumber, $\\nu$ [cm$^{-1}$]")
 
     ax.set_xlabel("Wavelength, $\\lambda$ [nm]")
@@ -88,8 +103,8 @@ class GUI:
         screen_width: int = self.root.winfo_screenwidth()
         screen_height: int = self.root.winfo_screenheight()
 
-        window_height: int = 600
-        window_width: int = 1200
+        window_height: int = 800
+        window_width: int = 1600
 
         x_offset: int = int((screen_width / 2) - (window_width / 2))
         y_offset: int = int((screen_height / 2) - (window_height / 2))
@@ -144,9 +159,18 @@ class GUI:
             row=0, column=1, columnspan=3, padx=5, pady=5
         )
 
+        # Selection for number of rotational lines.
+        self.num_lines = tk.IntVar(value=DEFAULT_LINES)
+        ttk.Label(self.frame_above_run, text="Rotational Lines:").grid(
+            row=0, column=0, padx=5, pady=5
+        )
+        ttk.Entry(self.frame_above_run, textvariable=self.num_lines).grid(
+            row=0, column=1, padx=5, pady=5
+        )
+
         # Button for running the simulation.
         ttk.Button(self.frame_above_run, text="Run Simulation", command=self.run_simulation).grid(
-            row=0, column=0, padx=5, pady=5
+            row=0, column=2, padx=5, pady=5
         )
 
         # ENTRIES ----------------------------------------------------------------------------------
@@ -265,14 +289,18 @@ class GUI:
             self.entry_temp.grid_forget()
 
             # Place all nonequilibrium entries.
-            self.label_temp_elc.grid(row=0, column=0, padx=5, pady=5, sticky="w")
-            self.entry_temp_elc.grid(row=0, column=1, padx=5, pady=5)
-            self.label_temp_vib.grid(row=0, column=2, padx=5, pady=5, sticky="w")
-            self.entry_temp_vib.grid(row=0, column=3, padx=5, pady=5)
-            self.label_temp_rot.grid(row=0, column=4, padx=5, pady=5, sticky="w")
-            self.entry_temp_rot.grid(row=0, column=5, padx=5, pady=5)
+            self.label_temp_trn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+            self.entry_temp_trn.grid(row=0, column=1, padx=5, pady=5)
+            self.label_temp_elc.grid(row=0, column=2, padx=5, pady=5, sticky="w")
+            self.entry_temp_elc.grid(row=0, column=3, padx=5, pady=5)
+            self.label_temp_vib.grid(row=0, column=4, padx=5, pady=5, sticky="w")
+            self.entry_temp_vib.grid(row=0, column=5, padx=5, pady=5)
+            self.label_temp_rot.grid(row=0, column=6, padx=5, pady=5, sticky="w")
+            self.entry_temp_rot.grid(row=0, column=7, padx=5, pady=5)
         else:
             # Remove all nonequilibrium entries.
+            self.label_temp_trn.grid_forget()
+            self.entry_temp_trn.grid_forget()
             self.label_temp_elc.grid_forget()
             self.entry_temp_elc.grid_forget()
             self.label_temp_vib.grid_forget()
@@ -336,6 +364,8 @@ class GUI:
         sim_type: str = self.sim_type.get().upper()
         # Get the list of upper and lower vibrational bands from the user input.
         bands: list[tuple[int, int]] = self.parse_band_ranges()
+        # Maximum number of rotational lines to simulate.
+        num_lines: int = self.num_lines.get()
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
 
@@ -347,7 +377,7 @@ class GUI:
             molecule=molecule,
             state_up=state_up,
             state_lo=state_lo,
-            rot_lvls=np.arange(0, 40),
+            rot_lvls=np.arange(0, num_lines),
             temp_trn=temp_trn,
             temp_elc=temp_elc,
             temp_vib=temp_vib,

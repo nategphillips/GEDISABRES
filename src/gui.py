@@ -49,48 +49,6 @@ DEFAULT_PLOTTYPE: str = "Line"
 DEFAULT_SIMTYPE: str = "Absorption"
 
 
-def set_axis_labels(ax: Axes) -> None:
-    """
-    Sets the main x-label to wavelength and adds a secondary wavenumber x-axis.
-    """
-
-    def conversion_fn(x):
-        """
-        A robust conversion from wavenumbers to wavelength that avoids divide by zero errors.
-        """
-
-        x = np.array(x, float)
-        near_zero: np.ndarray = np.isclose(x, 0)
-
-        x[near_zero] = np.inf
-        x[~near_zero] = 1 / x[~near_zero]
-
-        return x * 1e7
-
-    secax = ax.secondary_xaxis("top", functions=(conversion_fn, conversion_fn))
-    secax.set_xlabel("Wavenumber, $\\nu$ [cm$^{-1}$]")
-
-    ax.set_xlabel("Wavelength, $\\lambda$ [nm]")
-    ax.set_ylabel("Intensity, $I$ [a.u.]")
-
-
-def create_figure() -> tuple[Figure, Axes]:
-    """
-    Initialize a blank figure with arbitrary limits.
-    """
-
-    fig: Figure = Figure()
-    axs: Axes = fig.add_subplot(111)
-
-    # Set the left x-limit to something greater than zero so the secondary axis doesn't encounter a
-    # divide by zero error before any data is actually plotted.
-    axs.set_xlim(100, 200)
-
-    set_axis_labels(axs)
-
-    return fig, axs
-
-
 class GUI:
     """
     The GUI.
@@ -171,11 +129,11 @@ class GUI:
         )
 
         # Button for running the simulation.
-        ttk.Button(self.frame_above_run, text="Run Simulation", command=self.run_simulation).grid(
+        ttk.Button(self.frame_above_run, text="Run Simulation", command=self.add_simulation).grid(
             row=0, column=2, padx=5, pady=5
         )
 
-        ttk.Button(self.frame_above_run, text="Open File", command=self.plot_sample_file).grid(
+        ttk.Button(self.frame_above_run, text="Open File", command=self.add_sample).grid(
             row=0, column=3, padx=5, pady=5
         )
 
@@ -228,7 +186,7 @@ class GUI:
         mode_combobox.grid(row=0, column=1, padx=5, pady=5)
 
         # Updates the visible boxes based on the mode the user selects.
-        mode_combobox.bind("<<ComboboxSelected>>", self.update_temperature_entries)
+        mode_combobox.bind("<<ComboboxSelected>>", self.switch_temp_mode)
 
         self.sim_type = tk.StringVar(value=DEFAULT_SIMTYPE)
         ttk.Label(self.frame_input_combos, text="Simulation Type:").grid(
@@ -256,16 +214,16 @@ class GUI:
 
         # Initialize the table with an empty dataframe so that nothing is shown until a simulation
         # is run by the user.
-        tab_frame = ttk.Frame(self.notebook)
-        table = Table(
-            tab_frame,
+        frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
+        table: Table = Table(
+            frame_notebook,
             dataframe=pd.DataFrame(),
             showtoolbar=True,
             showstatusbar=True,
             editable=False,
         )
         table.show()
-        self.notebook.add(tab_frame, text="v'-v''")
+        self.notebook.add(frame_notebook, text="v'-v''")
 
         # PLOT -------------------------------------------------------------------------------------
 
@@ -288,21 +246,35 @@ class GUI:
             "Convolve All": plot.plot_conv_all,
         }
 
-    def plot_sample_file(self) -> None:
+    def add_sample(self) -> None:
         """
-        Opens a dialog to select and plot a sample file.
+        Testing.
         """
 
-        filename: str = filedialog.askopenfilename(initialdir=".")
+        full_path: str = filedialog.askopenfilename(initialdir="../data/samples")
+        filename: str = full_path.split("/")[-1]
 
-        data: np.ndarray = np.genfromtxt(filename, delimiter=",", skip_header=1)
+        if full_path:
+            try:
+                df: pd.DataFrame = pd.read_csv(full_path)
+            except ValueError:
+                messagebox.showerror("Error", "Data is improperly formatted.")
+                return
+        else:
+            return
 
-        plot.plot_sample(self.axs, data)
+        frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
+        table: Table = Table(
+            frame_notebook, dataframe=df, showtoolbar=True, showstatusbar=True, editable=False
+        )
+        table.show()
+        self.notebook.add(frame_notebook, text=filename)
 
+        plot_sample(self.axs, df, filename, "black")
         self.axs.legend()
         self.plot_canvas.draw()
 
-    def update_temperature_entries(self, event=None) -> None:
+    def switch_temp_mode(self, event=None) -> None:
         """
         Switches between equilibrium and nonequilibrium temperature modes.
         """
@@ -361,7 +333,7 @@ class GUI:
 
         return bands
 
-    def run_simulation(self) -> None:
+    def add_simulation(self) -> None:
         """
         Runs a simulation instance.
         """
@@ -449,14 +421,67 @@ class GUI:
                 for line in sim.bands[i].lines
             ]
 
-            df = pd.DataFrame(data)
+            df: pd.DataFrame = pd.DataFrame(data)
 
-            tab_frame: ttk.Frame = ttk.Frame(self.notebook)
+            frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
             table: Table = Table(
-                tab_frame, dataframe=df, showtoolbar=True, showstatusbar=True, editable=False
+                frame_notebook, dataframe=df, showtoolbar=True, showstatusbar=True, editable=False
             )
             table.show()
-            self.notebook.add(tab_frame, text=f"{band[0]}-{band[1]}")
+            self.notebook.add(frame_notebook, text=f"{band[0]}-{band[1]}")
+
+
+def set_axis_labels(ax: Axes) -> None:
+    """
+    Sets the main x-label to wavelength and adds a secondary wavenumber x-axis.
+    """
+
+    def conversion_fn(x):
+        """
+        A robust conversion from wavenumbers to wavelength that avoids divide by zero errors.
+        """
+
+        x = np.array(x, float)
+        near_zero: np.ndarray = np.isclose(x, 0)
+
+        x[near_zero] = np.inf
+        x[~near_zero] = 1 / x[~near_zero]
+
+        return x * 1e7
+
+    secax = ax.secondary_xaxis("top", functions=(conversion_fn, conversion_fn))
+    secax.set_xlabel("Wavenumber, $\\nu$ [cm$^{-1}$]")
+
+    ax.set_xlabel("Wavelength, $\\lambda$ [nm]")
+    ax.set_ylabel("Intensity, $I$ [a.u.]")
+
+
+def create_figure() -> tuple[Figure, Axes]:
+    """
+    Initialize a blank figure with arbitrary limits.
+    """
+
+    fig: Figure = Figure()
+    axs: Axes = fig.add_subplot(111)
+
+    # Set the left x-limit to something greater than zero so the secondary axis doesn't encounter a
+    # divide by zero error before any data is actually plotted.
+    axs.set_xlim(100, 200)
+
+    set_axis_labels(axs)
+
+    return fig, axs
+
+
+def plot_sample(axs: Axes, df: pd.DataFrame, label: str, color: str) -> None:
+    """
+    Plots sample data.
+    """
+
+    wavelengths = utils.wavenum_to_wavelen(df["wavenumber"])
+    intensities = df["intensity"]
+
+    axs.plot(wavelengths, intensities / intensities.max(), label=label, color=color)
 
 
 def main() -> None:

@@ -299,6 +299,9 @@ class GUI:
 
         plot.plot_sample(self.axs, data)
 
+        self.axs.legend()
+        self.plot_canvas.draw()
+
     def update_temperature_entries(self, event=None) -> None:
         """
         Switches between equilibrium and nonequilibrium temperature modes.

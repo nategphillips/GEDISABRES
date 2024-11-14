@@ -16,11 +16,11 @@ def get_colors(bands: list[tuple[int, int]]) -> list[str]:
 
     colors_small: list[str] = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-    palette: list[tuple] = plt.cycler("color", plt.cm.tab20c.colors).by_key()["color"]
-    colors_medium: list[str] = [to_hex(color) for color in palette]
-
     if num_bands < len(colors_small):
         return colors_small
+
+    palette: list[tuple] = plt.cycler("color", plt.cm.tab20c.colors).by_key()["color"]
+    colors_medium: list[str] = [to_hex(color) for color in palette]
 
     if num_bands < len(colors_medium):
         return colors_medium

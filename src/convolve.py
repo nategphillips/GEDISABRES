@@ -39,3 +39,31 @@ def convolve_brod(lines: list[Line], wavenumbers_conv: np.ndarray) -> np.ndarray
         intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line)
 
     return intensities_conv
+
+
+def instrument_fn(
+    convolved_wavenumbers: np.ndarray, wavenumber_peak: float, broadening: float
+) -> np.ndarray:
+    """
+    Simulates the effects of instrument broadening using a Gaussian probability density function.
+    """
+
+    return np.exp(-0.5 * (convolved_wavenumbers - wavenumber_peak) ** 2 / broadening**2) / (
+        broadening * np.sqrt(2 * np.pi)
+    )
+
+
+def convolve_inst(
+    wavenumbers_conv: np.ndarray, intensities_conv: np.ndarray, broadening: float
+) -> np.ndarray:
+    """
+    Convolves a discrete number of spectral lines into a continuous spectra by applying an
+    instrument function.
+    """
+
+    intensities_inst: np.ndarray = np.zeros_like(wavenumbers_conv)
+
+    for wave, intn in zip(wavenumbers_conv, intensities_conv):
+        intensities_inst += intn * instrument_fn(wavenumbers_conv, wave, broadening)
+
+    return intensities_inst

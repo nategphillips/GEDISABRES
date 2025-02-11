@@ -1,3 +1,8 @@
+# module constants
+"""
+Provides physical and molecular constants.
+"""
+
 # Avodagro constant [1/mol]
 AVOGD: float = 6.02214076e23
 # Boltzmann constant [J/K]

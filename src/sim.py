@@ -8,10 +8,7 @@ import pandas as pd
 
 from band import Band
 import constants
-import convolve
-from line import Line
 from molecule import Molecule
-import params
 from simtype import SimType
 from state import State
 import terms
@@ -68,19 +65,22 @@ class Sim:
 
         return wavenumbers_line, intensities_line
 
-    def all_conv_data(self, inst_broadening: float) -> tuple[np.ndarray, np.ndarray]:
+    def all_conv_data(
+        self, inst_broadening: float, granularity: int
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Creates common axes for plotting the convolved data of all vibrational bands at once.
+        Creates common axes for superimposing the convolved data of all vibrational bands.
         """
 
-        wavenumbers_line: np.ndarray = np.array([])
-        intensities_line: np.ndarray = np.array([])
-        lines: list[Line] = []
+        # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
+        # expressed as a sum over the individual line absorption coefficients. See "Analysis of
+        # Collision-Broadened and Overlapped Spectral Lines to Obtain Individual Line Parameters" by
+        # BelBruno (1981).
 
-        for band in self.bands:
-            wavenumbers_line = np.concatenate((wavenumbers_line, band.wavenumbers_line()))
-            intensities_line = np.concatenate((intensities_line, band.intensities_line()))
-            lines.extend(band.lines)
+        # The total span of wavenumbers from all bands.
+        wavenumbers_line: np.ndarray = np.concatenate(
+            [band.wavenumbers_line() for band in self.bands]
+        )
 
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
@@ -89,10 +89,22 @@ class Sim:
         # is encountered.
         padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_params(inst_broadening)[0], 2)
 
-        wavenumbers_conv = np.linspace(
-            wavenumbers_line.min() - padding, wavenumbers_line.max() + padding, params.GRANULARITY
-        )
-        intensities_conv = convolve.convolve_brod(lines, wavenumbers_conv, inst_broadening)
+        grid_min: float = wavenumbers_line.min() - padding
+        grid_max: float = wavenumbers_line.max() + padding
+
+        # Create common wavenumber and intensity grids to hold all of the vibrational band data.
+        wavenumbers_conv: np.ndarray = np.linspace(grid_min, grid_max, granularity)
+        intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
+
+        # Since each band is defined on a different wavenumber interval, they must each be
+        # interpolated onto the new domain so that they can be summed at each point.
+        for band in self.bands:
+            interpolated_intensity: np.ndarray = np.interp(
+                wavenumbers_conv,
+                band.wavenumbers_conv(inst_broadening, granularity),
+                band.intensities_conv(inst_broadening, granularity),
+            )
+            intensities_conv += interpolated_intensity
 
         return wavenumbers_conv, intensities_conv
 

@@ -43,6 +43,7 @@ DEFAULT_LINES: int = 40
 
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
 DEFAULT_PRESSURE: float = 101325.0  # [Pa]
+DEFAULT_BROADENING: float = 0.0  # [1/cm]
 
 DEFAULT_BANDS: str = "0-0"
 DEFAULT_PLOTTYPE: str = "Line"
@@ -87,6 +88,9 @@ class GUI:
         self.frame_above_bands: ttk.Frame = ttk.Frame(self.frame_above)
         self.frame_above_bands.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
 
+        self.frame_above_broadening: ttk.Frame = ttk.Frame(self.frame_above)
+        self.frame_above_broadening.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+
         self.frame_above_run: ttk.Frame = ttk.Frame(self.frame_above)
         self.frame_above_run.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=5)
 
@@ -117,6 +121,15 @@ class GUI:
         )
         ttk.Entry(self.frame_above_bands, textvariable=self.band_ranges, width=50).grid(
             row=0, column=1, columnspan=3, padx=5, pady=5
+        )
+
+        # Selection for instrument broadening in [1/cm].
+        self.inst_broadening = tk.DoubleVar(value=DEFAULT_BROADENING)
+        ttk.Label(self.frame_above_broadening, text="Instrument Broadening [1/cm]:").grid(
+            row=0, column=0, padx=5, pady=5
+        )
+        ttk.Entry(self.frame_above_broadening, textvariable=self.inst_broadening).grid(
+            row=0, column=1, padx=5, pady=5
         )
 
         # Selection for number of rotational lines.
@@ -208,7 +221,6 @@ class GUI:
                 "Line Info",
                 "Convolve Separate",
                 "Convolve All",
-                "Instrument Separate",
             ),
         ).grid(row=2, column=1, padx=5, pady=5)
 
@@ -250,7 +262,6 @@ class GUI:
             "Line Info": plot.plot_line_info,
             "Convolve Separate": plot.plot_conv_sep,
             "Convolve All": plot.plot_conv_all,
-            "Instrument Separate": plot.plot_inst_sep,
         }
 
     def add_sample(self) -> None:
@@ -400,8 +411,8 @@ class GUI:
         plot_function: Callable | None = self.map_functions.get(plot_type)
 
         if plot_function is not None:
-            if plot_function.__name__ in ("plot_inst_sep", "plot_inst_all"):
-                plot_function(self.axs, sim, colors, 10)
+            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                plot_function(self.axs, sim, colors, self.inst_broadening.get())
             else:
                 plot_function(self.axs, sim, colors)
         else:

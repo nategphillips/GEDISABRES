@@ -68,7 +68,7 @@ class Sim:
 
         return wavenumbers_line, intensities_line
 
-    def all_conv_data(self) -> tuple[np.ndarray, np.ndarray]:
+    def all_conv_data(self, inst_broadening: float) -> tuple[np.ndarray, np.ndarray]:
         """
         Creates common axes for plotting the convolved data of all vibrational bands at once.
         """
@@ -85,7 +85,7 @@ class Sim:
         wavenumbers_conv = np.linspace(
             wavenumbers_line.min(), wavenumbers_line.max(), params.GRANULARITY
         )
-        intensities_conv = convolve.convolve_brod(lines, wavenumbers_conv)
+        intensities_conv = convolve.convolve_brod(lines, wavenumbers_conv, inst_broadening)
 
         return wavenumbers_conv, intensities_conv
 

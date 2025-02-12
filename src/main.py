@@ -53,24 +53,29 @@ def main() -> None:
     plt.plot(wns_samp, ins_samp)
 
     max_total: float = 0.0
+    inst_broadening: float = 0.0
 
     for band in sim.bands:
         # Get the maximum intensity for each band in the simulation.
-        max_band: float = band.intensities_conv().max()
+        max_band: float = band.intensities_conv(inst_broadening).max()
 
         # Find the maximum intensity across all bands.
-        if band.intensities_conv().max() > max_total:
+        if band.intensities_conv(inst_broadening).max() > max_total:
             max_total = max_band
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
-        plt.plot(band.wavenumbers_conv(), band.intensities_conv() / max_total)
+        plt.plot(
+            band.wavenumbers_conv(),
+            band.intensities_conv(inst_broadening) / max_total,
+            label=f"band: {band.v_qn_up, band.v_qn_lo}",
+        )
 
     # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data()
+    wns, ins = sim.all_conv_data(inst_broadening)
     ins /= ins.max()
 
-    plt.plot(wns, ins)
+    plt.plot(wns, ins, label="all convolved")
 
     # Interpolate simulated data to have the same number of points as the experimental data and
     # compute the residual.
@@ -78,7 +83,8 @@ def main() -> None:
     residual: np.ndarray = np.abs(ins_samp - ins_inrp)
 
     # Show residual below the main data for clarity.
-    plt.plot(wns_samp, -residual)
+    plt.plot(wns_samp, -residual, label="residual")
+    plt.legend()
     plt.show()
 
 

@@ -69,7 +69,7 @@ class Line:
 
         return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
 
-    def fwhm_params(self) -> tuple[float, float]:
+    def fwhm_params(self, inst_broadening: float) -> tuple[float, float]:
         """
         Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
         """
@@ -132,6 +132,10 @@ class Line:
             / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
         )
 
+        # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian
+        # FWHM.
+        gaussian: float = inst_broadening + doppler
+
         # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption,
         #       the broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
 
@@ -139,7 +143,7 @@ class Line:
         # effects of predissociation.
         lorentzian: float = (natural + collisional) / constants.LIGHT + self.predissociation()
 
-        return doppler, lorentzian
+        return gaussian, lorentzian
 
     def get_wavenumber(self) -> float:
         """

@@ -203,7 +203,13 @@ class GUI:
         ttk.Combobox(
             self.frame_input_combos,
             textvariable=self.plot_type,
-            values=("Line", "Line Info", "Convolve Separate", "Convolve All"),
+            values=(
+                "Line",
+                "Line Info",
+                "Convolve Separate",
+                "Convolve All",
+                "Instrument Separate",
+            ),
         ).grid(row=2, column=1, padx=5, pady=5)
 
         # TABLE ------------------------------------------------------------------------------------
@@ -244,6 +250,7 @@ class GUI:
             "Line Info": plot.plot_line_info,
             "Convolve Separate": plot.plot_conv_sep,
             "Convolve All": plot.plot_conv_all,
+            "Instrument Separate": plot.plot_inst_sep,
         }
 
     def add_sample(self) -> None:
@@ -392,8 +399,11 @@ class GUI:
         plot_type: str = self.plot_type.get()
         plot_function: Callable | None = self.map_functions.get(plot_type)
 
-        if plot_function:
-            plot_function(self.axs, sim, colors)
+        if plot_function is not None:
+            if plot_function.__name__ in ("plot_inst_sep", "plot_inst_all"):
+                plot_function(self.axs, sim, colors, 10)
+            else:
+                plot_function(self.axs, sim, colors)
         else:
             messagebox.showinfo("Info", f"Plot type '{plot_type}' is not recognized.")
 

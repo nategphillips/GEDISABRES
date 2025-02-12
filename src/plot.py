@@ -97,3 +97,20 @@ def plot_conv_all(axs: Axes, sim: Sim, colors: list[str]) -> None:
         colors[0],
         label=f"{sim.molecule.name} conv all",
     )
+
+
+def plot_inst_sep(axs: Axes, sim: Sim, colors: list[str], broadening: float) -> None:
+    """
+    Plots data convolved with an instrument function for each vibrational band separately.
+    """
+
+    for idx, band in enumerate(sim.bands):
+        wavelengths_inst: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv())
+        intensities_inst: np.ndarray = band.intensities_inst(broadening)
+
+        axs.plot(
+            wavelengths_inst,
+            intensities_inst,
+            colors[idx],
+            label=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} inst",
+        )

@@ -63,6 +63,13 @@ def convolve_inst(
 
     intensities_inst: np.ndarray = np.zeros_like(wavenumbers_conv)
 
+    # TODO: 25/02/11 - Need to switch this to scipy's implementation of convolve - it's extremely
+    #       inefficient, especially as the granularity of the convolved data increases since this
+    #       function is convolving already convolved data. Not great.
+
+    # One way to change this would be to add the instrument broadening parameter to each line's FWHM
+    # params, which would eliminate the need for the second convolution altogether.
+
     for wave, intn in zip(wavenumbers_conv, intensities_conv):
         intensities_inst += intn * instrument_fn(wavenumbers_conv, wave, broadening)
 

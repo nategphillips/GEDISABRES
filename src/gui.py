@@ -40,6 +40,7 @@ pd.set_option("future.no_silent_downcasting", True)
 warnings.simplefilter(action="ignore", category=FutureWarning)
 
 DEFAULT_LINES: int = 40
+DEFAULT_GRANULARITY: int = int(1e4)
 
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
 DEFAULT_PRESSURE: float = 101325.0  # [Pa]
@@ -91,6 +92,9 @@ class GUI:
         self.frame_above_broadening: ttk.Frame = ttk.Frame(self.frame_above)
         self.frame_above_broadening.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
 
+        self.frame_above_granularity: ttk.Frame = ttk.Frame(self.frame_above)
+        self.frame_above_granularity.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+
         self.frame_above_run: ttk.Frame = ttk.Frame(self.frame_above)
         self.frame_above_run.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=5)
 
@@ -129,6 +133,15 @@ class GUI:
             row=0, column=0, padx=5, pady=5
         )
         ttk.Entry(self.frame_above_broadening, textvariable=self.inst_broadening).grid(
+            row=0, column=1, padx=5, pady=5
+        )
+
+        # Selection for granularity.
+        self.granularity = tk.IntVar(value=DEFAULT_GRANULARITY)
+        ttk.Label(self.frame_above_granularity, text="Granularity:").grid(
+            row=0, column=0, padx=5, pady=5
+        )
+        ttk.Entry(self.frame_above_granularity, textvariable=self.granularity).grid(
             row=0, column=1, padx=5, pady=5
         )
 
@@ -412,7 +425,9 @@ class GUI:
 
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
-                plot_function(self.axs, sim, colors, self.inst_broadening.get())
+                plot_function(
+                    self.axs, sim, colors, self.inst_broadening.get(), self.granularity.get()
+                )
             else:
                 plot_function(self.axs, sim, colors)
         else:

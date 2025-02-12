@@ -60,6 +60,9 @@ class Line:
         #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
         #       Check this to make sure v' and J' should be used even in absorption.
 
+        # FIXME: 25/02/12 - This will break the simulation for some vibrational bands if J exceeds
+        #        40 by too large of a margin.
+
         a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
         a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
         a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]

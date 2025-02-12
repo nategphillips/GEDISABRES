@@ -11,7 +11,6 @@ import numpy as np
 import constants
 import convolve
 from line import Line
-import params
 from simtype import SimType
 import terms
 import utils
@@ -48,7 +47,7 @@ class Band:
 
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self, inst_broadening: float) -> np.ndarray:
+    def wavenumbers_conv(self, inst_broadening: float, granularity: int) -> np.ndarray:
         """
         Returns an array of convolved wavenumbers.
         """
@@ -65,15 +64,15 @@ class Band:
         wns_line: np.ndarray = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data.
-        return np.linspace(wns_line.min() - padding, wns_line.max() + padding, params.GRANULARITY)
+        return np.linspace(wns_line.min() - padding, wns_line.max() + padding, granularity)
 
-    def intensities_conv(self, inst_broadening: float) -> np.ndarray:
+    def intensities_conv(self, inst_broadening: float, granularity: int) -> np.ndarray:
         """
         Returns an array of convolved intensities.
         """
 
         return convolve.convolve_brod(
-            self.lines, self.wavenumbers_conv(inst_broadening), inst_broadening
+            self.lines, self.wavenumbers_conv(inst_broadening, granularity), inst_broadening
         )
 
     def get_vib_boltz_frac(self) -> float:

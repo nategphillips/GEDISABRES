@@ -64,16 +64,16 @@ def plot_line_info(axs: Axes, sim: Sim, colors: list[str]) -> None:
             )
 
 
-def plot_conv_sep(axs: Axes, sim: Sim, colors: list[str]) -> None:
+def plot_conv_sep(axs: Axes, sim: Sim, colors: list[str], inst_broadening: float) -> None:
     """
     Plots convolved data for each vibrational band separately.
     """
 
-    max_intensity: float = sim.all_conv_data()[1].max()
+    max_intensity: float = sim.all_conv_data(inst_broadening)[1].max()
 
     for idx, band in enumerate(sim.bands):
         wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv())
-        intensities_conv: np.ndarray = band.intensities_conv()
+        intensities_conv: np.ndarray = band.intensities_conv(inst_broadening)
 
         axs.plot(
             wavelengths_conv,
@@ -83,12 +83,12 @@ def plot_conv_sep(axs: Axes, sim: Sim, colors: list[str]) -> None:
         )
 
 
-def plot_conv_all(axs: Axes, sim: Sim, colors: list[str]) -> None:
+def plot_conv_all(axs: Axes, sim: Sim, colors: list[str], inst_broadening: float) -> None:
     """
     Plots convolved data for all vibrational bands simultaneously.
     """
 
-    wavenumbers_conv, intensities_conv = sim.all_conv_data()
+    wavenumbers_conv, intensities_conv = sim.all_conv_data(inst_broadening)
     wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(wavenumbers_conv)
 
     axs.plot(
@@ -97,20 +97,3 @@ def plot_conv_all(axs: Axes, sim: Sim, colors: list[str]) -> None:
         colors[0],
         label=f"{sim.molecule.name} conv all",
     )
-
-
-def plot_inst_sep(axs: Axes, sim: Sim, colors: list[str], broadening: float) -> None:
-    """
-    Plots data convolved with an instrument function for each vibrational band separately.
-    """
-
-    for idx, band in enumerate(sim.bands):
-        wavelengths_inst: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv())
-        intensities_inst: np.ndarray = band.intensities_inst(broadening)
-
-        axs.plot(
-            wavelengths_inst,
-            intensities_inst,
-            colors[idx],
-            label=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} inst",
-        )

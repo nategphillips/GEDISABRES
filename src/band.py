@@ -60,23 +60,12 @@ class Band:
         # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min(), wns_line.max(), params.GRANULARITY)
 
-    def intensities_conv(self) -> np.ndarray:
+    def intensities_conv(self, inst_broadening: float) -> np.ndarray:
         """
         Returns an array of convolved intensities.
         """
 
-        return convolve.convolve_brod(self.lines, self.wavenumbers_conv())
-
-    def intensities_inst(self, broadening: float) -> np.ndarray:
-        """
-        Returns an array of intensities convolved with an instrument function.
-        """
-
-        # TODO: 25/02/11 - This is really slow, I believe on the account of manually convolving
-        #       using a for loop in the convolve_inst function. Should switch to scipy's
-        #       implementation of convolve.
-
-        return convolve.convolve_inst(self.wavenumbers_conv(), self.intensities_conv(), broadening)
+        return convolve.convolve_brod(self.lines, self.wavenumbers_conv(), inst_broadening)
 
     def get_vib_boltz_frac(self) -> float:
         """

@@ -82,8 +82,15 @@ class Sim:
             intensities_line = np.concatenate((intensities_line, band.intensities_line()))
             lines.extend(band.lines)
 
+        # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
+        # spectral features at either extreme are not clipped when the FWHM parameters are large.
+        # The Gaussian FWHM of the first line in the first band is chosen as an arbitrary reference
+        # to keep things simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping
+        # is encountered.
+        padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_params(inst_broadening)[0], 2)
+
         wavenumbers_conv = np.linspace(
-            wavenumbers_line.min(), wavenumbers_line.max(), params.GRANULARITY
+            wavenumbers_line.min() - padding, wavenumbers_line.max() + padding, params.GRANULARITY
         )
         intensities_conv = convolve.convolve_brod(lines, wavenumbers_conv, inst_broadening)
 

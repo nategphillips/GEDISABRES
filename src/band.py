@@ -48,24 +48,33 @@ class Band:
 
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self) -> np.ndarray:
+    def wavenumbers_conv(self, inst_broadening: float) -> np.ndarray:
         """
         Returns an array of convolved wavenumbers.
         """
+
+        # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
+        # spectral features at either extreme are not clipped when the FWHM parameters are large.
+        # The first line's Gaussian parameters are chosen as an arbitrary reference for current
+        # FWHM to keep things simple. The minimum Gaussian FWHM allowed is 2 to ensure that no
+        # clipping is encountered.
+        padding: float = 10.0 * max(self.lines[0].fwhm_params(inst_broadening)[0], 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.
         wns_line: np.ndarray = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data.
-        return np.linspace(wns_line.min(), wns_line.max(), params.GRANULARITY)
+        return np.linspace(wns_line.min() - padding, wns_line.max() + padding, params.GRANULARITY)
 
     def intensities_conv(self, inst_broadening: float) -> np.ndarray:
         """
         Returns an array of convolved intensities.
         """
 
-        return convolve.convolve_brod(self.lines, self.wavenumbers_conv(), inst_broadening)
+        return convolve.convolve_brod(
+            self.lines, self.wavenumbers_conv(inst_broadening), inst_broadening
+        )
 
     def get_vib_boltz_frac(self) -> float:
         """

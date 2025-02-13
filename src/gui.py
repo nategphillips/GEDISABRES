@@ -3,6 +3,7 @@
 Testing GUI functionality.
 """
 
+import os
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import messagebox
@@ -283,7 +284,7 @@ class GUI:
         """
 
         full_path: str = filedialog.askopenfilename(initialdir="../data/samples")
-        filename: str = full_path.split("/")[-1]
+        filename: str = os.path.basename(full_path)
 
         if full_path:
             try:

@@ -52,21 +52,24 @@ def main() -> None:
 
     plt.plot(wns_samp, ins_samp)
 
-    inst_broadening: float = 0.0
+    inst_broadening_wl: float = 0.0
+    granularity: int = int(1e4)
 
     # Find the max intensity in all the bands.
-    max_intensity: float = max(band.intensities_conv(inst_broadening).max() for band in sim.bands)
+    max_intensity: float = max(
+        band.intensities_conv(inst_broadening_wl, granularity).max() for band in sim.bands
+    )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(inst_broadening),
-            band.intensities_conv(inst_broadening) / max_intensity,
+            band.wavenumbers_conv(inst_broadening_wl, granularity),
+            band.intensities_conv(inst_broadening_wl, granularity) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
     # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data(inst_broadening)
+    wns, ins = sim.all_conv_data(inst_broadening_wl, granularity)
     ins /= ins.max()
 
     plt.plot(wns, ins, label="all convolved")

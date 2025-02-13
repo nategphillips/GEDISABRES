@@ -44,7 +44,7 @@ DEFAULT_GRANULARITY: int = int(1e4)
 
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
 DEFAULT_PRESSURE: float = 101325.0  # [Pa]
-DEFAULT_BROADENING: float = 0.0  # [1/cm]
+DEFAULT_BROADENING: float = 0.0  # [nm]
 
 DEFAULT_BANDS: str = "0-0"
 DEFAULT_PLOTTYPE: str = "Line"
@@ -127,12 +127,12 @@ class GUI:
             row=0, column=1, columnspan=3, padx=5, pady=5
         )
 
-        # Selection for instrument broadening in [1/cm].
-        self.inst_broadening = tk.DoubleVar(value=DEFAULT_BROADENING)
-        ttk.Label(self.frame_above_broadening, text="Instrument Broadening [1/cm]:").grid(
+        # Selection for instrument broadening in [nm].
+        self.inst_broadening_wl = tk.DoubleVar(value=DEFAULT_BROADENING)
+        ttk.Label(self.frame_above_broadening, text="Instrument Broadening [nm]:").grid(
             row=0, column=0, padx=5, pady=5
         )
-        ttk.Entry(self.frame_above_broadening, textvariable=self.inst_broadening).grid(
+        ttk.Entry(self.frame_above_broadening, textvariable=self.inst_broadening_wl).grid(
             row=0, column=1, padx=5, pady=5
         )
 
@@ -425,8 +425,14 @@ class GUI:
 
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                # The instrument broadening FWHM passed here is in [nm], it will get converted to
+                # [1/cm] in the FWHM function of the Line class.
                 plot_function(
-                    self.axs, sim, colors, self.inst_broadening.get(), self.granularity.get()
+                    self.axs,
+                    sim,
+                    colors,
+                    self.inst_broadening_wl.get(),
+                    self.granularity.get(),
                 )
             else:
                 plot_function(self.axs, sim, colors)

@@ -11,6 +11,7 @@ import numpy as np
 import constants
 from simtype import SimType
 import terms
+import utils
 
 if TYPE_CHECKING:
     from band import Band
@@ -72,7 +73,7 @@ class Line:
 
         return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
 
-    def fwhm_params(self, inst_broadening: float) -> tuple[float, float]:
+    def fwhm_params(self, inst_broadening_wl: float) -> tuple[float, float]:
         """
         Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
         """
@@ -135,9 +136,16 @@ class Line:
             / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
         )
 
+        # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm], so we
+        # must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot simply convert
+        # [nm] to [1/cm] in the normal sense - there must be a central wavelength to expand about.
+        inst_broadening_wn = utils.bandwidth_wavelen_to_wavenum(
+            utils.wavenum_to_wavelen(self.wavenumber), inst_broadening_wl
+        )
+
         # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian
         # FWHM.
-        gaussian: float = inst_broadening + doppler
+        gaussian: float = inst_broadening_wn + doppler
 
         # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption,
         #       the broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.

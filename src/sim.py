@@ -66,7 +66,7 @@ class Sim:
         return wavenumbers_line, intensities_line
 
     def all_conv_data(
-        self, inst_broadening_wl: float, granularity: int
+        self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Creates common axes for superimposing the convolved data of all vibrational bands.
@@ -84,10 +84,9 @@ class Sim:
 
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
-        # The Gaussian FWHM of the first line in the first band is chosen as an arbitrary reference
-        # to keep things simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping
-        # is encountered.
-        padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_params(inst_broadening_wl)[0], 2)
+        # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
+        # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
+        padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_doppler(True), 2)
 
         grid_min: float = wavenumbers_line.min() - padding
         grid_max: float = wavenumbers_line.max() + padding
@@ -101,8 +100,8 @@ class Sim:
         for band in self.bands:
             interpolated_intensity: np.ndarray = np.interp(
                 wavenumbers_conv,
-                band.wavenumbers_conv(inst_broadening_wl, granularity),
-                band.intensities_conv(inst_broadening_wl, granularity),
+                band.wavenumbers_conv(granularity),
+                band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity),
             )
             intensities_conv += interpolated_intensity
 

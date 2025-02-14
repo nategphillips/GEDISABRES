@@ -65,7 +65,12 @@ def plot_line_info(axs: Axes, sim: Sim, colors: list[str]) -> None:
 
 
 def plot_conv_sep(
-    axs: Axes, sim: Sim, colors: list[str], inst_broadening_wl: float, granularity: int
+    axs: Axes,
+    sim: Sim,
+    colors: list[str],
+    fwhm_selections: dict[str, bool],
+    inst_broadening_wl: float,
+    granularity: int,
 ) -> None:
     """
     Plots convolved data for each vibrational band separately.
@@ -75,14 +80,15 @@ def plot_conv_sep(
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
     max_intensity: float = max(
-        band.intensities_conv(inst_broadening_wl, granularity).max() for band in sim.bands
+        band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity).max()
+        for band in sim.bands
     )
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(
-            band.wavenumbers_conv(inst_broadening_wl, granularity)
+        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv(granularity))
+        intensities_conv: np.ndarray = band.intensities_conv(
+            fwhm_selections, inst_broadening_wl, granularity
         )
-        intensities_conv: np.ndarray = band.intensities_conv(inst_broadening_wl, granularity)
 
         axs.plot(
             wavelengths_conv,
@@ -93,13 +99,20 @@ def plot_conv_sep(
 
 
 def plot_conv_all(
-    axs: Axes, sim: Sim, colors: list[str], inst_broadening_wl: float, granularity: int
+    axs: Axes,
+    sim: Sim,
+    colors: list[str],
+    fwhm_selections: dict[str, bool],
+    inst_broadening_wl: float,
+    granularity: int,
 ) -> None:
     """
     Plots convolved data for all vibrational bands simultaneously.
     """
 
-    wavenumbers_conv, intensities_conv = sim.all_conv_data(inst_broadening_wl, granularity)
+    wavenumbers_conv, intensities_conv = sim.all_conv_data(
+        fwhm_selections, inst_broadening_wl, granularity
+    )
     wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(wavenumbers_conv)
 
     axs.plot(

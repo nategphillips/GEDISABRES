@@ -47,16 +47,16 @@ class Band:
 
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self, granularity: int) -> np.ndarray:
+    def wavenumbers_conv(self, inst_broadening_wl: float, granularity: int) -> np.ndarray:
         """
         Returns an array of convolved wavenumbers.
         """
 
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
-        # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
-        # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(self.lines[0].fwhm_doppler(True), 2)
+        # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
+        # simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
+        padding: float = 10.0 * max(self.lines[0].fwhm_instrument(True, inst_broadening_wl), 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.
@@ -74,7 +74,7 @@ class Band:
 
         return convolve.convolve_brod(
             self.lines,
-            self.wavenumbers_conv(granularity),
+            self.wavenumbers_conv(inst_broadening_wl, granularity),
             fwhm_selections,
             inst_broadening_wl,
         )

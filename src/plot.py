@@ -85,7 +85,9 @@ def plot_conv_sep(
     )
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_conv(granularity))
+        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(
+            band.wavenumbers_conv(inst_broadening_wl, granularity)
+        )
         intensities_conv: np.ndarray = band.intensities_conv(
             fwhm_selections, inst_broadening_wl, granularity
         )

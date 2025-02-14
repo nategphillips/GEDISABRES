@@ -9,16 +9,44 @@ from scipy.special import wofz  # pylint: disable=no-name-in-module
 from line import Line
 
 
-def broadening_fn(wavenumbers: np.ndarray, line: Line, inst_broadening_wl: float) -> np.ndarray:
+def broadening_fn(
+    wavenumbers: np.ndarray, line: Line, fwhm_selections: dict[str, bool], inst_broadening_wl: float
+) -> np.ndarray:
     """
     Returns the contribution of a single rotational line to the total spectra using a Voigt
     probability density function.
     """
 
-    # Each line has its own broadening parameters.
-    gaussian, lorentzian = line.fwhm_params(inst_broadening_wl)
+    # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian FWHM.
+    gaussian: float = line.fwhm_instrument(
+        fwhm_selections["instrument"], inst_broadening_wl
+    ) + line.fwhm_doppler(fwhm_selections["doppler"])
 
-    # Compute the argument of the complex Faddeeva function.
+    # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption, the
+    #       broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
+
+    # Add the effects of natural, collisional, and predissociation broadening to get the full
+    # Lorentzian FWHM.
+    lorentzian: float = (
+        line.fwhm_natural(fwhm_selections["natural"])
+        + line.fwhm_collisional(fwhm_selections["collisional"])
+        + line.fwhm_predissociation(fwhm_selections["predissociation"])
+    )
+
+    # If only Gaussian FWHM parameters are present, then return a Gaussian profile.
+    if (gaussian > 0.0) and (lorentzian == 0.0):
+        return np.exp(-((wavenumbers - line.wavenumber) ** 2) / (2 * gaussian**2)) / (
+            gaussian * np.sqrt(2 * np.pi)
+        )
+
+    # Similarly, if only Lorentzian FWHM parameters exist, then return a Lorentzian profile.
+    if (gaussian == 0.0) and (lorentzian > 0.0):
+        return lorentzian / (np.pi * ((wavenumbers - line.wavenumber) ** 2 + lorentzian**2))
+
+    # TODO: 25/02/14 - Should check if both Gaussian and Lorentzian FWHM params are zero here and
+    #       return an error if so.
+
+    # Otherwise, compute the argument of the complex Faddeeva function and return a Voigt profile.
     z: np.ndarray = ((wavenumbers - line.wavenumber) + 1j * lorentzian) / (gaussian * np.sqrt(2))
 
     # The probability density function for the Voigt profile.
@@ -26,7 +54,10 @@ def broadening_fn(wavenumbers: np.ndarray, line: Line, inst_broadening_wl: float
 
 
 def convolve_brod(
-    lines: list[Line], wavenumbers_conv: np.ndarray, inst_broadening_wl: float
+    lines: list[Line],
+    wavenumbers_conv: np.ndarray,
+    fwhm_selections: dict[str, bool],
+    inst_broadening_wl: float,
 ) -> np.ndarray:
     """
     Convolves a discrete number of spectral lines into a continuous spectra by applying a broadening
@@ -42,7 +73,7 @@ def convolve_brod(
     # multiplied by its intensity and adding it to the total intensity.
     for line in lines:
         intensities_conv += line.intensity * broadening_fn(
-            wavenumbers_conv, line, inst_broadening_wl
+            wavenumbers_conv, line, fwhm_selections, inst_broadening_wl
         )
 
     return intensities_conv

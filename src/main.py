@@ -54,22 +54,30 @@ def main() -> None:
 
     inst_broadening_wl: float = 0.0
     granularity: int = int(1e4)
+    fwhm_selections: dict[str, bool] = {
+        "instrument": True,
+        "doppler": True,
+        "natural": True,
+        "collisional": True,
+        "predissociation": True,
+    }
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(inst_broadening_wl, granularity).max() for band in sim.bands
+        band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity).max()
+        for band in sim.bands
     )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-            band.intensities_conv(inst_broadening_wl, granularity) / max_intensity,
+            band.wavenumbers_conv(granularity),
+            band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
     # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data(inst_broadening_wl, granularity)
+    wns, ins = sim.all_conv_data(fwhm_selections, inst_broadening_wl, granularity)
     ins /= ins.max()
 
     plt.plot(wns, ins, label="all convolved")

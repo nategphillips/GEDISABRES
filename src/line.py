@@ -51,110 +51,118 @@ class Line:
         self.rot_boltz_frac: float = self.get_rot_boltz_frac()
         self.intensity: float = self.get_intensity()
 
-    def predissociation(self) -> float:
+    def fwhm_predissociation(self, is_selected: bool) -> float:
         """
         Returns the predissociation broadening for a line in [1/cm].
         """
 
-        # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986 for
-        #       the predissociation of all bands for now. The goal is to use experimental values
-        #       when available, and use this fit otherwise. The fit is good up to J = 40 and v = 21.
-        #       Check this to make sure v' and J' should be used even in absorption.
+        if is_selected:
+            # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986
+            #       for the predissociation of all bands for now. The goal is to use experimental
+            #       values when available, and use this fit otherwise. The fit is good up to J = 40
+            #       and v = 21. Check this to make sure v' and J' should be used even in absorption.
 
-        # FIXME: 25/02/12 - This will break the simulation for some vibrational bands if J exceeds
-        #        40 by too large of a margin.
+            # FIXME: 25/02/12 - This will break the simulation for some vibrational bands if J
+            #        exceeds 40 by too large of a margin.
 
-        a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
-        a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
-        a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
-        a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
-        a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
-        x: int = self.j_qn_up * (self.j_qn_up + 1)
+            a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
+            a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
+            a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
+            a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
+            a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
+            x: int = self.j_qn_up * (self.j_qn_up + 1)
 
-        return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
+            return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
 
-    def fwhm_params(self, inst_broadening_wl: float) -> tuple[float, float]:
-        """
-        Returns the Gaussian and Lorentzian full width at half maximum parameters in [1/cm].
-        """
+        return 0.0
 
-        # TODO: 10/21/24 - Look over this, seems weird still.
+    def fwhm_natural(self, is_selected: bool) -> float:
+        if is_selected:
+            # TODO: 10/21/24 - Look over this, seems weird still.
 
-        # The sum of the Einstein A coefficients for all downward transitions from the two levels of
-        # the transitions i and j.
-        i: int = self.band.v_qn_up
-        a_ik: float = 0.0
-        for k in range(0, i):
-            a_ik += self.sim.einstein[i][k]
+            # The sum of the Einstein A coefficients for all downward transitions from the two
+            # levels of the transitions i and j.
+            i: int = self.band.v_qn_up
+            a_ik: float = 0.0
+            for k in range(0, i):
+                a_ik += self.sim.einstein[i][k]
 
-        j: int = self.band.v_qn_lo
-        a_jk: float = 0.0
-        for k in range(0, j):
-            a_jk += self.sim.einstein[j][k]
+            j: int = self.band.v_qn_lo
+            a_jk: float = 0.0
+            for k in range(0, j):
+                a_jk += self.sim.einstein[j][k]
 
-        # Natural broadening in [1/s].
-        natural: float = (a_ik + a_jk) / (2 * np.pi)
+            # Natural broadening in [1/cm].
+            return ((a_ik + a_jk) / (2 * np.pi)) / constants.LIGHT
 
-        # NOTE: 11/05/24 - In most cases, the amount of electronically excited molecules in the gas
-        #       is essentially zero, meaning that most molecules are in the ground state. Therefore,
-        #       the ground state radius is used to compute the cross-section. An even more accurate
-        #       approach would be to multiply the radius in each state by its Boltzmann fraction and
-        #       add them together.
-        cross_section: float = (
-            np.pi
-            * (2 * constants.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][self.sim.state_lo.name])
-            ** 2
-        )
+        return 0.0
 
-        # NOTE: 10/22/24 - Both the cross-section and reduced mass refer to the interactions between
-        #       two *molecules*, not the two atoms that compose a molecule. For now, only
-        #       homogeneous gases are considered, so the diameter and masses of the two molecules
-        #       are identical. The internuclear distance is being used as the effective radius of
-        #       the molecule. For homogeneous gases, the reduced mass is just half the molecular
-        #       mass (remember, this is for molecule-molecule interactions).
-        reduced_mass: float = self.sim.molecule.mass / 2
+    def fwhm_collisional(self, is_selected: bool) -> float:
+        if is_selected:
+            # NOTE: 11/05/24 - In most cases, the amount of electronically excited molecules in the
+            #       gas is essentially zero, meaning that most molecules are in the ground state.
+            #       Therefore, the ground state radius is used to compute the cross-section. An even
+            #       more accurate approach would be to multiply the radius in each state by its
+            #       Boltzmann fraction and add them together.
+            cross_section: float = (
+                np.pi
+                * (
+                    2
+                    * constants.INTERNUCLEAR_DISTANCE[self.sim.molecule.name][
+                        self.sim.state_lo.name
+                    ]
+                )
+                ** 2
+            )
 
-        # NOTE: 11/05/24 - The translational tempearature is used for collisional and Doppler
-        #       broadening since both effects are direct consequences of the thermal velocity of
-        #       molecules.
+            # NOTE: 10/22/24 - Both the cross-section and reduced mass refer to the interactions
+            #       between two molecules, not the two atoms that compose a molecule. For now, only
+            #       homogeneous gases are considered, so the diameter and masses of the two
+            #       molecules are identical. The internuclear distance is being used as the
+            #       effective radius of the molecule. For homogeneous gases, the reduced mass is
+            #       just half the molecular mass (remember, this is for molecule-molecule
+            #       interactions).
+            reduced_mass: float = self.sim.molecule.mass / 2
 
-        # Collisional (pressure) broadening in [1/s].
-        collisional: float = (
-            self.sim.pressure
-            * cross_section
-            * np.sqrt(8 / (np.pi * reduced_mass * constants.BOLTZ * self.sim.temp_trn))
-            / np.pi
-        )
+            # NOTE: 11/05/24 - The translational tempearature is used for collisional and Doppler
+            #       broadening since both effects are direct consequences of the thermal velocity of
+            #       molecules.
 
-        # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
-        # [cm/s] to [m/s] to ensure that the units work out correctly.
-        doppler: float = self.wavenumber * np.sqrt(
-            8
-            * constants.BOLTZ
-            * self.sim.temp_trn
-            * np.log(2)
-            / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
-        )
+            # Collisional (pressure) broadening in [1/cm].
+            return (
+                self.sim.pressure
+                * cross_section
+                * np.sqrt(8 / (np.pi * reduced_mass * constants.BOLTZ * self.sim.temp_trn))
+                / np.pi
+            ) / constants.LIGHT
 
-        # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm], so we
-        # must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot simply convert
-        # [nm] to [1/cm] in the normal sense - there must be a central wavelength to expand about.
-        inst_broadening_wn = utils.bandwidth_wavelen_to_wavenum(
-            utils.wavenum_to_wavelen(self.wavenumber), inst_broadening_wl
-        )
+        return 0.0
 
-        # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian
-        # FWHM.
-        gaussian: float = inst_broadening_wn + doppler
+    def fwhm_doppler(self, is_selected: bool) -> float:
+        if is_selected:
+            # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
+            # [cm/s] to [m/s] to ensure that the units work out correctly.
+            return self.wavenumber * np.sqrt(
+                8
+                * constants.BOLTZ
+                * self.sim.temp_trn
+                * np.log(2)
+                / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
+            )
 
-        # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption,
-        #       the broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
+        return 0.0
 
-        # Convert the natural and collisional broadening parameters from [1/s] to [1/cm] and add the
-        # effects of predissociation.
-        lorentzian: float = (natural + collisional) / constants.LIGHT + self.predissociation()
+    def fwhm_instrument(self, is_selected: bool, inst_broadening_wl: float) -> float:
+        if is_selected:
+            # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
+            #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
+            #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
+            #       wavelength to expand about.
+            return utils.bandwidth_wavelen_to_wavenum(
+                utils.wavenum_to_wavelen(self.wavenumber), inst_broadening_wl
+            )
 
-        return gaussian, lorentzian
+        return 0.0
 
     def get_wavenumber(self) -> float:
         """

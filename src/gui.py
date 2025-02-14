@@ -137,6 +137,42 @@ class GUI:
             row=0, column=1, padx=5, pady=5
         )
 
+        # Turn on and off individual broadening parameters.
+        self.enable_instrument_broadening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            self.frame_above_bands,
+            text="Instrument Broadening",
+            variable=self.enable_instrument_broadening,
+        ).grid(row=1, column=0, padx=5, pady=5)
+
+        self.enable_doppler_broadening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            self.frame_above_bands,
+            text="Doppler Broadening",
+            variable=self.enable_doppler_broadening,
+        ).grid(row=1, column=1, padx=5, pady=5)
+
+        self.enable_natural_broadening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            self.frame_above_bands,
+            text="Natural Broadening",
+            variable=self.enable_natural_broadening,
+        ).grid(row=1, column=2, padx=5, pady=5)
+
+        self.enable_collisional_broadening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            self.frame_above_bands,
+            text="Collisional Broadening",
+            variable=self.enable_collisional_broadening,
+        ).grid(row=1, column=3, padx=5, pady=5)
+
+        self.enable_predissociation_broadening = tk.BooleanVar(value=True)
+        ttk.Checkbutton(
+            self.frame_above_bands,
+            text="Predissociation Broadening",
+            variable=self.enable_predissociation_broadening,
+        ).grid(row=1, column=4, padx=5, pady=5)
+
         # Selection for granularity.
         self.granularity = tk.IntVar(value=DEFAULT_GRANULARITY)
         ttk.Label(self.frame_above_granularity, text="Granularity:").grid(
@@ -424,6 +460,15 @@ class GUI:
         plot_type: str = self.plot_type.get()
         plot_function: Callable | None = self.map_functions.get(plot_type)
 
+        # Check which FWHM parameters the user has selected.
+        fwhm_selections: dict[str, bool] = {
+            "instrument": self.enable_instrument_broadening.get(),
+            "doppler": self.enable_doppler_broadening.get(),
+            "natural": self.enable_natural_broadening.get(),
+            "collisional": self.enable_collisional_broadening.get(),
+            "predissociation": self.enable_predissociation_broadening.get(),
+        }
+
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
                 # The instrument broadening FWHM passed here is in [nm], it will get converted to
@@ -432,6 +477,7 @@ class GUI:
                     self.axs,
                     sim,
                     colors,
+                    fwhm_selections,
                     self.inst_broadening_wl.get(),
                     self.granularity.get(),
                 )

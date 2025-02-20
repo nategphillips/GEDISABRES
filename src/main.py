@@ -71,7 +71,7 @@ def main() -> None:
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(granularity),
+            band.wavenumbers_conv(inst_broadening_wl, granularity),
             band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )

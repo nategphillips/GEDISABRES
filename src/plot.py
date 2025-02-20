@@ -6,9 +6,9 @@ Contains functions used for plotting.
 import numpy as np
 from matplotlib.axes import Axes
 
+import utils
 from line import Line
 from sim import Sim
-import utils
 
 
 def plot_sample(axs: Axes, data: np.ndarray) -> None:

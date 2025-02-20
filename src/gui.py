@@ -5,28 +5,26 @@ Testing GUI functionality.
 
 import os
 import tkinter as tk
-from tkinter import filedialog
-from tkinter import messagebox
-from tkinter import ttk
-from typing import Callable
 import warnings
+from tkinter import filedialog, messagebox, ttk
+from typing import Callable
 
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.backends._backend_tk import NavigationToolbar2Tk
 import numpy as np
 import pandas as pd
+from matplotlib.axes import Axes
+from matplotlib.backends._backend_tk import NavigationToolbar2Tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from pandastable import Table
 
+import plot
+import utils
 from atom import Atom
 from colors import get_colors
 from molecule import Molecule
-import plot
 from sim import Sim
 from simtype import SimType
 from state import State
-import utils
 
 # NOTE: 11/04/24 - I think an internal function within pandastable is using .fillna or a related
 # function that emits "FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is

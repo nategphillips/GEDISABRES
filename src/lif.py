@@ -9,8 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sy
 
-from atom import Atom
 import constants
+from atom import Atom
 from line import Line
 from molecule import Molecule
 from sim import Sim

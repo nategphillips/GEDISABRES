@@ -4,14 +4,15 @@ Contains the implementation of the Line class.
 """
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 import constants
-from simtype import SimType
 import terms
 import utils
+from simtype import SimType
 
 if TYPE_CHECKING:
     from band import Band

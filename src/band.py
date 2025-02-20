@@ -4,16 +4,17 @@ Contains the implementation of the Band class.
 """
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 import constants
 import convolve
-from line import Line
-from simtype import SimType
 import terms
 import utils
+from line import Line
+from simtype import SimType
 
 if TYPE_CHECKING:
     from sim import Sim

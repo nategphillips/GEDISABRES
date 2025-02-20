@@ -6,12 +6,12 @@ Contains the implementation of the Sim class.
 import numpy as np
 import pandas as pd
 
-from band import Band
 import constants
+import terms
+from band import Band
 from molecule import Molecule
 from simtype import SimType
 from state import State
-import terms
 
 
 class Sim:

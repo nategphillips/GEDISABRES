@@ -1,21 +1,40 @@
 # module gui
 """
-Testing GUI functionality.
+A GUI built using PySide6 with a native table view for pandas DataFrames.
 """
 
 import os
-import tkinter as tk
-import warnings
-from tkinter import filedialog, messagebox, ttk
+import sys
 from typing import Callable
 
 import numpy as np
 import pandas as pd
 from matplotlib.axes import Axes
-from matplotlib.backends._backend_tk import NavigationToolbar2Tk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from pandastable import Table
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPoint, QRect, Qt
+from PySide6.QtGui import QValidator
+from PySide6.QtWidgets import (
+    QApplication,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTableView,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
 import plot
 import utils
@@ -25,18 +44,6 @@ from molecule import Molecule
 from sim import Sim
 from simtype import SimType
 from state import State
-
-# NOTE: 11/04/24 - I think an internal function within pandastable is using .fillna or a related
-# function that emits "FutureWarning: Downcasting object dtype arrays on .fillna, .ffill, .bfill is
-# deprecated and will change in a future version."
-#
-# The fixes in the linked thread don't seem to work, which is why I think the issue is internal to
-# pandastable itself. For now, just disable the warning.
-# https://stackoverflow.com/questions/77900971/pandas-futurewarning-downcasting-object-dtype-arrays-on-fillna-ffill-bfill.
-pd.set_option("future.no_silent_downcasting", True)
-# NOTE: 11/06/24 - More warnings for d_type conversions that aren't yet fixed in a release build of
-# pandastable, see: https://github.com/dmnfarrell/pandastable/issues/251.
-warnings.simplefilter(action="ignore", category=FutureWarning)
 
 DEFAULT_LINES: int = 40
 DEFAULT_GRANULARITY: int = int(1e4)
@@ -50,387 +57,440 @@ DEFAULT_PLOTTYPE: str = "Line"
 DEFAULT_SIMTYPE: str = "Absorption"
 
 
-class GUI:
+class MyDoubleSpinBox(QDoubleSpinBox):
     """
-    The GUI.
+    A custom double spin box that allows for arbitrarily large/small input values, high decimal
+    precision, and scientific notation.
     """
 
-    def __init__(self, root: tk.Tk) -> None:
-        self.root: tk.Tk = root
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setRange(-1e99, 1e99)
+        self.setDecimals(6)
+        self.setKeyboardTracking(False)
 
-        self.root.title("Diatomic Molecular Simulation")
+    def valueFromText(self, text: str) -> float:
+        try:
+            return float(text)
+        except ValueError:
+            return 0.0
 
-        # Center the window on the screen.
-        screen_width: int = self.root.winfo_screenwidth()
-        screen_height: int = self.root.winfo_screenheight()
+    def textFromValue(self, value: float) -> str:
+        return f"{value:g}"
 
-        window_height: int = 800
-        window_width: int = 1600
+    def validate(self, text: str, pos: int):
+        # Allow empty input.
+        if text == "":
+            return (QValidator.State.Intermediate, text, pos)
+        try:
+            # Try converting to float.
+            float(text)
+            return (QValidator.State.Acceptable, text, pos)
+        except ValueError:
+            # If the text contains an 'e' or 'E', it might be a partial scientific notation.
+            if "e" in text.lower():
+                parts = text.lower().split("e")
+                # Allow cases like "1e", "1e-", or "1e+".
+                if len(parts) == 2 and (parts[1] == "" or parts[1] in ["-", "+"]):
+                    return (QValidator.State.Intermediate, text, pos)
+            return (QValidator.State.Invalid, text, pos)
 
-        x_offset: int = int((screen_width / 2) - (window_width / 2))
-        y_offset: int = int((screen_height / 2) - (window_height / 2))
 
-        self.root.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
+class MyTable(QAbstractTableModel):
+    """
+    A simple model to interface a Qt view with a pandas DataFrame.
+    """
 
-        self.create_widgets()
+    def __init__(self, df: pd.DataFrame, parent=None):
+        super().__init__(parent)
+        self._df = df
 
-    def create_widgets(self) -> None:
+    def rowCount(self, parent=QModelIndex()):
+        return len(self._df.index)
+
+    def columnCount(self, parent=QModelIndex()):
+        return len(self._df.columns)
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.ItemDataRole.DisplayRole:
+            value = self._df.iat[index.row(), index.column()]
+            return str(value)
+        return None
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        if role != Qt.ItemDataRole.DisplayRole:
+            return None
+        if orientation == Qt.Orientation.Horizontal:
+            return str(self._df.columns[section])
+        if orientation == Qt.Orientation.Vertical:
+            return str(self._df.index[section])
+        return None
+
+
+def create_dataframe_tab(df: pd.DataFrame, tab_label: str) -> QWidget:
+    """
+    Creates a QWidget containing a QTableView to display the DataFrame.
+    """
+
+    widget = QWidget()
+    layout = QVBoxLayout(widget)
+    table_view = QTableView()
+    model = MyTable(df)
+    table_view.setModel(model)
+    table_view.resizeColumnsToContents()
+    layout.addWidget(table_view)
+
+    return widget
+
+
+class GUI(QMainWindow):
+    """
+    The GUI implemented with PySide6.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.setWindowTitle("Diatomic Molecular Simulation")
+        self.resize(1600, 800)
+        self.center()
+        self.init_ui()
+
+    def center(self) -> None:
         """
-        Create widgets.
+        Center the window on the screen.
         """
 
-        # FRAMES -----------------------------------------------------------------------------------
+        qr: QRect = self.frameGeometry()
+        qp: QPoint = self.screen().availableGeometry().center()
+        qr.moveCenter(qp)
+        self.move(qr.topLeft())
 
-        # Main frames for input boxes, entries, combo boxes, the table, and the plot.
-        self.frame_above: ttk.Frame = ttk.Frame(self.root)
-        self.frame_above.pack(side=tk.TOP, fill=tk.X)
+    def init_ui(self) -> None:
+        """
+        Initialize the user interface.
+        """
 
-        self.frame_above_bands: ttk.Frame = ttk.Frame(self.frame_above)
-        self.frame_above_bands.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+        central_widget: QWidget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout: QVBoxLayout = QVBoxLayout(central_widget)
 
-        self.frame_above_broadening: ttk.Frame = ttk.Frame(self.frame_above)
-        self.frame_above_broadening.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+        # Top panel (above)
+        top_panel: QWidget = self.create_top_panel()
+        main_layout.addWidget(top_panel)
 
-        self.frame_above_granularity: ttk.Frame = ttk.Frame(self.frame_above)
-        self.frame_above_granularity.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+        # Main panel (table and plot)
+        main_panel: QWidget = self.create_main_panel()
+        main_layout.addWidget(main_panel, stretch=1)
 
-        self.frame_above_run: ttk.Frame = ttk.Frame(self.frame_above)
-        self.frame_above_run.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=5)
+        # Bottom panel (input entries and combos)
+        bottom_panel: QWidget = self.create_bottom_panel()
+        main_layout.addWidget(bottom_panel)
 
-        self.frame_input: ttk.Frame = ttk.Frame(self.root)
-        self.frame_input.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
+    def create_top_panel(self) -> QWidget:
+        """
+        Creates the top panel with band ranges, broadening options, granularity, and run controls.
+        """
 
-        self.frame_input_entries: ttk.Frame = ttk.Frame(self.frame_input)
-        self.frame_input_entries.pack(side=tk.LEFT, fill=tk.X, padx=5, pady=5)
+        top_widget: QWidget = QWidget()
+        layout: QHBoxLayout = QHBoxLayout(top_widget)
 
-        self.frame_input_combos: ttk.Frame = ttk.Frame(self.frame_input)
-        self.frame_input_combos.pack(side=tk.RIGHT, fill=tk.X, padx=5, pady=5)
+        # --- Group 1: Bands and broadening checkboxes ---
+        group_bands: QGroupBox = QGroupBox("Bands")
+        bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
-        self.frame_main: ttk.Frame = ttk.Frame(self.root)
-        self.frame_main.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Row: Band ranges entry.
+        band_range_layout = QHBoxLayout()
+        band_range_label = QLabel("Band Ranges (format: v'-v''):")
+        self.band_ranges_line_edit = QLineEdit(DEFAULT_BANDS)
+        band_range_layout.addWidget(band_range_label)
+        band_range_layout.addWidget(self.band_ranges_line_edit)
+        bands_layout.addLayout(band_range_layout)
 
-        self.frame_table: ttk.Frame = ttk.Frame(self.frame_main)
-        self.frame_table.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Row: Broadening checkboxes.
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument Broadening")
+        self.checkbox_instrument.setChecked(True)
+        self.checkbox_doppler = QCheckBox("Doppler Broadening")
+        self.checkbox_doppler.setChecked(True)
+        self.checkbox_natural = QCheckBox("Natural Broadening")
+        self.checkbox_natural.setChecked(True)
+        self.checkbox_collisional = QCheckBox("Collisional Broadening")
+        self.checkbox_collisional.setChecked(True)
+        self.checkbox_predissociation = QCheckBox("Predissociation Broadening")
+        self.checkbox_predissociation.setChecked(True)
+        checkbox_layout.addWidget(self.checkbox_instrument)
+        checkbox_layout.addWidget(self.checkbox_doppler)
+        checkbox_layout.addWidget(self.checkbox_natural)
+        checkbox_layout.addWidget(self.checkbox_collisional)
+        checkbox_layout.addWidget(self.checkbox_predissociation)
+        bands_layout.addLayout(checkbox_layout)
+        layout.addWidget(group_bands)
 
-        self.frame_plot: ttk.Frame = ttk.Frame(self.frame_main)
-        self.frame_plot.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # --- Group 2: Instrument Broadening value ---
+        group_inst_broadening = QGroupBox("Instrument Broadening [nm]")
+        inst_layout = QHBoxLayout(group_inst_broadening)
+        self.inst_broadening_spinbox = MyDoubleSpinBox()
+        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        inst_layout.addWidget(self.inst_broadening_spinbox)
+        layout.addWidget(group_inst_broadening)
 
-        # ABOVE ------------------------------------------------------------------------------------
+        # --- Group 3: Granularity ---
+        group_granularity = QGroupBox("Granularity")
+        gran_layout = QHBoxLayout(group_granularity)
+        self.granularity_spinbox = QSpinBox()
+        self.granularity_spinbox.setMaximum(10000000)
+        self.granularity_spinbox.setValue(DEFAULT_GRANULARITY)
+        gran_layout.addWidget(self.granularity_spinbox)
+        layout.addWidget(group_granularity)
 
-        # Entry for choosing bands.
-        self.band_ranges = tk.StringVar(value=DEFAULT_BANDS)
-        ttk.Label(self.frame_above_bands, text="Band Ranges (format: v'-v''):").grid(
-            row=0, column=0, padx=5, pady=5
-        )
-        ttk.Entry(self.frame_above_bands, textvariable=self.band_ranges, width=50).grid(
-            row=0, column=1, columnspan=3, padx=5, pady=5
-        )
+        # --- Group 4: Rotational Lines and action buttons ---
+        group_run = QGroupBox("Run Simulation")
+        run_layout = QHBoxLayout(group_run)
+        run_layout.addWidget(QLabel("Rotational Lines:"))
+        self.num_lines_spinbox = QSpinBox()
+        self.num_lines_spinbox.setMaximum(10000)
+        self.num_lines_spinbox.setValue(DEFAULT_LINES)
+        run_layout.addWidget(self.num_lines_spinbox)
+        self.run_button = QPushButton("Run Simulation")
+        self.run_button.clicked.connect(self.add_simulation)
+        run_layout.addWidget(self.run_button)
+        self.open_button = QPushButton("Open File")
+        self.open_button.clicked.connect(self.add_sample)
+        run_layout.addWidget(self.open_button)
+        layout.addWidget(group_run)
 
-        # Selection for instrument broadening in [nm].
-        self.inst_broadening_wl = tk.DoubleVar(value=DEFAULT_BROADENING)
-        ttk.Label(self.frame_above_broadening, text="Instrument Broadening [nm]:").grid(
-            row=0, column=0, padx=5, pady=5
-        )
-        ttk.Entry(self.frame_above_broadening, textvariable=self.inst_broadening_wl).grid(
-            row=0, column=1, padx=5, pady=5
-        )
+        return top_widget
 
-        # Turn on and off individual broadening parameters.
-        self.enable_instrument_broadening = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            self.frame_above_bands,
-            text="Instrument Broadening",
-            variable=self.enable_instrument_broadening,
-        ).grid(row=1, column=0, padx=5, pady=5)
+    def create_main_panel(self) -> QWidget:
+        """
+        Creates the main panel with a tab widget for tables on the left and a plot area on the
+        right.
+        """
 
-        self.enable_doppler_broadening = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            self.frame_above_bands,
-            text="Doppler Broadening",
-            variable=self.enable_doppler_broadening,
-        ).grid(row=1, column=1, padx=5, pady=5)
+        main_widget = QWidget()
+        layout = QHBoxLayout(main_widget)
 
-        self.enable_natural_broadening = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            self.frame_above_bands,
-            text="Natural Broadening",
-            variable=self.enable_natural_broadening,
-        ).grid(row=1, column=2, padx=5, pady=5)
+        # --- Left side: QTabWidget for tables ---
+        self.tab_widget = QTabWidget()
+        # Add an initial empty tab (using an empty DataFrame)
+        empty_df = pd.DataFrame()
+        empty_tab = create_dataframe_tab(empty_df, "v'-v''")
+        self.tab_widget.addTab(empty_tab, "v'-v''")
+        layout.addWidget(self.tab_widget, stretch=1)
 
-        self.enable_collisional_broadening = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            self.frame_above_bands,
-            text="Collisional Broadening",
-            variable=self.enable_collisional_broadening,
-        ).grid(row=1, column=3, padx=5, pady=5)
-
-        self.enable_predissociation_broadening = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            self.frame_above_bands,
-            text="Predissociation Broadening",
-            variable=self.enable_predissociation_broadening,
-        ).grid(row=1, column=4, padx=5, pady=5)
-
-        # Selection for granularity.
-        self.granularity = tk.IntVar(value=DEFAULT_GRANULARITY)
-        ttk.Label(self.frame_above_granularity, text="Granularity:").grid(
-            row=0, column=0, padx=5, pady=5
-        )
-        ttk.Entry(self.frame_above_granularity, textvariable=self.granularity).grid(
-            row=0, column=1, padx=5, pady=5
-        )
-
-        # Selection for number of rotational lines.
-        self.num_lines = tk.IntVar(value=DEFAULT_LINES)
-        ttk.Label(self.frame_above_run, text="Rotational Lines:").grid(
-            row=0, column=0, padx=5, pady=5
-        )
-        ttk.Entry(self.frame_above_run, textvariable=self.num_lines).grid(
-            row=0, column=1, padx=5, pady=5
-        )
-
-        # Button for running the simulation.
-        ttk.Button(self.frame_above_run, text="Run Simulation", command=self.add_simulation).grid(
-            row=0, column=2, padx=5, pady=5
-        )
-
-        ttk.Button(self.frame_above_run, text="Open File", command=self.add_sample).grid(
-            row=0, column=3, padx=5, pady=5
-        )
-
-        # ENTRIES ----------------------------------------------------------------------------------
-
-        # Show the entry for equilibrium temperature by default.
-        self.temp = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-
-        self.label_temp = ttk.Label(self.frame_input_entries, text="Temperature [K]:")
-        self.label_temp.grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        self.entry_temp = ttk.Entry(self.frame_input_entries, textvariable=self.temp)
-        self.entry_temp.grid(row=0, column=1, padx=5, pady=5)
-
-        # Nonequilibrium entries, all of which are hidden by default.
-        self.temp_trn = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-        self.temp_elc = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-        self.temp_vib = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-        self.temp_rot = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-
-        self.label_temp_trn = ttk.Label(self.frame_input_entries, text="Translational Temp [K]:")
-        self.entry_temp_trn = ttk.Entry(self.frame_input_entries, textvariable=self.temp_trn)
-        self.label_temp_elc = ttk.Label(self.frame_input_entries, text="Electronic Temp [K]:")
-        self.entry_temp_elc = ttk.Entry(self.frame_input_entries, textvariable=self.temp_elc)
-        self.label_temp_vib = ttk.Label(self.frame_input_entries, text="Vibrational Temp [K]:")
-        self.entry_temp_vib = ttk.Entry(self.frame_input_entries, textvariable=self.temp_vib)
-        self.label_temp_rot = ttk.Label(self.frame_input_entries, text="Rotational Temp [K]:")
-        self.entry_temp_rot = ttk.Entry(self.frame_input_entries, textvariable=self.temp_rot)
-
-        # Entries for pressure and bands.
-        self.pressure = tk.DoubleVar(value=DEFAULT_PRESSURE)
-        ttk.Label(self.frame_input_entries, text="Pressure [Pa]:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="w"
-        )
-        ttk.Entry(self.frame_input_entries, textvariable=self.pressure).grid(
-            row=1, column=1, padx=5, pady=5
-        )
-
-        # COMBOS -----------------------------------------------------------------------------------
-
-        # Combo boxes for temperature mode, simulation type, and plot type.
-        self.temp_type = tk.StringVar(value="Equilibrium")
-        ttk.Label(self.frame_input_combos, text="Temperature Type:").grid(
-            row=0, column=0, padx=5, pady=5, sticky="w"
-        )
-        mode_combobox = ttk.Combobox(
-            self.frame_input_combos,
-            textvariable=self.temp_type,
-            values=("Equilibrium", "Nonequilibrium"),
-        )
-        mode_combobox.grid(row=0, column=1, padx=5, pady=5)
-
-        # Updates the visible boxes based on the mode the user selects.
-        mode_combobox.bind("<<ComboboxSelected>>", self.switch_temp_mode)
-
-        self.sim_type = tk.StringVar(value=DEFAULT_SIMTYPE)
-        ttk.Label(self.frame_input_combos, text="Simulation Type:").grid(
-            row=1, column=0, padx=5, pady=5, sticky="w"
-        )
-        ttk.Combobox(
-            self.frame_input_combos, textvariable=self.sim_type, values=("Absorption", "Emission")
-        ).grid(row=1, column=1, padx=5, pady=5)
-
-        self.plot_type = tk.StringVar(value=DEFAULT_PLOTTYPE)
-        ttk.Label(self.frame_input_combos, text="Plot Type:").grid(
-            row=2, column=0, padx=5, pady=5, sticky="w"
-        )
-        ttk.Combobox(
-            self.frame_input_combos,
-            textvariable=self.plot_type,
-            values=(
-                "Line",
-                "Line Info",
-                "Convolve Separate",
-                "Convolve All",
-            ),
-        ).grid(row=2, column=1, padx=5, pady=5)
-
-        # TABLE ------------------------------------------------------------------------------------
-
-        # Notebook (tabs) for holding multiple tables, one for each specified vibrational band.
-        self.notebook = ttk.Notebook(self.frame_table)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
-
-        # Initialize the table with an empty dataframe so that nothing is shown until a simulation
-        # is run by the user.
-        frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
-        table: Table = Table(
-            frame_notebook,
-            dataframe=pd.DataFrame(),
-            showtoolbar=True,
-            showstatusbar=True,
-            editable=False,
-        )
-        table.show()
-        self.notebook.add(frame_notebook, text="v'-v''")
-
-        # PLOT -------------------------------------------------------------------------------------
-
-        # Draw the initial figure and axes with no data present.
-        self.fig: Figure
-        self.axs: Axes
+        # --- Right side: Plot area ---
+        self.plot_widget = QWidget()
+        plot_layout = QVBoxLayout(self.plot_widget)
         self.fig, self.axs = create_figure()
-        self.plot_canvas: FigureCanvasTkAgg = FigureCanvasTkAgg(self.fig, master=self.frame_plot)
-        self.plot_canvas.draw()
-        self.plot_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        self.plot_canvas = FigureCanvas(self.fig)
+        plot_layout.addWidget(self.plot_canvas)
+        self.toolbar = NavigationToolbar(self.plot_canvas, self.plot_widget)
+        plot_layout.addWidget(self.toolbar)
+        layout.addWidget(self.plot_widget, stretch=2)
 
-        # Show the matplotlib toolbar at the bottom of the plot.
-        self.toolbar: NavigationToolbar2Tk = NavigationToolbar2Tk(self.plot_canvas)
+        return main_widget
 
-        # Map plot types to functions.
-        self.map_functions: dict[str, Callable] = {
-            "Line": plot.plot_line,
-            "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
-        }
+    def create_bottom_panel(self) -> QWidget:
+        """
+        Creates the bottom panel with temperature, pressure, and combo selections.
+        """
+
+        bottom_widget = QWidget()
+        layout = QHBoxLayout(bottom_widget)
+
+        # --- Left: Input entries for temperature and pressure ---
+        entries_widget = QWidget()
+        entries_layout = QGridLayout(entries_widget)
+
+        # Row 0: Equilibrium temperature.
+        self.temp_label = QLabel("Temperature [K]:")
+        self.temp_spinbox = MyDoubleSpinBox()
+        self.temp_spinbox.setValue(DEFAULT_TEMPERATURE)
+        entries_layout.addWidget(self.temp_label, 0, 0)
+        entries_layout.addWidget(self.temp_spinbox, 0, 1)
+
+        # Nonequilibrium temperatures (hidden initially)
+        self.temp_trn_label = QLabel("Translational Temp [K]:")
+        self.temp_trn_spinbox = MyDoubleSpinBox()
+        self.temp_trn_spinbox.setValue(DEFAULT_TEMPERATURE)
+        self.temp_elc_label = QLabel("Electronic Temp [K]:")
+        self.temp_elc_spinbox = MyDoubleSpinBox()
+        self.temp_elc_spinbox.setValue(DEFAULT_TEMPERATURE)
+        self.temp_vib_label = QLabel("Vibrational Temp [K]:")
+        self.temp_vib_spinbox = MyDoubleSpinBox()
+        self.temp_vib_spinbox.setValue(DEFAULT_TEMPERATURE)
+        self.temp_rot_label = QLabel("Rotational Temp [K]:")
+        self.temp_rot_spinbox = MyDoubleSpinBox()
+        self.temp_rot_spinbox.setValue(DEFAULT_TEMPERATURE)
+
+        for w in (
+            self.temp_trn_label,
+            self.temp_trn_spinbox,
+            self.temp_elc_label,
+            self.temp_elc_spinbox,
+            self.temp_vib_label,
+            self.temp_vib_spinbox,
+            self.temp_rot_label,
+            self.temp_rot_spinbox,
+        ):
+            w.hide()
+
+        entries_layout.addWidget(self.temp_trn_label, 0, 2)
+        entries_layout.addWidget(self.temp_trn_spinbox, 0, 3)
+        entries_layout.addWidget(self.temp_elc_label, 0, 4)
+        entries_layout.addWidget(self.temp_elc_spinbox, 0, 5)
+        entries_layout.addWidget(self.temp_vib_label, 0, 6)
+        entries_layout.addWidget(self.temp_vib_spinbox, 0, 7)
+        entries_layout.addWidget(self.temp_rot_label, 0, 8)
+        entries_layout.addWidget(self.temp_rot_spinbox, 0, 9)
+
+        # Row 1: Pressure.
+        pressure_label = QLabel("Pressure [Pa]:")
+        self.pressure_spinbox = MyDoubleSpinBox()
+        self.pressure_spinbox.setValue(DEFAULT_PRESSURE)
+        entries_layout.addWidget(pressure_label, 1, 0)
+        entries_layout.addWidget(self.pressure_spinbox, 1, 1)
+
+        layout.addWidget(entries_widget)
+
+        # --- Right: Combo boxes ---
+        combos_widget = QWidget()
+        combos_layout = QGridLayout(combos_widget)
+
+        # Temperature Type.
+        temp_type_label = QLabel("Temperature Type:")
+        self.temp_type_combo = QComboBox()
+        self.temp_type_combo.addItems(["Equilibrium", "Nonequilibrium"])
+        self.temp_type_combo.currentTextChanged.connect(self.switch_temp_mode)
+        combos_layout.addWidget(temp_type_label, 0, 0)
+        combos_layout.addWidget(self.temp_type_combo, 0, 1)
+
+        # Simulation Type.
+        sim_type_label = QLabel("Simulation Type:")
+        self.sim_type_combo = QComboBox()
+        self.sim_type_combo.addItems(["Absorption", "Emission"])
+        combos_layout.addWidget(sim_type_label, 1, 0)
+        combos_layout.addWidget(self.sim_type_combo, 1, 1)
+
+        # Plot Type.
+        plot_type_label = QLabel("Plot Type:")
+        self.plot_type_combo = QComboBox()
+        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        combos_layout.addWidget(plot_type_label, 2, 0)
+        combos_layout.addWidget(self.plot_type_combo, 2, 1)
+
+        layout.addWidget(combos_widget)
+
+        return bottom_widget
 
     def add_sample(self) -> None:
         """
-        Testing.
+        Opens a CSV file and adds a new tab showing its contents.
         """
 
-        full_path: str = filedialog.askopenfilename(initialdir="../data/samples")
-        filename: str = os.path.basename(full_path)
-
-        if full_path:
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open File",
+            os.path.join("..", "data", "samples"),
+            "CSV Files (*.csv);;All Files (*)",
+        )
+        if filename:
             try:
-                df: pd.DataFrame = pd.read_csv(full_path)
+                df = pd.read_csv(filename)
             except ValueError:
-                messagebox.showerror("Error", "Data is improperly formatted.")
+                QMessageBox.critical(self, "Error", "Data is improperly formatted.")
                 return
         else:
             return
 
-        frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
-        table: Table = Table(
-            frame_notebook, dataframe=df, showtoolbar=True, showstatusbar=True, editable=False
-        )
-        table.show()
-        self.notebook.add(frame_notebook, text=filename)
+        new_tab = create_dataframe_tab(df, os.path.basename(filename))
+        self.tab_widget.addTab(new_tab, os.path.basename(filename))
 
-        plot_sample(self.axs, df, filename, "black")
+        plot_sample(self.axs, df, os.path.basename(filename), "black")
         self.axs.legend()
         self.plot_canvas.draw()
 
-    def switch_temp_mode(self, event=None) -> None:
+    def switch_temp_mode(self) -> None:
         """
-        Switches between equilibrium and nonequilibrium temperature modes.
+        Switch between equilibrium and nonequilibrium temperature modes.
         """
 
-        if self.temp_type.get() == "Nonequilibrium":
-            # Remove equilibrium entry.
-            self.label_temp.grid_forget()
-            self.entry_temp.grid_forget()
-
-            # Place all nonequilibrium entries.
-            self.label_temp_trn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
-            self.entry_temp_trn.grid(row=0, column=1, padx=5, pady=5)
-            self.label_temp_elc.grid(row=0, column=2, padx=5, pady=5, sticky="w")
-            self.entry_temp_elc.grid(row=0, column=3, padx=5, pady=5)
-            self.label_temp_vib.grid(row=0, column=4, padx=5, pady=5, sticky="w")
-            self.entry_temp_vib.grid(row=0, column=5, padx=5, pady=5)
-            self.label_temp_rot.grid(row=0, column=6, padx=5, pady=5, sticky="w")
-            self.entry_temp_rot.grid(row=0, column=7, padx=5, pady=5)
+        if self.temp_type_combo.currentText() == "Nonequilibrium":
+            self.temp_label.hide()
+            self.temp_spinbox.hide()
+            self.temp_trn_label.show()
+            self.temp_trn_spinbox.show()
+            self.temp_elc_label.show()
+            self.temp_elc_spinbox.show()
+            self.temp_vib_label.show()
+            self.temp_vib_spinbox.show()
+            self.temp_rot_label.show()
+            self.temp_rot_spinbox.show()
         else:
-            # Remove all nonequilibrium entries.
-            self.label_temp_trn.grid_forget()
-            self.entry_temp_trn.grid_forget()
-            self.label_temp_elc.grid_forget()
-            self.entry_temp_elc.grid_forget()
-            self.label_temp_vib.grid_forget()
-            self.entry_temp_vib.grid_forget()
-            self.label_temp_rot.grid_forget()
-            self.entry_temp_rot.grid_forget()
-
-            # Place equilibrium entry.
-            self.label_temp.grid(row=0, column=0, padx=5, pady=5, sticky="w")
-            self.entry_temp.grid(row=0, column=1, padx=5, pady=5)
+            self.temp_trn_label.hide()
+            self.temp_trn_spinbox.hide()
+            self.temp_elc_label.hide()
+            self.temp_elc_spinbox.hide()
+            self.temp_vib_label.hide()
+            self.temp_vib_spinbox.hide()
+            self.temp_rot_label.hide()
+            self.temp_rot_spinbox.hide()
+            self.temp_label.show()
+            self.temp_spinbox.show()
 
     def parse_band_ranges(self) -> list[tuple[int, int]]:
         """
-        Convert comma-separated user input of the form 0-0, 0-2, etc. into valid vibrational bands.
+        Parses comma-separated band ranges from user input.
         """
 
-        band_ranges_str: str = self.band_ranges.get()
-
+        band_ranges_str: str = self.band_ranges_line_edit.text()
         bands: list[tuple[int, int]] = []
 
         for range_str in band_ranges_str.split(","):
-            range_str: str = range_str.strip()
-
+            range_str = range_str.strip()
             if "-" in range_str:
                 try:
-                    lower_band: int
-                    upper_band: int
                     lower_band, upper_band = map(int, range_str.split("-"))
                     bands.append((lower_band, upper_band))
                 except ValueError:
-                    messagebox.showinfo("Info", f"Invalid band range format: {range_str}")
+                    QMessageBox.information(
+                        self,
+                        "Info",
+                        f"Invalid band range format: {range_str}",
+                        QMessageBox.StandardButton.Ok,
+                    )
             else:
-                messagebox.showinfo("Info", f"Invalid band range format: {range_str}")
+                QMessageBox.information(
+                    self,
+                    "Info",
+                    f"Invalid band range format: {range_str}",
+                    QMessageBox.StandardButton.Ok,
+                )
 
         return bands
 
     def add_simulation(self) -> None:
         """
-        Runs a simulation instance.
+        Runs a simulation instance and updates the plot and table tabs.
         """
 
-        # TODO: 11/06/24:
-        # - Create an option for switching between equilibrium and non-equilibrium.
-        # - Add the ability to plot sample data with simulated data.
-        # - Allow multiple types of data to be plotted at the same time.
-        # - Have separate temperature, pressure, and plots for each band.
-        # - Make another tab for LIF calculations.
-        # - Create options to save and load simulations.
+        # Determine temperatures based on mode.
+        temp: float = self.temp_spinbox.value()
+        temp_trn = temp_elc = temp_vib = temp_rot = temp
+        if self.temp_type_combo.currentText() == "Nonequilibrium":
+            temp_trn = self.temp_trn_spinbox.value()
+            temp_elc = self.temp_elc_spinbox.value()
+            temp_vib = self.temp_vib_spinbox.value()
+            temp_rot = self.temp_rot_spinbox.value()
 
-        # First check which mode the simulation is in and set the temperatures accordingly.
-        temp_trn = temp_elc = temp_vib = temp_rot = self.temp.get()
-        if self.temp_type.get() == "Nonequilibrium":
-            temp_trn = self.temp_trn.get()
-            temp_elc = self.temp_elc.get()
-            temp_vib = self.temp_vib.get()
-            temp_rot = self.temp_rot.get()
-
-        # Grab the pressure data directly from the input fields.
-        pres: float = self.pressure.get()
-        # Convert the simulation type to uppercase to use as a key for the SimType enum.
-        sim_type: SimType = SimType[self.sim_type.get().upper()]
-        # Get the list of upper and lower vibrational bands from the user input.
+        pres: float = self.pressure_spinbox.value()
+        sim_type: SimType = SimType[self.sim_type_combo.currentText().upper()]
         bands: list[tuple[int, int]] = self.parse_band_ranges()
-        # Maximum number of rotational lines to simulate.
-        rot_lvls: np.ndarray = np.arange(0, self.num_lines.get())
+        rot_lvls = np.arange(0, self.num_lines_spinbox.value())
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-
         state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)
         state_lo: State = State(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
 
@@ -449,22 +509,26 @@ class GUI:
         )
 
         colors: list[str] = get_colors(bands)
-
-        # Clear the previously plotted data and reset the axis labels.
         self.axs.clear()
         set_axis_labels(self.axs)
 
-        # Choose the plotting function based on the selected plot type.
-        plot_type: str = self.plot_type.get()
-        plot_function: Callable | None = self.map_functions.get(plot_type)
+        # Map plot types to functions.
+        map_functions: dict[str, Callable] = {
+            "Line": plot.plot_line,
+            "Line Info": plot.plot_line_info,
+            "Convolve Separate": plot.plot_conv_sep,
+            "Convolve All": plot.plot_conv_all,
+        }
+        plot_type: str = self.plot_type_combo.currentText()
+        plot_function: Callable | None = map_functions.get(plot_type)
 
         # Check which FWHM parameters the user has selected.
         fwhm_selections: dict[str, bool] = {
-            "instrument": self.enable_instrument_broadening.get(),
-            "doppler": self.enable_doppler_broadening.get(),
-            "natural": self.enable_natural_broadening.get(),
-            "collisional": self.enable_collisional_broadening.get(),
-            "predissociation": self.enable_predissociation_broadening.get(),
+            "instrument": self.checkbox_instrument.isChecked(),
+            "doppler": self.checkbox_doppler.isChecked(),
+            "natural": self.checkbox_natural.isChecked(),
+            "collisional": self.checkbox_collisional.isChecked(),
+            "predissociation": self.checkbox_predissociation.isChecked(),
         }
 
         if plot_function is not None:
@@ -476,25 +540,29 @@ class GUI:
                     sim,
                     colors,
                     fwhm_selections,
-                    self.inst_broadening_wl.get(),
-                    self.granularity.get(),
+                    self.inst_broadening_spinbox.value(),
+                    self.granularity_spinbox.value(),
                 )
             else:
                 plot_function(self.axs, sim, colors)
         else:
-            messagebox.showinfo("Info", f"Plot type '{plot_type}' is not recognized.")
+            QMessageBox.information(
+                self,
+                "Info",
+                f"Plot type '{plot_type}' is not recognized.",
+                QMessageBox.StandardButton.Ok,
+            )
 
         self.axs.legend()
         self.plot_canvas.draw()
 
         # Clear previous tabs.
-        for tab in self.notebook.tabs():
-            self.notebook.forget(tab)
+        while self.tab_widget.count() > 0:
+            self.tab_widget.removeTab(0)
 
-        # Each vibrational band has a separate tab associated with it, each tab gets updated
-        # separately.
+        # Create a new tab for each vibrational band.
         for i, band in enumerate(bands):
-            data: list[dict[str, float | int | str]] = [
+            data = [
                 {
                     "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                     "Wavenumber": line.wavenumber,
@@ -507,15 +575,9 @@ class GUI:
                 }
                 for line in sim.bands[i].lines
             ]
-
             df: pd.DataFrame = pd.DataFrame(data)
-
-            frame_notebook: ttk.Frame = ttk.Frame(self.notebook)
-            table: Table = Table(
-                frame_notebook, dataframe=df, showtoolbar=True, showstatusbar=True, editable=False
-            )
-            table.show()
-            self.notebook.add(frame_notebook, text=f"{band[0]}-{band[1]}")
+            new_tab = create_dataframe_tab(df, f"{band[0]}-{band[1]}")
+            self.tab_widget.addTab(new_tab, f"{band[0]}-{band[1]}")
 
 
 def set_axis_labels(ax: Axes) -> None:
@@ -524,21 +586,14 @@ def set_axis_labels(ax: Axes) -> None:
     """
 
     def conversion_fn(x):
-        """
-        A robust conversion from wavenumbers to wavelength that avoids divide by zero errors.
-        """
-
         x = np.array(x, float)
-        near_zero: np.ndarray = np.isclose(x, 0)
-
+        near_zero = np.isclose(x, 0)
         x[near_zero] = np.inf
         x[~near_zero] = 1 / x[~near_zero]
-
         return x * 1e7
 
     secax = ax.secondary_xaxis("top", functions=(conversion_fn, conversion_fn))
     secax.set_xlabel("Wavenumber, $\\nu$ [cm$^{-1}$]")
-
     ax.set_xlabel("Wavelength, $\\lambda$ [nm]")
     ax.set_ylabel("Intensity, $I$ [a.u.]")
 
@@ -550,11 +605,7 @@ def create_figure() -> tuple[Figure, Axes]:
 
     fig: Figure = Figure()
     axs: Axes = fig.add_subplot(111)
-
-    # Set the left x-limit to something greater than zero so the secondary axis doesn't encounter a
-    # divide by zero error before any data is actually plotted.
     axs.set_xlim(100, 200)
-
     set_axis_labels(axs)
 
     return fig, axs
@@ -567,7 +618,6 @@ def plot_sample(axs: Axes, df: pd.DataFrame, label: str, color: str) -> None:
 
     wavelengths = utils.wavenum_to_wavelen(df["wavenumber"])
     intensities = df["intensity"]
-
     axs.plot(wavelengths, intensities / intensities.max(), label=label, color=color)
 
 
@@ -576,9 +626,10 @@ def main() -> None:
     Entry point.
     """
 
-    root: tk.Tk = tk.Tk()
-    GUI(root)
-    root.mainloop()
+    app: QApplication = QApplication(sys.argv)
+    window: GUI = GUI()
+    window.show()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

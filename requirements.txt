@@ -10,36 +10,27 @@ cycler==0.12.1
     # via matplotlib
 fonttools==4.55.8
     # via matplotlib
-future==1.0.0
-    # via pandastable
 kiwisolver==1.4.8
     # via matplotlib
 matplotlib==3.10.0
-    # via
-    #   -r requirements.in
-    #   pandastable
-numexpr==2.10.2
-    # via pandastable
+    # via -r requirements.in
 numpy==2.2.2
     # via
     #   -r requirements.in
     #   contourpy
     #   matplotlib
-    #   numexpr
     #   pandas
     #   scipy
 packaging==24.2
     # via matplotlib
 pandas==2.2.3
-    # via
-    #   -r requirements.in
-    #   pandastable
-pandastable==0.13.1
     # via -r requirements.in
 pillow==11.1.0
     # via matplotlib
 pyparsing==3.2.1
     # via matplotlib
+pyside6-essentials==6.8.2.1
+    # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via
     #   matplotlib
@@ -48,9 +39,9 @@ pytz==2025.1
     # via pandas
 scipy==1.15.1
     # via -r requirements.in
+shiboken6==6.8.2.1
+    # via pyside6-essentials
 six==1.17.0
     # via python-dateutil
 tzdata==2025.1
     # via pandas
-xlrd==2.0.1
-    # via pandastable

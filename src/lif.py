@@ -1,7 +1,5 @@
 # module lif
-"""
-A three-level LIF model for the Schumann-Runge bands of molecular oxygen.
-"""
+"""A three-level LIF model for the Schumann-Runge bands of molecular oxygen."""
 
 from dataclasses import dataclass
 
@@ -24,9 +22,7 @@ N_FLUENCE: int = 100
 
 @dataclass
 class RateParams:
-    """
-    Holds parameters related to the rate equations.
-    """
+    """Holds parameters related to the rate equations."""
 
     a_21: float
     b_12: float
@@ -39,9 +35,7 @@ class RateParams:
 
 @dataclass
 class LaserParams:
-    """
-    Holds parameters related to the laser.
-    """
+    """Holds parameters related to the laser."""
 
     pulse_center: float
     pulse_width: float
@@ -49,10 +43,7 @@ class LaserParams:
 
 
 def laser_intensity(t: float | np.ndarray, laser_params: LaserParams):
-    """
-    Returns the laser intensity.
-    """
-
+    """Return the laser intensity."""
     return (
         laser_params.fluence
         / laser_params.pulse_width
@@ -68,10 +59,7 @@ def rate_equations(
     laser_params: LaserParams,
     line: Line,
 ) -> list[float]:
-    """
-    The rate equations governing the three-level LIF system.
-    """
-
+    """Return the rate equations governing the three-level LIF system."""
     n1, n2, n3 = n
 
     # TODO: 10/29/24 - Implement the overlap integral between the transition and laser lineshapes.
@@ -95,10 +83,7 @@ def rate_equations(
 def simulate(
     t: np.ndarray, rate_params: RateParams, laser_params: LaserParams, line: Line
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Returns the population densities of the three states as a function of time.
-    """
-
+    """Return the population densities of the three states as a function of time."""
     n: list[float] = [1.0, 0.0, 1.0]
 
     solution: np.ndarray = sy.integrate.odeint(
@@ -113,10 +98,7 @@ def simulate(
 
 
 def get_signal(t: np.ndarray, n2: np.ndarray, rate_params: RateParams) -> np.ndarray:
-    """
-    Returns the LIF signal as a function of time.
-    """
-
+    """Return the LIF signal as a function of time."""
     return rate_params.w_f * sy.integrate.cumulative_trapezoid(n2, t, initial=0)
 
 
@@ -129,10 +111,7 @@ def get_sim(
     v_qn_up: int,
     v_qn_lo: int,
 ) -> Sim:
-    """
-    Returns a simulation object with the desired parameters.
-    """
-
+    """Return a simulation object with the desired parameters."""
     bands: list[tuple[int, int]] = [(v_qn_up, v_qn_lo)]
 
     return Sim(
@@ -151,10 +130,7 @@ def get_sim(
 
 
 def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
-    """
-    Returns a rotational line with the desired parameters.
-    """
-
+    """Return a rotational line with the desired parameters."""
     for line in sim.bands[0].lines:
         if (
             line.branch_name == branch_name
@@ -168,10 +144,7 @@ def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Li
 
 
 def get_rates(sim: Sim, line: Line) -> RateParams:
-    """
-    Returns the rate parameters.
-    """
-
+    """Return the rate parameters."""
     # Electronic degeneracies
     g_l: int = 3
     g_u: int = 1
@@ -220,10 +193,7 @@ def run_simulation(
     pulse_width: float,
     fluence: float,
 ) -> None:
-    """
-    Plots the population densities, signal, and laser intensity as functions of time.
-    """
-
+    """Plot the population densities, signal, and laser intensity as functions of time."""
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
     line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
@@ -272,10 +242,7 @@ def scan_fluences(
     pulse_width: float,
     max_fluence: float,
 ):
-    """
-    Scans over fluence values and returns the resulting singals.
-    """
-
+    """Scan over fluence values and returns the resulting singals."""
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
     line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
@@ -310,10 +277,7 @@ def n2_vs_time_and_fluence(
     pulse_width: float,
     max_fluence: float,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Scans over fluence values and returns the time-dependent populations.
-    """
-
+    """Scan over fluence values and returns the time-dependent populations."""
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
     line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
@@ -333,10 +297,7 @@ def n2_vs_time_and_fluence(
 def plot_n2_vs_time_and_fluence(
     fluences: np.ndarray, t: np.ndarray, n2_populations: np.ndarray
 ) -> None:
-    """
-    Plots a heatmap showing the population of state N2 as a function of time and fluence.
-    """
-
+    """Plot a heatmap showing the population of state N2 as a function of time and fluence."""
     t, f = np.meshgrid(t, fluences)
 
     contour = plt.contourf(t, f, n2_populations, levels=50, cmap="magma")
@@ -351,10 +312,7 @@ def plot_n2_vs_time_and_fluence(
 
 
 def main() -> None:
-    """
-    Entry point.
-    """
-
+    """Entry point."""
     molecule: Molecule = Molecule("O2", Atom("O"), Atom("O"))
     state_up: State = State("B3Su-", 3, molecule)
     state_lo: State = State("X3Sg-", 3, molecule)

@@ -1,17 +1,20 @@
 # module molecule
-"""
-Contains the implementation of the Molecule class.
-"""
+"""Contains the implementation of the Molecule class."""
 
 from atom import Atom
 
 
 class Molecule:
-    """
-    Represents a diatomic molecule consisting of two atoms.
-    """
+    """Represents a diatomic molecule consisting of two atoms."""
 
     def __init__(self, name: str, atom_1: Atom, atom_2: Atom) -> None:
+        """Initialize class variables.
+
+        Args:
+            name (str): Name of the molecule.
+            atom_1 (Atom): First constituent atom.
+            atom_2 (Atom): Second constituent atom.
+        """
         self.name: str = name
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
@@ -20,10 +23,7 @@ class Molecule:
 
     @staticmethod
     def get_symmetry_param(atom_1: Atom, atom_2: Atom) -> int:
-        """
-        Returns the symmetry parameter of the molecule.
-        """
-
+        """Return the symmetry parameter of the molecule."""
         # For homonuclear diatomic molecules like O2, the symmetry parameter is 2.
         if atom_1.name == atom_2.name:
             return 2

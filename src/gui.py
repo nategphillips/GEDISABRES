@@ -1,7 +1,5 @@
 # module gui
-"""
-A GUI built using PySide6 with a native table view for pandas DataFrames.
-"""
+"""A GUI built using PySide6 with a native table view for pandas DataFrames."""
 
 import os
 import sys
@@ -58,9 +56,10 @@ DEFAULT_SIMTYPE: str = "Absorption"
 
 
 class MyDoubleSpinBox(QDoubleSpinBox):
-    """
-    A custom double spin box that allows for arbitrarily large/small input values, high decimal
-    precision, and scientific notation.
+    """A custom double spin box.
+
+    Allows for arbitrarily large or small input values, high decimal precision, and scientific
+    notation.
     """
 
     def __init__(self, parent=None):
@@ -97,9 +96,7 @@ class MyDoubleSpinBox(QDoubleSpinBox):
 
 
 class MyTable(QAbstractTableModel):
-    """
-    A simple model to interface a Qt view with a pandas DataFrame.
-    """
+    """A simple model to interface a Qt view with a pandas DataFrame."""
 
     def __init__(self, df: pd.DataFrame, parent=None):
         super().__init__(parent)
@@ -130,10 +127,7 @@ class MyTable(QAbstractTableModel):
 
 
 def create_dataframe_tab(df: pd.DataFrame, tab_label: str) -> QWidget:
-    """
-    Creates a QWidget containing a QTableView to display the DataFrame.
-    """
-
+    """Create a QWidget containing a QTableView to display the DataFrame."""
     widget = QWidget()
     layout = QVBoxLayout(widget)
     table_view = QTableView()
@@ -146,9 +140,7 @@ def create_dataframe_tab(df: pd.DataFrame, tab_label: str) -> QWidget:
 
 
 class GUI(QMainWindow):
-    """
-    The GUI implemented with PySide6.
-    """
+    """The GUI implemented with PySide6."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -158,20 +150,14 @@ class GUI(QMainWindow):
         self.init_ui()
 
     def center(self) -> None:
-        """
-        Center the window on the screen.
-        """
-
+        """Center the window on the screen."""
         qr: QRect = self.frameGeometry()
         qp: QPoint = self.screen().availableGeometry().center()
         qr.moveCenter(qp)
         self.move(qr.topLeft())
 
     def init_ui(self) -> None:
-        """
-        Initialize the user interface.
-        """
-
+        """Initialize the user interface."""
         central_widget: QWidget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout: QVBoxLayout = QVBoxLayout(central_widget)
@@ -189,10 +175,7 @@ class GUI(QMainWindow):
         main_layout.addWidget(bottom_panel)
 
     def create_top_panel(self) -> QWidget:
-        """
-        Creates the top panel with band ranges, broadening options, granularity, and run controls.
-        """
-
+        """Create the top panel with band ranges, broadening, granularity, and run controls."""
         top_widget: QWidget = QWidget()
         layout: QHBoxLayout = QHBoxLayout(top_widget)
 
@@ -264,11 +247,7 @@ class GUI(QMainWindow):
         return top_widget
 
     def create_main_panel(self) -> QWidget:
-        """
-        Creates the main panel with a tab widget for tables on the left and a plot area on the
-        right.
-        """
-
+        """Create the main panel with table tabs on the left and a plot on the right."""
         main_widget = QWidget()
         layout = QHBoxLayout(main_widget)
 
@@ -293,10 +272,7 @@ class GUI(QMainWindow):
         return main_widget
 
     def create_bottom_panel(self) -> QWidget:
-        """
-        Creates the bottom panel with temperature, pressure, and combo selections.
-        """
-
+        """Create the bottom panel with temperature, pressure, and combo selections."""
         bottom_widget = QWidget()
         layout = QHBoxLayout(bottom_widget)
 
@@ -386,10 +362,7 @@ class GUI(QMainWindow):
         return bottom_widget
 
     def add_sample(self) -> None:
-        """
-        Opens a CSV file and adds a new tab showing its contents.
-        """
-
+        """Open a CSV file and adds a new tab showing its contents."""
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
@@ -413,10 +386,7 @@ class GUI(QMainWindow):
         self.plot_canvas.draw()
 
     def switch_temp_mode(self) -> None:
-        """
-        Switch between equilibrium and nonequilibrium temperature modes.
-        """
-
+        """Switch between equilibrium and nonequilibrium temperature modes."""
         if self.temp_type_combo.currentText() == "Nonequilibrium":
             self.temp_label.hide()
             self.temp_spinbox.hide()
@@ -441,16 +411,12 @@ class GUI(QMainWindow):
             self.temp_spinbox.show()
 
     def parse_band_ranges(self) -> list[tuple[int, int]]:
-        """
-        Parses comma-separated band ranges from user input.
-        """
-
+        """Parse comma-separated band ranges from user input."""
         band_ranges_str: str = self.band_ranges_line_edit.text()
         bands: list[tuple[int, int]] = []
 
         for range_str in band_ranges_str.split(","):
-            range_str = range_str.strip()
-            if "-" in range_str:
+            if "-" in range_str.strip():
                 try:
                     lower_band, upper_band = map(int, range_str.split("-"))
                     bands.append((lower_band, upper_band))
@@ -472,10 +438,7 @@ class GUI(QMainWindow):
         return bands
 
     def add_simulation(self) -> None:
-        """
-        Runs a simulation instance and updates the plot and table tabs.
-        """
-
+        """Run a simulation instance and update the plot and table tabs."""
         # Determine temperatures based on mode.
         temp: float = self.temp_spinbox.value()
         temp_trn = temp_elc = temp_vib = temp_rot = temp
@@ -581,9 +544,7 @@ class GUI(QMainWindow):
 
 
 def set_axis_labels(ax: Axes) -> None:
-    """
-    Sets the main x-label to wavelength and adds a secondary wavenumber x-axis.
-    """
+    """Set the main x-label to wavelength and adds a secondary wavenumber x-axis."""
 
     def conversion_fn(x):
         x = np.array(x, float)
@@ -599,10 +560,7 @@ def set_axis_labels(ax: Axes) -> None:
 
 
 def create_figure() -> tuple[Figure, Axes]:
-    """
-    Initialize a blank figure with arbitrary limits.
-    """
-
+    """Initialize a blank figure with arbitrary limits."""
     fig: Figure = Figure()
     axs: Axes = fig.add_subplot(111)
     axs.set_xlim(100, 200)
@@ -612,20 +570,14 @@ def create_figure() -> tuple[Figure, Axes]:
 
 
 def plot_sample(axs: Axes, df: pd.DataFrame, label: str, color: str) -> None:
-    """
-    Plots sample data.
-    """
-
+    """Plot sample data."""
     wavelengths = utils.wavenum_to_wavelen(df["wavenumber"])
     intensities = df["intensity"]
     axs.plot(wavelengths, intensities / intensities.max(), label=label, color=color)
 
 
 def main() -> None:
-    """
-    Entry point.
-    """
-
+    """Entry point."""
     app: QApplication = QApplication(sys.argv)
     window: GUI = GUI()
     window.show()

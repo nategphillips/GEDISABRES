@@ -1,10 +1,8 @@
 # module convolve
-"""
-Contains functions used for convolution.
-"""
+"""Contains functions used for convolution."""
 
 import numpy as np
-from scipy.special import wofz  # pylint: disable=no-name-in-module
+from scipy.special import wofz
 
 from line import Line
 
@@ -12,11 +10,10 @@ from line import Line
 def broadening_fn(
     wavenumbers: np.ndarray, line: Line, fwhm_selections: dict[str, bool], inst_broadening_wl: float
 ) -> np.ndarray:
-    """
-    Returns the contribution of a single rotational line to the total spectra using a Voigt
-    probability density function.
-    """
+    """Return the contribution of a single rotational line to the total spectra.
 
+    Uses a Voigt probability density function.
+    """
     # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian FWHM.
     gaussian: float = line.fwhm_instrument(
         fwhm_selections["instrument"], inst_broadening_wl
@@ -59,11 +56,7 @@ def convolve_brod(
     fwhm_selections: dict[str, bool],
     inst_broadening_wl: float,
 ) -> np.ndarray:
-    """
-    Convolves a discrete number of spectral lines into a continuous spectra by applying a broadening
-    function.
-    """
-
+    """Convolve a discrete number of spectral lines into a continuous spectra."""
     intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
 
     # TODO: 25/02/12 - See if switching to scipy's convolve method improves the speed of this,

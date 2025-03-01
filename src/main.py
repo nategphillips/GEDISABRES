@@ -1,7 +1,5 @@
 # module main
-"""
-A simulation of the Schumann-Runge bands of molecular oxygen written in Python.
-"""
+"""A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,10 +12,7 @@ from state import State
 
 
 def main() -> None:
-    """
-    Entry point.
-    """
-
+    """Entry point."""
     molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
 
     state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)

@@ -1,24 +1,16 @@
 # module terms
-"""
-Contains functions used for vibrational and rotational term calculations.
-"""
+"""Contains functions used for vibrational and rotational term calculations."""
 
 import numpy as np
 
 
 def vibrational_term(state, v_qn: int) -> float:
-    """
-    Returns the vibrational term value.
-    """
-
+    """Return the vibrational term value."""
     return state.constants["G"][v_qn]
 
 
 def rotational_term(state, v_qn: int, j_qn: int, branch_idx: int) -> float:
-    """
-    Returns the rotational term value.
-    """
-
+    """Return the rotational term value."""
     lookup_table: dict = state.constants
 
     b: float = lookup_table["B"][v_qn]

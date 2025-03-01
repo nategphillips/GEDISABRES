@@ -1,17 +1,12 @@
 # module colors
-"""
-Provides a list of colors based on the number of bands to be plotted.
-"""
+"""Provides a list of colors based on the number of bands to be plotted."""
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import Colormap, to_hex
 
 
 def get_colors(bands: list[tuple[int, int]]) -> list[str]:
-    """
-    Returns a list of colors.
-    """
-
+    """Return a list of colors."""
     num_bands: int = len(bands)
 
     colors_small: list[str] = plt.rcParams["axes.prop_cycle"].by_key()["color"]

@@ -1,7 +1,5 @@
 # module band
-"""
-Contains the implementation of the Band class.
-"""
+"""Contains the implementation of the Band class."""
 
 from __future__ import annotations
 
@@ -21,11 +19,16 @@ if TYPE_CHECKING:
 
 
 class Band:
-    """
-    Represents a vibrational band of a particular molecule.
-    """
+    """Represents a vibrational band of a particular molecule."""
 
     def __init__(self, sim: Sim, v_qn_up: int, v_qn_lo: int) -> None:
+        """Initialize class variables.
+
+        Args:
+            sim (Sim): Parent simulation.
+            v_qn_up (int): Upper vibrational quantum number.
+            v_qn_lo (int): Lower vibrational quantum number.
+        """
         self.sim: Sim = sim
         self.v_qn_up: int = v_qn_up
         self.v_qn_lo: int = v_qn_lo
@@ -35,24 +38,15 @@ class Band:
         self.lines: list[Line] = self.get_lines()
 
     def wavenumbers_line(self) -> np.ndarray:
-        """
-        Returns an array of wavenumbers, one for each line.
-        """
-
+        """Return an array of wavenumbers, one for each line."""
         return np.array([line.wavenumber for line in self.lines])
 
     def intensities_line(self) -> np.ndarray:
-        """
-        Returns an array of intensities, one for each line.
-        """
-
+        """Return an array of intensities, one for each line."""
         return np.array([line.intensity for line in self.lines])
 
     def wavenumbers_conv(self, inst_broadening_wl: float, granularity: int) -> np.ndarray:
-        """
-        Returns an array of convolved wavenumbers.
-        """
-
+        """Return an array of convolved wavenumbers."""
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
@@ -69,10 +63,7 @@ class Band:
     def intensities_conv(
         self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
     ) -> np.ndarray:
-        """
-        Returns an array of convolved intensities.
-        """
-
+        """Return an array of convolved intensities."""
         return convolve.convolve_brod(
             self.lines,
             self.wavenumbers_conv(inst_broadening_wl, granularity),
@@ -81,10 +72,7 @@ class Band:
         )
 
     def get_vib_boltz_frac(self) -> float:
-        """
-        Returns the vibrational Boltzmann fraction N_v / N.
-        """
-
+        """Return the vibrational Boltzmann fraction N_v / N."""
         match self.sim.sim_type:
             case SimType.EMISSION:
                 state = self.sim.state_up
@@ -106,10 +94,7 @@ class Band:
         )
 
     def get_band_origin(self) -> float:
-        """
-        Returns the band origin in [1/cm].
-        """
-
+        """Return the band origin in [1/cm]."""
         # Herzberg p. 168, eq. (IV, 24)
 
         upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
@@ -135,10 +120,7 @@ class Band:
         )
 
     def get_rot_partition_fn(self) -> float:
-        """
-        Returns the rotational partition function.
-        """
-
+        """Return the rotational partition function."""
         # TODO: 10/25/24 - Add nuclear effects to make this the effective rotational partition
         #       function.
 
@@ -183,10 +165,7 @@ class Band:
         return q_r / self.sim.molecule.symmetry_param
 
     def get_lines(self):
-        """
-        Returns a list of all allowed rotational lines.
-        """
-
+        """Return a list of all allowed rotational lines."""
         lines = []
 
         for n_qn_up in self.sim.rot_lvls:
@@ -199,10 +178,7 @@ class Band:
         return lines
 
     def allowed_branches(self, n_qn_up: int, n_qn_lo: int):
-        """
-        Determines the selection rules for Hund's case (b).
-        """
-
+        """Determine the selection rules for Hund's case (b)."""
         # For Σ-Σ transitions, the rotational selection rules are ∆N = ±1, ∆N ≠ 0.
         # Herzberg p. 244, eq. (V, 44)
 
@@ -231,15 +207,10 @@ class Band:
         return lines
 
     def branch_index(self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str):
-        """
-        Returns the rotational lines within a given branch.
-        """
+        """Return the rotational lines within a given branch."""
 
         def add_line(branch_idx_up: int, branch_idx_lo: int, is_satellite: bool):
-            """
-            Helper to create and append a rotational line.
-            """
-
+            """Create and append a rotational line."""
             lines.append(
                 Line(
                     sim=self.sim,
@@ -278,10 +249,12 @@ class Band:
                 if branch_idx_up == branch_idx_lo:
                     add_line(branch_idx_up, branch_idx_lo, False)
                 # Satellite branches: RQ31, RQ32, RQ21
-                elif (branch_name == "R") and (branch_idx_up > branch_idx_lo):
-                    add_line(branch_idx_up, branch_idx_lo, True)
-                # Satellite branches: PQ13, PQ23, PQ12
-                elif (branch_name == "P") and (branch_idx_up < branch_idx_lo):
+                elif (
+                    (branch_name == "R")
+                    and (branch_idx_up > branch_idx_lo)
+                    or (branch_name == "P")
+                    and (branch_idx_up < branch_idx_lo)
+                ):
                     add_line(branch_idx_up, branch_idx_lo, True)
 
         return lines

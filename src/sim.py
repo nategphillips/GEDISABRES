@@ -1,7 +1,5 @@
 # module sim
-"""
-Contains the implementation of the Sim class.
-"""
+"""Contains the implementation of the Sim class."""
 
 import numpy as np
 import pandas as pd
@@ -15,9 +13,7 @@ from state import State
 
 
 class Sim:
-    """
-    Simulates the spectra of a particular molecule.
-    """
+    """Simulate the spectra of a particular molecule."""
 
     def __init__(
         self,
@@ -33,6 +29,21 @@ class Sim:
         pressure: float,
         bands: list[tuple[int, int]],
     ) -> None:
+        """Initialize class variables.
+
+        Args:
+            sim_type (SimType): The type of simulation to perform.
+            molecule (Molecule): Which molecule to simulate.
+            state_up (State): Upper electronic state.
+            state_lo (State): Lower electronic state.
+            rot_lvls (np.ndarray): Which rotational levels to simulate.
+            temp_trn (float): Translational temperature.
+            temp_elc (float): Electronic temperature.
+            temp_vib (float): Vibrational temperature.
+            temp_rot (float): Rotational temperature.
+            pressure (float): Pressure.
+            bands (list[tuple[int, int]]): Which vibrational bands to simulate.
+        """
         self.sim_type: SimType = sim_type
         self.molecule: Molecule = molecule
         self.state_up: State = state_up
@@ -52,10 +63,7 @@ class Sim:
         self.bands: list[Band] = self.get_bands(bands)
 
     def all_line_data(self) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Combines the line data for all vibrational bands.
-        """
-
+        """Combine the line data for all vibrational bands."""
         wavenumbers_line: np.ndarray = np.array([])
         intensities_line: np.ndarray = np.array([])
 
@@ -68,10 +76,7 @@ class Sim:
     def all_conv_data(
         self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
     ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Creates common axes for superimposing the convolved data of all vibrational bands.
-        """
-
+        """Create common axes for superimposing the convolved data of all vibrational bands."""
         # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
         # expressed as a sum over the individual line absorption coefficients. See "Analysis of
         # Collision-Broadened and Overlapped Spectral Lines to Obtain Individual Line Parameters" by
@@ -110,50 +115,39 @@ class Sim:
         return wavenumbers_conv, intensities_conv
 
     def get_predissociation(self) -> dict[str, dict[int, float]]:
-        """
-        Returns polynomial coefficients for computing predissociation linewidths.
-        """
-
+        """Return polynomial coefficients for computing predissociation linewidths."""
         return pd.read_csv(
             f"../data/{self.molecule.name}/predissociation/lewis_coeffs.csv"
         ).to_dict()
 
     def get_einstein(self) -> np.ndarray:
-        """
-        Returns a table of Einstein coefficients for spontaneous emission: A_{v'v''}. Rows
-        correspond to the upper state vibrational quantum number (v'), while columns correspond to
-        the lower state vibrational quantum number (v'').
-        """
+        """Return a table of Einstein coefficients for spontaneous emission: A_{v'v''}.
 
+        Rows correspond to the upper state vibrational quantum number (v'), while columns correspond
+        to the lower state vibrational quantum number (v'').
+        """
         return np.loadtxt(
             f"../data/{self.molecule.name}/einstein/{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
             delimiter=",",
         )
 
     def get_franck_condon(self) -> np.ndarray:
-        """
-        Returns a table of Franck-Condon factors for the associated electronic transition. Rows
-        correspond to the upper state vibrational quantum number (v'), while columns correspond to
-        the lower state vibrational quantum number (v'').
-        """
+        """Return a table of Franck-Condon factors for the associated electronic transition.
 
+        Rows correspond to the upper state vibrational quantum number (v'), while columns correspond
+        to the lower state vibrational quantum number (v'').
+        """
         return np.loadtxt(
             f"../data/{self.molecule.name}/franck-condon/{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
             delimiter=",",
         )
 
     def get_bands(self, bands: list[tuple[int, int]]):
-        """
-        Returns the selected vibrational bands within the simulation.
-        """
-
+        """Return the selected vibrational bands within the simulation."""
         return [Band(sim=self, v_qn_up=band[0], v_qn_lo=band[1]) for band in bands]
 
     def get_vib_partition_fn(self) -> float:
-        """
-        Returns the vibrational partition function.
-        """
-
+        """Return the vibrational partition function."""
         # NOTE: 10/22/24 - The maximum vibrational quantum number is dictated by the tabulated data
         #       available.
         match self.sim_type:
@@ -184,10 +178,7 @@ class Sim:
         return q_v
 
     def get_elc_partition_fn(self) -> float:
-        """
-        Returns the electronic partition function.
-        """
-
+        """Return the electronic partition function."""
         energies: list[float] = list(constants.ELECTRONIC_ENERGIES[self.molecule.name].values())
         degeneracies: list[int] = list(
             constants.ELECTRONIC_DEGENERACIES[self.molecule.name].values()
@@ -207,10 +198,7 @@ class Sim:
         return q_e
 
     def get_elc_boltz_frac(self) -> float:
-        """
-        Returns the electronic Boltzmann fraction N_e / N.
-        """
-
+        """Return the electronic Boltzmann fraction N_e / N."""
         match self.sim_type:
             case SimType.EMISSION:
                 state = self.state_up.name

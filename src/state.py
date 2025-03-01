@@ -1,7 +1,5 @@
 # module state
-"""
-Contains the implementation of the State class.
-"""
+"""Contains the implementation of the State class."""
 
 import pandas as pd
 
@@ -9,11 +7,16 @@ from molecule import Molecule
 
 
 class State:
-    """
-    Represents an electronic state of a particular molecule.
-    """
+    """Represents an electronic state of a particular molecule."""
 
     def __init__(self, name: str, spin_multiplicity: int, molecule: Molecule) -> None:
+        """Initialize class variables.
+
+        Args:
+            name (str): Name of the electronic state.
+            spin_multiplicity (int): Spin multiplicity.
+            molecule (Molecule): Parent molecule.
+        """
         self.name: str = name
         self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
@@ -21,18 +24,11 @@ class State:
 
     @staticmethod
     def get_constants(molecule: str, state: str) -> dict[str, dict[int, float]]:
-        """
-        Returns a dictionary of molecular constants for the specified electronic state in [1/cm].
-        """
-
+        """Return the molecular constants for the specified electronic state in [1/cm]."""
         return pd.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict()
 
     def is_allowed(self, n_qn: int) -> bool:
-        """
-        Returns a boolean value corresponding to whether or not the selected rotational level is
-        allowed.
-        """
-
+        """Return whether or not the selected rotational level is allowed."""
         if self.name == "X3Sg-":
             # For X3Σg-, only the rotational levels with odd N can be populated.
             return bool(n_qn % 2 == 1)

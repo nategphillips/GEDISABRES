@@ -1,21 +1,20 @@
 # module plot
-"""
-Contains functions used for plotting.
-"""
+"""Contains functions used for plotting."""
+
+from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib.axes import Axes
 
 import utils
-from line import Line
 from sim import Sim
+
+if TYPE_CHECKING:
+    from line import Line
 
 
 def plot_sample(axs: Axes, data: np.ndarray) -> None:
-    """
-    Plots sample data.
-    """
-
+    """Plotssample data."""
     wavelengths: np.ndarray = utils.wavenum_to_wavelen(data[:, 0])
     intensities: np.ndarray = data[:, 1]
 
@@ -23,10 +22,7 @@ def plot_sample(axs: Axes, data: np.ndarray) -> None:
 
 
 def plot_line(axs: Axes, sim: Sim, colors: list[str]) -> None:
-    """
-    Plots each rotational line.
-    """
-
+    """Plot each rotational line."""
     max_intensity: float = sim.all_line_data()[1].max()
 
     for idx, band in enumerate(sim.bands):
@@ -43,10 +39,7 @@ def plot_line(axs: Axes, sim: Sim, colors: list[str]) -> None:
 
 
 def plot_line_info(axs: Axes, sim: Sim, colors: list[str]) -> None:
-    """
-    Plots information about each rotational line.
-    """
-
+    """Plot information about each rotational line."""
     # In order to show text, a plot must first exist.
     plot_line(axs, sim, colors)
 
@@ -72,10 +65,7 @@ def plot_conv_sep(
     inst_broadening_wl: float,
     granularity: int,
 ) -> None:
-    """
-    Plots convolved data for each vibrational band separately.
-    """
-
+    """Plot convolved data for each vibrational band separately."""
     # Need to convolve all bands separately, get their maximum intensities, store the largest, and
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
@@ -108,10 +98,7 @@ def plot_conv_all(
     inst_broadening_wl: float,
     granularity: int,
 ) -> None:
-    """
-    Plots convolved data for all vibrational bands simultaneously.
-    """
-
+    """Plot convolved data for all vibrational bands simultaneously."""
     wavenumbers_conv, intensities_conv = sim.all_conv_data(
         fwhm_selections, inst_broadening_wl, granularity
     )

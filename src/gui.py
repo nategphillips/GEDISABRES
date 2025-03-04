@@ -3,7 +3,7 @@
 
 import os
 import sys
-from typing import Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -42,6 +42,9 @@ from molecule import Molecule
 from sim import Sim
 from simtype import SimType
 from state import State
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 DEFAULT_LINES: int = 40
 DEFAULT_GRANULARITY: int = int(1e4)

@@ -24,6 +24,7 @@ extend-select = [
     "D",
     "E",
     "FIX",
+    "I",
     "N",
     "NPY",
     "PL",

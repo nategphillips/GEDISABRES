@@ -1,6 +1,8 @@
 # module main
 """A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -40,12 +42,12 @@ def main() -> None:
     )
 
     sample: np.ndarray = np.genfromtxt(
-        "../data/samples/harvard_20.csv", delimiter=",", skip_header=1
+        fname=Path("..", "data", "samples", "harvard_20.csv"), delimiter=",", skip_header=1
     )
     wns_samp = sample[:, 0]
     ins_samp = sample[:, 1] / sample[:, 1].max()
 
-    plt.plot(wns_samp, ins_samp)
+    plt.plot(wns_samp, ins_samp, label="sample")
 
     inst_broadening_wl: float = 0.0
     granularity: int = int(1e4)

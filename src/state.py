@@ -1,6 +1,8 @@
 # module state
 """Contains the implementation of the State class."""
 
+from pathlib import Path
+
 import polars as pl
 
 from molecule import Molecule
@@ -25,7 +27,9 @@ class State:
     @staticmethod
     def get_constants(molecule: str, state: str) -> dict[str, list[float]]:
         """Return the molecular constants for the specified electronic state in [1/cm]."""
-        return pl.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict(as_series=False)
+        return pl.read_csv(Path("..", "data", molecule, "states", f"{state}.csv")).to_dict(
+            as_series=False
+        )
 
     def is_allowed(self, n_qn: int) -> bool:
         """Return whether or not the selected rotational level is allowed."""

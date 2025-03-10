@@ -2,6 +2,7 @@
 """A three-level LIF model for the Schumann-Runge bands of molecular oxygen."""
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -150,7 +151,13 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     g_u: int = 1
 
     a21_coeffs: np.ndarray = np.loadtxt(
-        f"../data/{sim.molecule.name}/einstein/{sim.state_up.name}_to_{sim.state_lo.name}_allison.csv",
+        fname=Path(
+            "..",
+            "data",
+            sim.molecule.name,
+            "einstein",
+            f"{sim.state_up.name}_to_{sim.state_lo.name}_allison.csv",
+        ),
         delimiter=",",
     )
 

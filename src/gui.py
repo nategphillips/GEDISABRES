@@ -1,9 +1,9 @@
 # module gui
 """A GUI built using PySide6 with a native table view for DataFrames."""
 
-import os
 import sys
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -368,10 +368,10 @@ class GUI(QMainWindow):
     def add_sample(self) -> None:
         """Open a CSV file and adds a new tab showing its contents."""
         filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open File",
-            os.path.join("..", "data", "samples"),
-            "CSV Files (*.csv);;All Files (*)",
+            parent=self,
+            caption="Open File",
+            dir=str(Path("..", "data", "samples")),
+            filter="CSV Files (*.csv);;All Files (*)",
         )
         if filename:
             try:
@@ -382,10 +382,10 @@ class GUI(QMainWindow):
         else:
             return
 
-        new_tab = create_dataframe_tab(df, os.path.basename(filename))
-        self.tab_widget.addTab(new_tab, os.path.basename(filename))
+        new_tab = create_dataframe_tab(df, Path(filename).name)
+        self.tab_widget.addTab(new_tab, Path(filename).name)
 
-        plot_sample(self.axs, df, os.path.basename(filename), "black")
+        plot_sample(self.axs, df, Path(filename).name, "black")
         self.axs.legend()
         self.plot_canvas.draw()
 

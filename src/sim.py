@@ -1,6 +1,8 @@
 # module sim
 """Contains the implementation of the Sim class."""
 
+from pathlib import Path
+
 import numpy as np
 import polars as pl
 
@@ -117,7 +119,7 @@ class Sim:
     def get_predissociation(self) -> dict[str, list[float]]:
         """Return polynomial coefficients for computing predissociation linewidths."""
         return pl.read_csv(
-            f"../data/{self.molecule.name}/predissociation/lewis_coeffs.csv"
+            Path("..", "data", self.molecule.name, "predissociation", "lewis_coeffs.csv")
         ).to_dict(as_series=False)
 
     def get_einstein(self) -> np.ndarray:
@@ -127,7 +129,13 @@ class Sim:
         to the lower state vibrational quantum number (v'').
         """
         return np.loadtxt(
-            f"../data/{self.molecule.name}/einstein/{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
+            Path(
+                "..",
+                "data",
+                self.molecule.name,
+                "einstein",
+                f"{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
+            ),
             delimiter=",",
         )
 
@@ -138,7 +146,13 @@ class Sim:
         to the lower state vibrational quantum number (v'').
         """
         return np.loadtxt(
-            f"../data/{self.molecule.name}/franck-condon/{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
+            Path(
+                "..",
+                "data",
+                self.molecule.name,
+                "franck-condon",
+                f"{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
+            ),
             delimiter=",",
         )
 

@@ -1,7 +1,7 @@
 # module state
 """Contains the implementation of the State class."""
 
-import pandas as pd
+import polars as pl
 
 from molecule import Molecule
 
@@ -20,12 +20,12 @@ class State:
         self.name: str = name
         self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
-        self.constants: dict[str, dict[int, float]] = self.get_constants(molecule.name, name)
+        self.constants: dict[str, list[float]] = self.get_constants(molecule.name, name)
 
     @staticmethod
-    def get_constants(molecule: str, state: str) -> dict[str, dict[int, float]]:
+    def get_constants(molecule: str, state: str) -> dict[str, list[float]]:
         """Return the molecular constants for the specified electronic state in [1/cm]."""
-        return pd.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict()
+        return pl.read_csv(f"../data/{molecule}/states/{state}.csv").to_dict(as_series=False)
 
     def is_allowed(self, n_qn: int) -> bool:
         """Return whether or not the selected rotational level is allowed."""

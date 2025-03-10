@@ -97,8 +97,8 @@ class Band:
         """Return the band origin in [1/cm]."""
         # Herzberg p. 168, eq. (IV, 24)
 
-        upper_state: dict[str, dict[int, float]] = self.sim.state_up.constants
-        lower_state: dict[str, dict[int, float]] = self.sim.state_lo.constants
+        upper_state: dict[str, list[float]] = self.sim.state_up.constants
+        lower_state: dict[str, list[float]] = self.sim.state_lo.constants
 
         # NOTE: 11/05/24 - In the Cheung paper, the electronic energy is defined differently than in
         #       Herzberg's book. The conversion specified by Cheung on p. 5 is

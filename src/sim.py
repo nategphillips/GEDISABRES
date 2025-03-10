@@ -2,7 +2,7 @@
 """Contains the implementation of the Sim class."""
 
 import numpy as np
-import pandas as pd
+import polars as pl
 
 import constants
 import terms
@@ -59,7 +59,7 @@ class Sim:
         self.elc_boltz_frac: float = self.get_elc_boltz_frac()
         self.franck_condon: np.ndarray = self.get_franck_condon()
         self.einstein: np.ndarray = self.get_einstein()
-        self.predissociation: dict[str, dict[int, float]] = self.get_predissociation()
+        self.predissociation: dict[str, list[float]] = self.get_predissociation()
         self.bands: list[Band] = self.get_bands(bands)
 
     def all_line_data(self) -> tuple[np.ndarray, np.ndarray]:
@@ -114,11 +114,11 @@ class Sim:
 
         return wavenumbers_conv, intensities_conv
 
-    def get_predissociation(self) -> dict[str, dict[int, float]]:
+    def get_predissociation(self) -> dict[str, list[float]]:
         """Return polynomial coefficients for computing predissociation linewidths."""
-        return pd.read_csv(
+        return pl.read_csv(
             f"../data/{self.molecule.name}/predissociation/lewis_coeffs.csv"
-        ).to_dict()
+        ).to_dict(as_series=False)
 
     def get_einstein(self) -> np.ndarray:
         """Return a table of Einstein coefficients for spontaneous emission: A_{v'v''}.

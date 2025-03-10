@@ -1,12 +1,13 @@
 # module gui
-"""A GUI built using PySide6 with a native table view for pandas DataFrames."""
+"""A GUI built using PySide6 with a native table view for DataFrames."""
 
 import os
 import sys
+import time
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
+import polars as pl
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
@@ -99,23 +100,23 @@ class MyDoubleSpinBox(QDoubleSpinBox):
 
 
 class MyTable(QAbstractTableModel):
-    """A simple model to interface a Qt view with a pandas DataFrame."""
+    """A simple model to interface a Qt view with a DataFrame."""
 
-    def __init__(self, df: pd.DataFrame, parent=None):
+    def __init__(self, df: pl.DataFrame, parent=None):
         super().__init__(parent)
         self._df = df
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._df.index)
+        return self._df.height
 
     def columnCount(self, parent=QModelIndex()):
-        return len(self._df.columns)
+        return self._df.width
 
     def data(self, index, role=Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole:
-            value = self._df.iat[index.row(), index.column()]
+            value = self._df[index.row(), index.column()]
             return str(value)
         return None
 
@@ -125,11 +126,11 @@ class MyTable(QAbstractTableModel):
         if orientation == Qt.Orientation.Horizontal:
             return str(self._df.columns[section])
         if orientation == Qt.Orientation.Vertical:
-            return str(self._df.index[section])
+            return str(section)
         return None
 
 
-def create_dataframe_tab(df: pd.DataFrame, tab_label: str) -> QWidget:
+def create_dataframe_tab(df: pl.DataFrame, tab_label: str) -> QWidget:
     """Create a QWidget containing a QTableView to display the DataFrame."""
     widget = QWidget()
     layout = QVBoxLayout(widget)
@@ -257,7 +258,7 @@ class GUI(QMainWindow):
         # --- Left side: QTabWidget for tables ---
         self.tab_widget = QTabWidget()
         # Add an initial empty tab (using an empty DataFrame)
-        empty_df = pd.DataFrame()
+        empty_df = pl.DataFrame()
         empty_tab = create_dataframe_tab(empty_df, "v'-v''")
         self.tab_widget.addTab(empty_tab, "v'-v''")
         layout.addWidget(self.tab_widget, stretch=1)
@@ -374,7 +375,7 @@ class GUI(QMainWindow):
         )
         if filename:
             try:
-                df = pd.read_csv(filename)
+                df = pl.read_csv(filename)
             except ValueError:
                 QMessageBox.critical(self, "Error", "Data is improperly formatted.")
                 return
@@ -442,6 +443,7 @@ class GUI(QMainWindow):
 
     def add_simulation(self) -> None:
         """Run a simulation instance and update the plot and table tabs."""
+        start_time = time.time()
         # Determine temperatures based on mode.
         temp: float = self.temp_spinbox.value()
         temp_trn = temp_elc = temp_vib = temp_rot = temp
@@ -541,9 +543,13 @@ class GUI(QMainWindow):
                 }
                 for line in sim.bands[i].lines
             ]
-            df: pd.DataFrame = pd.DataFrame(data)
+
+            df: pl.DataFrame = pl.DataFrame(data)
+
             new_tab = create_dataframe_tab(df, f"{band[0]}-{band[1]}")
             self.tab_widget.addTab(new_tab, f"{band[0]}-{band[1]}")
+
+        print(f"Time: {time.time() - start_time}")
 
 
 def set_axis_labels(ax: Axes) -> None:
@@ -572,7 +578,7 @@ def create_figure() -> tuple[Figure, Axes]:
     return fig, axs
 
 
-def plot_sample(axs: Axes, df: pd.DataFrame, label: str, color: str) -> None:
+def plot_sample(axs: Axes, df: pl.DataFrame, label: str, color: str) -> None:
     """Plot sample data."""
     wavelengths = utils.wavenum_to_wavelen(df["wavenumber"])
     intensities = df["intensity"]

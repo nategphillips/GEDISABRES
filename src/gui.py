@@ -443,7 +443,8 @@ class GUI(QMainWindow):
 
     def add_simulation(self) -> None:
         """Run a simulation instance and update the plot and table tabs."""
-        start_time = time.time()
+        start_time: float = time.time()
+
         # Determine temperatures based on mode.
         temp: float = self.temp_spinbox.value()
         temp_trn = temp_elc = temp_vib = temp_rot = temp
@@ -475,6 +476,9 @@ class GUI(QMainWindow):
             pressure=pres,
             bands=bands,
         )
+
+        print(f"Time to create sim: {time.time() - start_time} s")
+        start_plot_time: float = time.time()
 
         colors: list[str] = get_colors(bands)
         self.axs.clear()
@@ -524,32 +528,40 @@ class GUI(QMainWindow):
         self.axs.legend()
         self.plot_canvas.draw()
 
+        print(f"Time to create plot: {time.time() - start_plot_time} s")
+        start_table_time: float = time.time()
+
         # Clear previous tabs.
         while self.tab_widget.count() > 0:
             self.tab_widget.removeTab(0)
 
         # Create a new tab for each vibrational band.
         for i, band in enumerate(bands):
-            data = [
-                {
-                    "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
-                    "Wavenumber": line.wavenumber,
-                    "Intensity": line.intensity,
-                    "J'": line.j_qn_up,
-                    "J''": line.j_qn_lo,
-                    "N'": line.n_qn_up,
-                    "N''": line.n_qn_lo,
-                    "Branch": line.branch_name + str(line.branch_idx_up) + str(line.branch_idx_lo),
-                }
-                for line in sim.bands[i].lines
-            ]
+            df: pl.DataFrame = pl.DataFrame(
+                [
+                    {
+                        "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
+                        "Wavenumber": line.wavenumber,
+                        "Intensity": line.intensity,
+                        "J'": line.j_qn_up,
+                        "J''": line.j_qn_lo,
+                        "N'": line.n_qn_up,
+                        "N''": line.n_qn_lo,
+                        "Branch": f"{line.branch_name}{line.branch_idx_up}{line.branch_idx_lo}",
+                    }
+                    for line in sim.bands[i].lines
+                ]
+            )
 
-            df: pl.DataFrame = pl.DataFrame(data)
+            tab_name: str = f"{band[0]}-{band[1]}"
+            new_tab: QWidget = create_dataframe_tab(df, tab_name)
+            self.tab_widget.addTab(new_tab, tab_name)
 
-            new_tab = create_dataframe_tab(df, f"{band[0]}-{band[1]}")
-            self.tab_widget.addTab(new_tab, f"{band[0]}-{band[1]}")
-
-        print(f"Time: {time.time() - start_time}")
+        # TODO: 25/03/10 - Creating tables seems to be the bottleneck in terms of speed, especially
+        #       when there are a large number of vibrational bands being displayed. I think this
+        #       is due to iterating over each Line, which means there's not much I can do.
+        print(f"Time to create table: {time.time() - start_table_time} s")
+        print(f"Total time: {time.time() - start_time} s\n")
 
 
 def set_axis_labels(ax: Axes) -> None:

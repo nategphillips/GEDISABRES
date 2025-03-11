@@ -7,7 +7,14 @@ from matplotlib.colors import Colormap, to_hex
 
 
 def get_colors(bands: list[tuple[int, int]]) -> list[str]:
-    """Return a list of colors."""
+    """Return a list of colors.
+
+    Args:
+        bands (list[tuple[int, int]]): A list of vibrational bands, e.g. [(0, 1), (0, 2)].
+
+    Returns:
+        list[str]: A list of colors in hex format.
+    """
     num_bands: int = len(bands)
 
     colors_small: list[str] = plt.rcParams["axes.prop_cycle"].by_key()["color"]

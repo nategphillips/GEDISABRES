@@ -26,13 +26,31 @@ class State:
 
     @staticmethod
     def get_constants(molecule: str, state: str) -> dict[str, list[float]]:
-        """Return the molecular constants for the specified electronic state in [1/cm]."""
+        """Return the molecular constants for the specified electronic state in [1/cm].
+
+        Args:
+            molecule (str): Parent molecule.
+            state (str): Name of the electronic state.
+
+        Returns:
+            dict[str, list[float]]: A `dict` of molecular constants for the electronic state.
+        """
         return pl.read_csv(Path("..", "data", molecule, "states", f"{state}.csv")).to_dict(
             as_series=False
         )
 
     def is_allowed(self, n_qn: int) -> bool:
-        """Return whether or not the selected rotational level is allowed."""
+        """Return whether or not the selected rotational level is allowed.
+
+        Args:
+            n_qn (int): Rotational quantum number N.
+
+        Raises:
+            ValueError: If the electronic state does not exist.
+
+        Returns:
+            bool: True if the selected rotational level is allowed.
+        """
         if self.name == "X3Sg-":
             # For X3Σg-, only the rotational levels with odd N can be populated.
             return bool(n_qn % 2 == 1)

@@ -38,10 +38,10 @@ class Line:
         Args:
             sim (Sim): Parent simulation.
             band (Band): Vibrational band.
-            n_qn_up (int): Upper rotational quantum number N.
-            n_qn_lo (int): Lower rotational quantum number N.
-            j_qn_up (int): Upper rotational quantum number J.
-            j_qn_lo (int): Lower rotational quantum number J.
+            n_qn_up (int): Upper state rotational quantum number N'.
+            n_qn_lo (int): Lower state rotational quantum number N''.
+            j_qn_up (int): Upper state rotational quantum number J'.
+            j_qn_lo (int): Lower state rotational quantum number J''.
             branch_idx_up (int): Upper branch index.
             branch_idx_lo (int): Lower branch index.
             branch_name (str): Branch name.
@@ -63,7 +63,14 @@ class Line:
         self.intensity: float = self.get_intensity()
 
     def fwhm_predissociation(self, is_selected: bool) -> float:
-        """Return the predissociation broadening FWHM in [1/cm]."""
+        """Return the predissociation broadening FWHM in [1/cm].
+
+        Args:
+            is_selected (bool): True if predissociation broadening should be simulated.
+
+        Returns:
+            float: The predissociation broadening FWHM in [1/cm].
+        """
         if is_selected:
             # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986
             #       for the predissociation of all bands for now. The goal is to use experimental
@@ -85,7 +92,14 @@ class Line:
         return 0.0
 
     def fwhm_natural(self, is_selected: bool) -> float:
-        """Return the natural broadening FWHM in [1/cm]."""
+        """Return the natural broadening FWHM in [1/cm].
+
+        Args:
+            is_selected (bool): True if natural broadening should be simulated.
+
+        Returns:
+            float: The natural broadening FWHM in [1/cm].
+        """
         if is_selected:
             # TODO: 10/21/24 - Look over this, seems weird still.
 
@@ -107,7 +121,14 @@ class Line:
         return 0.0
 
     def fwhm_collisional(self, is_selected: bool) -> float:
-        """Return the collisional broadening FWHM in [1/cm]."""
+        """Return the collisional broadening FWHM in [1/cm].
+
+        Args:
+            is_selected (bool): True if collisional broadening should be simulated.
+
+        Returns:
+            float: The collisional broadening FWHM in [1/cm].
+        """
         if is_selected:
             # NOTE: 11/05/24 - In most cases, the amount of electronically excited molecules in the
             #       gas is essentially zero, meaning that most molecules are in the ground state.
@@ -149,7 +170,14 @@ class Line:
         return 0.0
 
     def fwhm_doppler(self, is_selected: bool) -> float:
-        """Return the Doppler broadening FWHM in [1/cm]."""
+        """Return the Doppler broadening FWHM in [1/cm].
+
+        Args:
+            is_selected (bool): True if Doppler broadening should be simulated.
+
+        Returns:
+            float: The Doppler broadening FWHM in [1/cm].
+        """
         if is_selected:
             # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
             # [cm/s] to [m/s] to ensure that the units work out correctly.
@@ -164,7 +192,15 @@ class Line:
         return 0.0
 
     def fwhm_instrument(self, is_selected: bool, inst_broadening_wl: float) -> float:
-        """Return the instrument broadening FWHM in [1/cm]."""
+        """Return the instrument broadening FWHM in [1/cm].
+
+        Args:
+            is_selected (bool): True if instrument broadening should be simulated.
+            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
+
+        Returns:
+            float: The instrument broadening FWHM in [1/cm].
+        """
         if is_selected:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
@@ -177,7 +213,11 @@ class Line:
         return 0.0
 
     def get_wavenumber(self) -> float:
-        """Return the wavenumber in [1/cm]."""
+        """Return the wavenumber in [1/cm].
+
+        Returns:
+            float: The wavenumber of the rotational line in [1/cm].
+        """
         # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
         #       pp. 168-169.
 
@@ -193,7 +233,11 @@ class Line:
         )
 
     def get_intensity(self) -> float:
-        """Return the intensity."""
+        """Return the intensity.
+
+        Returns:
+            float: The intensity of the rotational line.
+        """
         # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
         #       pp. 126-127, pp. 200-201, and pp. 382-383.
 
@@ -216,7 +260,11 @@ class Line:
         )
 
     def get_rot_boltz_frac(self) -> float:
-        """Return the rotational Boltzmann fraction N_J / N."""
+        """Return the rotational Boltzmann fraction, N_J / N.
+
+        Returns:
+            float: The vibrational Boltzmann fraction, N_J / N.
+        """
         match self.sim.sim_type:
             case SimType.EMISSION:
                 state = self.sim.state_up
@@ -241,7 +289,11 @@ class Line:
         )
 
     def get_honl_london_factor(self) -> float:
-        """Return the Hönl-London factor (line strength)."""
+        """Return the Hönl-London (line strength) factor.
+
+        Returns:
+            float: The Hönl-London (line strength) factor.
+        """
         # For emission, the relevant rotational quantum number is N'; for absorption, it's N''.
         match self.sim.sim_type:
             case SimType.EMISSION:

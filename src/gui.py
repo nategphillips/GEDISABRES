@@ -47,6 +47,8 @@ from state import State
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from numpy.typing import NDArray
+
 DEFAULT_LINES: int = 40
 DEFAULT_GRANULARITY: int = int(1e4)
 
@@ -592,8 +594,8 @@ def create_figure() -> tuple[Figure, Axes]:
 
 def plot_sample(axs: Axes, df: pl.DataFrame, label: str, color: str) -> None:
     """Plot sample data."""
-    wavelengths = utils.wavenum_to_wavelen(df["wavenumber"])
-    intensities = df["intensity"]
+    wavelengths: NDArray[np.float64] = utils.wavenum_to_wavelen(df["wavenumber"].to_numpy())
+    intensities: NDArray[np.float64] = df["intensity"].to_numpy()
     axs.plot(wavelengths, intensities / intensities.max(), label=label, color=color)
 
 

@@ -1,17 +1,45 @@
 # module terms
 """Contains functions used for vibrational and rotational term calculations."""
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
+from state import State
 
-def vibrational_term(state, v_qn: int) -> float:
-    """Return the vibrational term value."""
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+
+def vibrational_term(state: State, v_qn: int) -> float:
+    """Return the vibrational term value in [1/cm].
+
+    Args:
+        state (State): Electronic `State` object.
+        v_qn (int): Vibrational quantum number v.
+
+    Returns:
+        float: The vibrational term value in [1/cm].
+    """
     return state.constants["G"][v_qn]
 
 
-def rotational_term(state, v_qn: int, j_qn: int, branch_idx: int) -> float:
-    """Return the rotational term value."""
-    lookup_table: dict = state.constants
+def rotational_term(state: State, v_qn: int, j_qn: int, branch_idx: int) -> float:
+    """Return the rotational term value in [1/cm].
+
+    Args:
+        state (State): Electronic `State` object.
+        v_qn (int): Vibrational quantum number v.
+        j_qn (int): Rotational quantum number J.
+        branch_idx (int): Branch index.
+
+    Raises:
+        ValueError: If the branch index cannot be found.
+
+    Returns:
+        float: The rotational term value in [1/cm].
+    """
+    lookup_table: dict[str, list[float]] = state.constants
 
     b: float = lookup_table["B"][v_qn]
     d: float = lookup_table["D"][v_qn]
@@ -53,7 +81,7 @@ def rotational_term(state, v_qn: int, j_qn: int, branch_idx: int) -> float:
     h21: float = h12
     h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
 
-    hamiltonian: np.ndarray = np.array([[h11, h12], [h21, h22]])
+    hamiltonian: NDArray[np.float64] = np.array([[h11, h12], [h21, h22]])
     f1, f3 = np.linalg.eigvals(hamiltonian)
 
     match branch_idx:

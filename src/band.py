@@ -15,6 +15,8 @@ from line import Line
 from simtype import SimType
 
 if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
     from sim import Sim
 
 
@@ -26,8 +28,8 @@ class Band:
 
         Args:
             sim (Sim): Parent simulation.
-            v_qn_up (int): Upper vibrational quantum number.
-            v_qn_lo (int): Lower vibrational quantum number.
+            v_qn_up (int): Upper vibrational quantum number v'.
+            v_qn_lo (int): Lower vibrational quantum number v''.
         """
         self.sim: Sim = sim
         self.v_qn_up: int = v_qn_up
@@ -37,16 +39,33 @@ class Band:
         self.vib_boltz_frac: float = self.get_vib_boltz_frac()
         self.lines: list[Line] = self.get_lines()
 
-    def wavenumbers_line(self) -> np.ndarray:
-        """Return an array of wavenumbers, one for each line."""
+    def wavenumbers_line(self) -> NDArray[np.float64]:
+        """Return an array of wavenumbers, one for each line.
+
+        Returns:
+            NDArray[np.float64]: All discrete rotational line wavenumbers belonging to the
+                vibrational band.
+        """
         return np.array([line.wavenumber for line in self.lines])
 
-    def intensities_line(self) -> np.ndarray:
-        """Return an array of intensities, one for each line."""
+    def intensities_line(self) -> NDArray[np.float64]:
+        """Return an array of intensities, one for each line.
+
+        Returns:
+            NDArray[np.float64]: All rotational line intensities belonging to the vibrational band.
+        """
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self, inst_broadening_wl: float, granularity: int) -> np.ndarray:
-        """Return an array of convolved wavenumbers."""
+    def wavenumbers_conv(self, inst_broadening_wl: float, granularity: int) -> NDArray[np.float64]:
+        """Return an array of convolved wavenumbers.
+
+        Args:
+            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
+            granularity (int): Number of points on the wavenumber axis.
+
+        Returns:
+            NDArray[np.float64]: A continuous range of wavenumbers.
+        """
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
@@ -55,15 +74,24 @@ class Band:
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.
-        wns_line: np.ndarray = self.wavenumbers_line()
+        wns_line: NDArray[np.float64] = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min() - padding, wns_line.max() + padding, granularity)
 
     def intensities_conv(
         self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
-    ) -> np.ndarray:
-        """Return an array of convolved intensities."""
+    ) -> NDArray[np.float64]:
+        """Return an array of convolved intensities.
+
+        Args:
+            fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
+            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
+            granularity (int): Number of points on the wavenumber axis.
+
+        Returns:
+            NDArray[np.float64]: A continuous range of intensities.
+        """
         return convolve.convolve_brod(
             self.lines,
             self.wavenumbers_conv(inst_broadening_wl, granularity),
@@ -72,7 +100,11 @@ class Band:
         )
 
     def get_vib_boltz_frac(self) -> float:
-        """Return the vibrational Boltzmann fraction N_v / N."""
+        """Return the vibrational Boltzmann fraction N_v / N.
+
+        Returns:
+            float: The vibrational Boltzmann fraction, N_v / N.
+        """
         match self.sim.sim_type:
             case SimType.EMISSION:
                 state = self.sim.state_up
@@ -94,7 +126,11 @@ class Band:
         )
 
     def get_band_origin(self) -> float:
-        """Return the band origin in [1/cm]."""
+        """Return the band origin in [1/cm].
+
+        Returns:
+            float: The band origin in [1/cm].
+        """
         # Herzberg p. 168, eq. (IV, 24)
 
         upper_state: dict[str, list[float]] = self.sim.state_up.constants
@@ -120,7 +156,11 @@ class Band:
         )
 
     def get_rot_partition_fn(self) -> float:
-        """Return the rotational partition function."""
+        """Return the rotational partition function, Q_r.
+
+        Returns:
+            float: The rotational partition function, Q_r.
+        """
         # TODO: 10/25/24 - Add nuclear effects to make this the effective rotational partition
         #       function.
 
@@ -164,9 +204,13 @@ class Band:
         # rotational orientations in space.
         return q_r / self.sim.molecule.symmetry_param
 
-    def get_lines(self):
-        """Return a list of all allowed rotational lines."""
-        lines = []
+    def get_lines(self) -> list[Line]:
+        """Return a list of all allowed rotational lines.
+
+        Returns:
+            list[Line]: A list of all allowed `Line` objects for the given selection rules.
+        """
+        lines: list[Line] = []
 
         for n_qn_up in self.sim.rot_lvls:
             for n_qn_lo in self.sim.rot_lvls:
@@ -177,21 +221,32 @@ class Band:
 
         return lines
 
-    def allowed_branches(self, n_qn_up: int, n_qn_lo: int):
-        """Determine the selection rules for Hund's case (b)."""
+    def allowed_branches(self, n_qn_up: int, n_qn_lo: int) -> list[Line]:
+        """Determine the selection rules for Hund's case (b).
+
+        Args:
+            n_qn_up (int): Upper state rotational quantum number N'.
+            n_qn_lo (int): Lower state rotational quantum number N''.
+
+        Raises:
+            ValueError: If the spin multiplicity of the two electronic states do not match.
+
+        Returns:
+            list[Line]: A list of `Line` objects for all allowed branches.
+        """
         # For Σ-Σ transitions, the rotational selection rules are ∆N = ±1, ∆N ≠ 0.
         # Herzberg p. 244, eq. (V, 44)
 
-        lines = []
+        lines: list[Line] = []
 
         # Determine how many lines should be present in the fine structure of the molecule due to
         # the effects of spin multiplicity.
         if self.sim.state_up.spin_multiplicity == self.sim.state_lo.spin_multiplicity:
-            branch_range = range(1, self.sim.state_up.spin_multiplicity + 1)
+            branch_range: range = range(1, self.sim.state_up.spin_multiplicity + 1)
         else:
             raise ValueError("Spin multiplicity of the two electronic states do not match.")
 
-        delta_n_qn = n_qn_up - n_qn_lo
+        delta_n_qn: int = n_qn_up - n_qn_lo
 
         # R branch
         if delta_n_qn == 1:
@@ -206,10 +261,22 @@ class Band:
 
         return lines
 
-    def branch_index(self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str):
-        """Return the rotational lines within a given branch."""
+    def branch_index(
+        self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str
+    ) -> list[Line]:
+        """Return the rotational lines within a given branch.
 
-        def add_line(branch_idx_up: int, branch_idx_lo: int, is_satellite: bool):
+        Args:
+            n_qn_up (int): Upper state rotational quantum number N'.
+            n_qn_lo (int): Lower state rotational quantum number N''.
+            branch_range (range): Range of branches corresponding to the spin multiplicity.
+            branch_name (str): The name of the branch, e.g. R, Q, or P.
+
+        Returns:
+            list[Line]: A list of `Line` objects within a given branch.
+        """
+
+        def add_line(branch_idx_up: int, branch_idx_lo: int, is_satellite: bool) -> None:
             """Create and append a rotational line."""
             lines.append(
                 Line(
@@ -231,7 +298,7 @@ class Band:
         # NOTE: 10/16/24 - Every transition has 6 total lines (3 main + 3 satellite) except for the
         #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite).
 
-        lines = []
+        lines: list[Line] = []
 
         # Handle the special case where N' = 0 (only the P1, PQ12, and PQ13 lines exist).
         if n_qn_up == 0:

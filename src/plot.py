@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from matplotlib.axes import Axes
+from numpy.typing import NDArray
 
 import utils
 from sim import Sim
@@ -13,10 +14,10 @@ if TYPE_CHECKING:
     from line import Line
 
 
-def plot_sample(axs: Axes, data: np.ndarray) -> None:
-    """Plotssample data."""
-    wavelengths: np.ndarray = utils.wavenum_to_wavelen(data[:, 0])
-    intensities: np.ndarray = data[:, 1]
+def plot_sample(axs: Axes, data: NDArray[np.float64]) -> None:
+    """Plots sample data."""
+    wavelengths: NDArray[np.float64] = utils.wavenum_to_wavelen(data[:, 0])
+    intensities: NDArray[np.float64] = data[:, 1]
 
     axs.plot(wavelengths, intensities / intensities.max())
 
@@ -26,8 +27,8 @@ def plot_line(axs: Axes, sim: Sim, colors: list[str]) -> None:
     max_intensity: float = sim.all_line_data()[1].max()
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_line: np.ndarray = utils.wavenum_to_wavelen(band.wavenumbers_line())
-        intensities_line: np.ndarray = band.intensities_line()
+        wavelengths_line: NDArray[np.float64] = utils.wavenum_to_wavelen(band.wavenumbers_line())
+        intensities_line: NDArray[np.float64] = band.intensities_line()
 
         axs.stem(
             wavelengths_line,
@@ -75,10 +76,10 @@ def plot_conv_sep(
     )
 
     for idx, band in enumerate(sim.bands):
-        wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(
+        wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(
             band.wavenumbers_conv(inst_broadening_wl, granularity)
         )
-        intensities_conv: np.ndarray = band.intensities_conv(
+        intensities_conv: NDArray[np.float64] = band.intensities_conv(
             fwhm_selections, inst_broadening_wl, granularity
         )
 
@@ -102,7 +103,7 @@ def plot_conv_all(
     wavenumbers_conv, intensities_conv = sim.all_conv_data(
         fwhm_selections, inst_broadening_wl, granularity
     )
-    wavelengths_conv: np.ndarray = utils.wavenum_to_wavelen(wavenumbers_conv)
+    wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_conv)
 
     axs.plot(
         wavelengths_conv,

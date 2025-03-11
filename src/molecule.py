@@ -23,7 +23,15 @@ class Molecule:
 
     @staticmethod
     def get_symmetry_param(atom_1: Atom, atom_2: Atom) -> int:
-        """Return the symmetry parameter of the molecule."""
+        """Return the symmetry parameter of the molecule.
+
+        Args:
+            atom_1 (Atom): First constituent atom.
+            atom_2 (Atom): Second constituent atom.
+
+        Returns:
+            int: The symmetry parameter of the molecule: 2 for homonuclear, 1 for heteronuclear.
+        """
         # For homonuclear diatomic molecules like O2, the symmetry parameter is 2.
         if atom_1.name == atom_2.name:
             return 2

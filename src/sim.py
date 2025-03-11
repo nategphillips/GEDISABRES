@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
+from numpy.typing import NDArray
 
 import constants
 import terms
@@ -23,7 +24,7 @@ class Sim:
         molecule: Molecule,
         state_up: State,
         state_lo: State,
-        rot_lvls: np.ndarray,
+        rot_lvls: NDArray[np.int64],
         temp_trn: float,
         temp_elc: float,
         temp_vib: float,
@@ -38,7 +39,7 @@ class Sim:
             molecule (Molecule): Which molecule to simulate.
             state_up (State): Upper electronic state.
             state_lo (State): Lower electronic state.
-            rot_lvls (np.ndarray): Which rotational levels to simulate.
+            rot_lvls (NDArray[np.int64]): Which rotational levels to simulate.
             temp_trn (float): Translational temperature.
             temp_elc (float): Electronic temperature.
             temp_vib (float): Vibrational temperature.
@@ -50,7 +51,7 @@ class Sim:
         self.molecule: Molecule = molecule
         self.state_up: State = state_up
         self.state_lo: State = state_lo
-        self.rot_lvls: np.ndarray = rot_lvls
+        self.rot_lvls: NDArray[np.int64] = rot_lvls
         self.temp_trn: float = temp_trn
         self.temp_elc: float = temp_elc
         self.temp_vib: float = temp_vib
@@ -59,15 +60,15 @@ class Sim:
         self.elc_part: float = self.get_elc_partition_fn()
         self.vib_part: float = self.get_vib_partition_fn()
         self.elc_boltz_frac: float = self.get_elc_boltz_frac()
-        self.franck_condon: np.ndarray = self.get_franck_condon()
-        self.einstein: np.ndarray = self.get_einstein()
+        self.franck_condon: NDArray[np.float64] = self.get_franck_condon()
+        self.einstein: NDArray[np.float64] = self.get_einstein()
         self.predissociation: dict[str, list[float]] = self.get_predissociation()
         self.bands: list[Band] = self.get_bands(bands)
 
-    def all_line_data(self) -> tuple[np.ndarray, np.ndarray]:
+    def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
-        wavenumbers_line: np.ndarray = np.array([])
-        intensities_line: np.ndarray = np.array([])
+        wavenumbers_line: NDArray[np.float64] = np.array([])
+        intensities_line: NDArray[np.float64] = np.array([])
 
         for band in self.bands:
             wavenumbers_line = np.concatenate((wavenumbers_line, band.wavenumbers_line()))
@@ -77,7 +78,7 @@ class Sim:
 
     def all_conv_data(
         self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the convolved data of all vibrational bands."""
         # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
         # expressed as a sum over the individual line absorption coefficients. See "Analysis of
@@ -85,7 +86,7 @@ class Sim:
         # BelBruno (1981).
 
         # The total span of wavenumbers from all bands.
-        wavenumbers_line: np.ndarray = np.concatenate(
+        wavenumbers_line: NDArray[np.float64] = np.concatenate(
             [band.wavenumbers_line() for band in self.bands]
         )
 
@@ -101,13 +102,15 @@ class Sim:
         grid_max: float = wavenumbers_line.max() + padding
 
         # Create common wavenumber and intensity grids to hold all of the vibrational band data.
-        wavenumbers_conv: np.ndarray = np.linspace(grid_min, grid_max, granularity)
-        intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
+        wavenumbers_conv: NDArray[np.float64] = np.linspace(
+            grid_min, grid_max, granularity, dtype=np.float64
+        )
+        intensities_conv: NDArray[np.float64] = np.zeros_like(wavenumbers_conv)
 
         # Since each band is defined on a different wavenumber interval, they must each be
         # interpolated onto the new domain so that they can be summed at each point.
         for band in self.bands:
-            interpolated_intensity: np.ndarray = np.interp(
+            interpolated_intensity: NDArray[np.float64] = np.interp(
                 wavenumbers_conv,
                 band.wavenumbers_conv(inst_broadening_wl, granularity),
                 band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity),
@@ -122,7 +125,7 @@ class Sim:
             Path("..", "data", self.molecule.name, "predissociation", "lewis_coeffs.csv")
         ).to_dict(as_series=False)
 
-    def get_einstein(self) -> np.ndarray:
+    def get_einstein(self) -> NDArray[np.float64]:
         """Return a table of Einstein coefficients for spontaneous emission: A_{v'v''}.
 
         Rows correspond to the upper state vibrational quantum number (v'), while columns correspond
@@ -139,7 +142,7 @@ class Sim:
             delimiter=",",
         )
 
-    def get_franck_condon(self) -> np.ndarray:
+    def get_franck_condon(self) -> NDArray[np.float64]:
         """Return a table of Franck-Condon factors for the associated electronic transition.
 
         Rows correspond to the upper state vibrational quantum number (v'), while columns correspond

@@ -2,17 +2,30 @@
 """Contains functions used for convolution."""
 
 import numpy as np
+from numpy.typing import NDArray
 from scipy.special import wofz
 
 from line import Line
 
 
 def broadening_fn(
-    wavenumbers: np.ndarray, line: Line, fwhm_selections: dict[str, bool], inst_broadening_wl: float
-) -> np.ndarray:
+    wavenumbers_conv: NDArray[np.float64],
+    line: Line,
+    fwhm_selections: dict[str, bool],
+    inst_broadening_wl: float,
+) -> NDArray[np.float64]:
     """Return the contribution of a single rotational line to the total spectra.
 
     Uses a Voigt probability density function.
+
+    Args:
+        wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
+        line (Line): A rotational `Line` object.
+        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
+        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
+
+    Returns:
+        NDArray[np.float64]: The Voigt probability density function for a single rotational line.
     """
     # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian FWHM.
     gaussian: float = line.fwhm_instrument(
@@ -32,19 +45,23 @@ def broadening_fn(
 
     # If only Gaussian FWHM parameters are present, then return a Gaussian profile.
     if (gaussian > 0.0) and (lorentzian == 0.0):
-        return np.exp(-((wavenumbers - line.wavenumber) ** 2) / (2 * gaussian**2)) / (
+        return np.exp(-((wavenumbers_conv - line.wavenumber) ** 2) / (2 * gaussian**2)) / (
             gaussian * np.sqrt(2 * np.pi)
         )
 
     # Similarly, if only Lorentzian FWHM parameters exist, then return a Lorentzian profile.
     if (gaussian == 0.0) and (lorentzian > 0.0):
-        return lorentzian / (np.pi * ((wavenumbers - line.wavenumber) ** 2 + lorentzian**2))
+        return np.divide(
+            lorentzian, (np.pi * ((wavenumbers_conv - line.wavenumber) ** 2 + lorentzian**2))
+        )
 
     # TODO: 25/02/14 - Should check if both Gaussian and Lorentzian FWHM params are zero here and
     #       return an error if so.
 
     # Otherwise, compute the argument of the complex Faddeeva function and return a Voigt profile.
-    z: np.ndarray = ((wavenumbers - line.wavenumber) + 1j * lorentzian) / (gaussian * np.sqrt(2))
+    z: NDArray[np.float64] = ((wavenumbers_conv - line.wavenumber) + 1j * lorentzian) / (
+        gaussian * np.sqrt(2)
+    )
 
     # The probability density function for the Voigt profile.
     return np.real(wofz(z)) / (gaussian * np.sqrt(2 * np.pi))
@@ -52,12 +69,22 @@ def broadening_fn(
 
 def convolve_brod(
     lines: list[Line],
-    wavenumbers_conv: np.ndarray,
+    wavenumbers_conv: NDArray[np.float64],
     fwhm_selections: dict[str, bool],
     inst_broadening_wl: float,
-) -> np.ndarray:
-    """Convolve a discrete number of spectral lines into a continuous spectra."""
-    intensities_conv: np.ndarray = np.zeros_like(wavenumbers_conv)
+) -> NDArray[np.float64]:
+    """Convolve a discrete number of spectral lines into a continuous spectra.
+
+    Args:
+        lines (list[Line]): A list of rotational `Line` objects.
+        wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
+        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
+        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
+
+    Returns:
+        NDArray[np.float64]: The total intensity spectrum with contributions from all lines.
+    """
+    intensities_conv: NDArray[np.float64] = np.zeros_like(wavenumbers_conv)
 
     # TODO: 25/02/12 - See if switching to scipy's convolve method improves the speed of this,
     #       especially with a large number of bands or points.

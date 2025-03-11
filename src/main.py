@@ -2,6 +2,7 @@
 """A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,6 +12,9 @@ from molecule import Molecule
 from sim import Sim
 from simtype import SimType
 from state import State
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 
 def main() -> None:
@@ -41,11 +45,11 @@ def main() -> None:
         bands=bands,
     )
 
-    sample: np.ndarray = np.genfromtxt(
+    sample: NDArray[np.float64] = np.genfromtxt(
         fname=Path("..", "data", "samples", "harvard_20.csv"), delimiter=",", skip_header=1
     )
-    wns_samp = sample[:, 0]
-    ins_samp = sample[:, 1] / sample[:, 1].max()
+    wns_samp: NDArray[np.float64] = sample[:, 0]
+    ins_samp: NDArray[np.float64] = sample[:, 1] / sample[:, 1].max()
 
     plt.plot(wns_samp, ins_samp, label="sample")
 
@@ -81,8 +85,8 @@ def main() -> None:
 
     # Interpolate simulated data to have the same number of points as the experimental data and
     # compute the residual.
-    ins_inrp: np.ndarray = np.interp(sample[:, 0], wns, ins)
-    residual: np.ndarray = np.abs(ins_samp - ins_inrp)
+    ins_inrp: NDArray[np.float64] = np.interp(sample[:, 0], wns, ins)
+    residual: NDArray[np.float64] = np.abs(ins_samp - ins_inrp)
 
     # Show residual below the main data for clarity.
     plt.plot(wns_samp, -residual, label="residual")

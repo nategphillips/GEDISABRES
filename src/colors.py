@@ -1,9 +1,14 @@
 # module colors
 """Provides a list of colors based on the number of bands to be plotted."""
 
+from typing import TYPE_CHECKING
+
 import matplotlib.pyplot as plt
-from cycler import cycler
+from matplotlib import color_sequences
 from matplotlib.colors import Colormap, to_hex
+
+if TYPE_CHECKING:
+    from matplotlib.typing import ColorType
 
 
 def get_colors(bands: list[tuple[int, int]]) -> list[str]:
@@ -22,12 +27,7 @@ def get_colors(bands: list[tuple[int, int]]) -> list[str]:
     if num_bands < len(colors_small):
         return colors_small
 
-    # NOTE: 25/03/10 - The `ListedColormap` class has a `colors` attribute, but for some reason, the
-    #       `get_cmap` method only ever returns a `Colormap`, even when the map is discrete. All
-    #       that to say, ignore this Pyright error. Also, see the link below for more info.
-    #
-    # https://matplotlib.org/stable/gallery/color/individual_colors_from_cmap.html#extracting-colors-from-a-discrete-colormap
-    palette: list[tuple] = cycler("color", plt.get_cmap("tab20c").colors).by_key()["color"]
+    palette: list[ColorType] = color_sequences["tab20c"]
     colors_medium: list[str] = [to_hex(color) for color in palette]
 
     if num_bands < len(colors_medium):

@@ -254,9 +254,8 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     Returns:
         RateParams: Parameters related to the rate equations for the selected rotational line.
     """
-    # TODO: 25/03/11 - Should pull these electronic degeneracies from the constants module.
-    g_l: int = 3
-    g_u: int = 1
+    g_u: int = constants.ELECTRONIC_DEGENERACIES[sim.molecule.name][sim.state_up.name]
+    g_l: int = constants.ELECTRONIC_DEGENERACIES[sim.molecule.name][sim.state_lo.name]
 
     a21_coeffs: NDArray[np.float64] = np.loadtxt(
         fname=Path(
@@ -509,7 +508,7 @@ def main() -> None:
     f, sf = scan_fluences(
         molecule, state_up, state_lo, 1800, 101325, 2, 7, "P", 1, 9, 30e-9, 20e-9, 42.5e-3
     )
-    plt.plot(f, sf, label="(2 ,7)")
+    plt.plot(f, sf, label="(2, 7)")
 
     jay_06_r17x: NDArray[np.float64] = np.array([0, 2, 3.8, 7, 12.1, 23, 43]) / 1e3
     jay_06_r17y: NDArray[np.float64] = np.array([0, 0.025, 0.06, 0.12, 0.27, 0.55, 1])

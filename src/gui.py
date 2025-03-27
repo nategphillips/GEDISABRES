@@ -276,6 +276,11 @@ class GUI(QMainWindow):
 
         # --- Right side: Plot area ---
         self.plot_widget = pg.PlotWidget()
+
+        # Adds a legend at the top right of the plot.
+        self.plot_widget.addLegend(offset=(0, 1))
+        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm<sup>-1</sup>]")
         self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
 
@@ -575,6 +580,33 @@ class GUI(QMainWindow):
 
         print(f"Time to create table: {time.time() - start_table_time} s")
         print(f"Total time: {time.time() - start_time} s\n")
+
+
+class WavenumberAxis(pg.AxisItem):
+    """A custom x-axis displaying wavenumbers."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def tickStrings(self, wavelengths: list[float], *_) -> list[str]:
+        """Return the wavenumber strings that are placed next to ticks.
+
+        Args:
+            wavelengths (list[float]): List of wavelength values.
+
+        Returns:
+            list[str]: List of wavenumber values placed next to ticks.
+        """
+        strings: list[str] = []
+
+        for wavelength in wavelengths:
+            if wavelength != 0:
+                wavenumber: float = utils.wavenum_to_wavelen(wavelength)
+                strings.append(f"{wavenumber:.1f}")
+            else:
+                strings.append("∞")
+
+        return strings
 
 
 def main() -> None:

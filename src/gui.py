@@ -8,10 +8,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from matplotlib.axes import Axes
-from matplotlib.backends.backend_qt import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
+import pyqtgraph as pg
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPoint, QRect, Qt
 from PySide6.QtGui import QValidator
 from PySide6.QtWidgets import (
@@ -150,6 +147,18 @@ class GUI(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
+
+        pg.setConfigOption("background", (30, 30, 30))
+        pg.setConfigOption("foreground", "w")
+
+        # NOTE: 25/03/27 - Enabling antialiasing with a line width greater than 1 leads to severe
+        #       performance issues. Setting `useOpenGL=True` doesn't help since antialiasing does
+        #       not work with OpenGL from what I've seen. Relevant topics:
+        #       - https://github.com/pyqtgraph/pyqtgraph/issues/533
+        #       - https://pyqtgraph.narkive.com/aIpWRh9F/is-antialiasing-for-2d-plots-with-opengl-not-supported
+        #
+        # pg.setConfigOptions(antialias=True, useOpenGL=True)
+
         self.setWindowTitle("Diatomic Molecular Simulation")
         self.resize(1600, 800)
         self.center()
@@ -266,14 +275,15 @@ class GUI(QMainWindow):
         layout.addWidget(self.tab_widget, stretch=1)
 
         # --- Right side: Plot area ---
-        self.plot_widget = QWidget()
-        plot_layout = QVBoxLayout(self.plot_widget)
-        self.fig, self.axs = create_figure()
-        self.plot_canvas = FigureCanvas(self.fig)
-        plot_layout.addWidget(self.plot_canvas)
-        self.toolbar = NavigationToolbar(self.plot_canvas, self.plot_widget)
-        plot_layout.addWidget(self.toolbar)
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+
+        # Initial arbitrary wavelength range
+        self.plot_widget.setXRange(100, 200)
+
         layout.addWidget(self.plot_widget, stretch=2)
+        self.legend = self.plot_widget.addLegend()
 
         return main_widget
 
@@ -377,19 +387,25 @@ class GUI(QMainWindow):
         )
         if filename:
             try:
-                df = pl.read_csv(filename)
+                df: pl.DataFrame = pl.read_csv(filename)
             except ValueError:
                 QMessageBox.critical(self, "Error", "Data is improperly formatted.")
                 return
         else:
             return
 
-        new_tab = create_dataframe_tab(df, Path(filename).name)
-        self.tab_widget.addTab(new_tab, Path(filename).name)
+        display_name: str = Path(filename).name
 
-        plot_sample(self.axs, df, Path(filename).name, "black")
-        self.axs.legend()
-        self.plot_canvas.draw()
+        new_tab: QWidget = create_dataframe_tab(df, display_name)
+        self.tab_widget.addTab(new_tab, display_name)
+
+        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
+        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
+
+        plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
+
+        # Update the wavelength range automatically based on the plotted data.
+        self.plot_widget.autoRange()
 
     def switch_temp_mode(self) -> None:
         """Switch between equilibrium and nonequilibrium temperature modes."""
@@ -483,8 +499,8 @@ class GUI(QMainWindow):
         start_plot_time: float = time.time()
 
         colors: list[str] = get_colors(bands)
-        self.axs.clear()
-        set_axis_labels(self.axs)
+
+        self.plot_widget.clear()
 
         # Map plot types to functions.
         map_functions: dict[str, Callable] = {
@@ -507,10 +523,8 @@ class GUI(QMainWindow):
 
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
-                # The instrument broadening FWHM passed here is in [nm], it will get converted to
-                # [1/cm] in the FWHM function of the Line class.
                 plot_function(
-                    self.axs,
+                    self.plot_widget,
                     sim,
                     colors,
                     fwhm_selections,
@@ -518,7 +532,7 @@ class GUI(QMainWindow):
                     self.granularity_spinbox.value(),
                 )
             else:
-                plot_function(self.axs, sim, colors)
+                plot_function(self.plot_widget, sim, colors)
         else:
             QMessageBox.information(
                 self,
@@ -527,8 +541,8 @@ class GUI(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
 
-        self.axs.legend()
-        self.plot_canvas.draw()
+        # Update the wavelength range automatically based on the plotted data.
+        self.plot_widget.autoRange()
 
         print(f"Time to create plot: {time.time() - start_plot_time} s")
         start_table_time: float = time.time()
@@ -559,44 +573,8 @@ class GUI(QMainWindow):
             new_tab: QWidget = create_dataframe_tab(df, tab_name)
             self.tab_widget.addTab(new_tab, tab_name)
 
-        # TODO: 25/03/10 - Creating tables seems to be the bottleneck in terms of speed, especially
-        #       when there are a large number of vibrational bands being displayed. I think this
-        #       is due to iterating over each Line, which means there's not much I can do.
         print(f"Time to create table: {time.time() - start_table_time} s")
         print(f"Total time: {time.time() - start_time} s\n")
-
-
-def set_axis_labels(ax: Axes) -> None:
-    """Set the main x-label to wavelength and adds a secondary wavenumber x-axis."""
-
-    def conversion_fn(x):
-        x = np.array(x, float)
-        near_zero = np.isclose(x, 0)
-        x[near_zero] = np.inf
-        x[~near_zero] = 1 / x[~near_zero]
-        return x * 1e7
-
-    secax = ax.secondary_xaxis("top", functions=(conversion_fn, conversion_fn))
-    secax.set_xlabel("Wavenumber, $\\nu$ [cm$^{-1}$]")
-    ax.set_xlabel("Wavelength, $\\lambda$ [nm]")
-    ax.set_ylabel("Intensity, $I$ [a.u.]")
-
-
-def create_figure() -> tuple[Figure, Axes]:
-    """Initialize a blank figure with arbitrary limits."""
-    fig: Figure = Figure()
-    axs: Axes = fig.add_subplot(111)
-    axs.set_xlim(100, 200)
-    set_axis_labels(axs)
-
-    return fig, axs
-
-
-def plot_sample(axs: Axes, df: pl.DataFrame, label: str, color: str) -> None:
-    """Plot sample data."""
-    wavelengths: NDArray[np.float64] = utils.wavenum_to_wavelen(df["wavenumber"].to_numpy())
-    intensities: NDArray[np.float64] = df["intensity"].to_numpy()
-    axs.plot(wavelengths, intensities / intensities.max(), label=label, color=color)
 
 
 def main() -> None:

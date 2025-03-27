@@ -283,6 +283,7 @@ class GUI(QMainWindow):
         self.plot_widget.setLabel("top", "Wavenumber, ν [cm<sup>-1</sup>]")
         self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
 
         # Initial arbitrary wavelength range
         self.plot_widget.setXRange(100, 200)

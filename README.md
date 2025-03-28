@@ -94,7 +94,7 @@ uv run ./gui.py
 ### GUI Functionality
 
 - [x] Switch to PyQtGraph instead of Matplotlib for improved plot performance
-- [ ] Add the ability to export rotational line data from the built-in spreadsheet
+- [x] Add the ability to export rotational line data from the built-in spreadsheet
 - [ ] Build a more intuitive interface for adding/removing simulated and experimental data, especially once multiple molecules are added
 - [ ] Design and implement a GUI for LIF computations, including estimated fluorescence yield and the ability to search for rotational line overlaps
 

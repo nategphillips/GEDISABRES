@@ -243,14 +243,18 @@ class GUI(QMainWindow):
         gran_layout.addWidget(self.granularity_spinbox)
         layout.addWidget(group_granularity)
 
-        # --- Group 4: Rotational Lines and action buttons ---
-        group_run = QGroupBox("Run Simulation")
-        run_layout = QHBoxLayout(group_run)
-        run_layout.addWidget(QLabel("Rotational Lines:"))
+        # --- Group 4: Rotational lines ---
+        group_lines = QGroupBox("Rotational Lines")
+        lines_layout = QHBoxLayout(group_lines)
         self.num_lines_spinbox = QSpinBox()
         self.num_lines_spinbox.setMaximum(10000)
         self.num_lines_spinbox.setValue(DEFAULT_LINES)
-        run_layout.addWidget(self.num_lines_spinbox)
+        lines_layout.addWidget(self.num_lines_spinbox)
+        layout.addWidget(group_lines)
+
+        # --- Group 5: Action buttons ---
+        group_run = QGroupBox("Actions")
+        run_layout = QHBoxLayout(group_run)
         self.run_button = QPushButton("Run Simulation")
         self.run_button.clicked.connect(self.add_simulation)
         run_layout.addWidget(self.run_button)

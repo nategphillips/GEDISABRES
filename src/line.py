@@ -72,7 +72,7 @@ class Line:
             float: The predissociation broadening FWHM in [1/cm].
         """
         if is_selected:
-            # TODO: 10/25/24 - Using the polynomial fit and coefficients described by Lewis, 1986
+            # TODO: 24/10/25 - Using the polynomial fit and coefficients described by Lewis, 1986
             #       for the predissociation of all bands for now. The goal is to use experimental
             #       values when available, and use this fit otherwise. The fit is good up to J = 40
             #       and v = 21. Check this to make sure v' and J' should be used even in absorption.
@@ -101,7 +101,7 @@ class Line:
             float: The natural broadening FWHM in [1/cm].
         """
         if is_selected:
-            # TODO: 10/21/24 - Look over this, seems weird still.
+            # TODO: 24/10/21 - Look over this, seems weird still.
 
             # The sum of the Einstein A coefficients for all downward transitions from the two
             # levels of the transitions i and j.
@@ -130,7 +130,7 @@ class Line:
             float: The collisional broadening FWHM in [1/cm].
         """
         if is_selected:
-            # NOTE: 11/05/24 - In most cases, the amount of electronically excited molecules in the
+            # NOTE: 24/11/05 - In most cases, the amount of electronically excited molecules in the
             #       gas is essentially zero, meaning that most molecules are in the ground state.
             #       Therefore, the ground state radius is used to compute the cross-section. An even
             #       more accurate approach would be to multiply the radius in each state by its
@@ -146,7 +146,7 @@ class Line:
                 ** 2
             )
 
-            # NOTE: 10/22/24 - Both the cross-section and reduced mass refer to the interactions
+            # NOTE: 24/10/22 - Both the cross-section and reduced mass refer to the interactions
             #       between two molecules, not the two atoms that compose a molecule. For now, only
             #       homogeneous gases are considered, so the diameter and masses of the two
             #       molecules are identical. The internuclear distance is being used as the
@@ -155,7 +155,7 @@ class Line:
             #       interactions).
             reduced_mass: float = self.sim.molecule.mass / 2
 
-            # NOTE: 11/05/24 - The translational tempearature is used for collisional and Doppler
+            # NOTE: 24/11/05 - The translational tempearature is used for collisional and Doppler
             #       broadening since both effects are direct consequences of the thermal velocity of
             #       molecules.
 
@@ -218,7 +218,7 @@ class Line:
         Returns:
             float: The wavenumber of the rotational line in [1/cm].
         """
-        # NOTE: 10/18/24 - Make sure to understand transition structure: Herzberg pp. 149-152, and
+        # NOTE: 24/10/18 - Make sure to understand transition structure: Herzberg pp. 149-152, and
         #       pp. 168-169.
 
         # Herzberg p. 168, eq. (IV, 24)
@@ -238,7 +238,7 @@ class Line:
         Returns:
             float: The intensity of the rotational line.
         """
-        # NOTE: 10/18/24 - Before going any further make sure to read Herzberg pp. 20-21,
+        # NOTE: 24/10/18 - Before going any further make sure to read Herzberg pp. 20-21,
         #       pp. 126-127, pp. 200-201, and pp. 382-383.
 
         match self.sim.sim_type:

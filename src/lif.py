@@ -115,7 +115,7 @@ def rate_equations(
     """
     n1, n2, n3 = n
 
-    # TODO: 10/29/24 - Implement the overlap integral between the transition and laser lineshapes.
+    # TODO: 24/10/29 - Implement the overlap integral between the transition and laser lineshapes.
     overlap_integral: float = 1.5  # [cm]
 
     f_b: float = line.rot_boltz_frac
@@ -493,7 +493,7 @@ def main() -> None:
     state_up: State = State("B3Su-", 3, molecule)
     state_lo: State = State("X3Sg-", 3, molecule)
 
-    # NOTE: 10/29/24 - For now, laser fluence should be specified in [J/cm^2].
+    # NOTE: 24/10/29 - For now, laser fluence should be specified in [J/cm^2].
 
     run_simulation(
         molecule, state_up, state_lo, 300, 101325, 15, 3, "R", 1, 11, 30e-9, 20e-9, 25e-3

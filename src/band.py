@@ -113,7 +113,7 @@ class Band:
                 state = self.sim.state_lo
                 v_qn = self.v_qn_lo
 
-        # NOTE: 10/25/25 - Calculates the vibrational Boltzmann fraction with respect to the
+        # NOTE: 24/10/25 - Calculates the vibrational Boltzmann fraction with respect to the
         #       zero-point vibrational energy to match the vibrational partition function.
         return (
             np.exp(
@@ -136,14 +136,14 @@ class Band:
         upper_state: dict[str, list[float]] = self.sim.state_up.constants
         lower_state: dict[str, list[float]] = self.sim.state_lo.constants
 
-        # NOTE: 11/05/24 - In the Cheung paper, the electronic energy is defined differently than in
+        # NOTE: 24/11/05 - In the Cheung paper, the electronic energy is defined differently than in
         #       Herzberg's book. The conversion specified by Cheung on p. 5 is
         #       nu_0 = T + 2 / 3 * lamda - gamma.
         energy_offset: float = (
             2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
         )
 
-        # NOTE: 11/05/24 - The band origin as defined by Herzberg is nu_0 = nu_e + nu_v, and is
+        # NOTE: 24/11/05 - The band origin as defined by Herzberg is nu_0 = nu_e + nu_v, and is
         #       different for each vibrational transition. The T values in Cheung include the
         #       vibrational term for each level, i.e. T = T_e + G. The ground state has no
         #       electronic energy, so it is not subtracted. In Cheung's data, the term values
@@ -161,7 +161,7 @@ class Band:
         Returns:
             float: The rotational partition function, Q_r.
         """
-        # TODO: 10/25/24 - Add nuclear effects to make this the effective rotational partition
+        # TODO: 24/10/25 - Add nuclear effects to make this the effective rotational partition
         #       function.
 
         match self.sim.sim_type:
@@ -174,14 +174,14 @@ class Band:
 
         q_r: float = 0.0
 
-        # NOTE: 10/22/24 - The rotational partition function is always computed using the same
+        # NOTE: 24/10/22 - The rotational partition function is always computed using the same
         #       number of lines. At reasonable temperatures (~300 K), only around 50 rotational
         #       lines contribute to the state sum. However, at high temperatures (~3000 K), at least
         #       100 lines need to be considered to obtain an accurate estimate of the state sum.
         #       This approach is used to ensure the sum is calculated correctly regardless of the
         #       number of rotational lines simulated by the user.
         for j_qn in range(201):
-            # TODO: 10/22/24 - Not sure which branch index should be used here. The triplet energies
+            # TODO: 24/10/22 - Not sure which branch index should be used here. The triplet energies
             #       are all close together, so it shouldn't matter too much. Averaging could work,
             #       but I'm not sure if this is necessary.
             q_r += (2 * j_qn + 1) * np.exp(
@@ -191,7 +191,7 @@ class Band:
                 / (constants.BOLTZ * self.sim.temp_rot)
             )
 
-        # NOTE: 10/22/24 - Alternatively, the high-temperature approximation can be used instead of
+        # NOTE: 24/10/22 - Alternatively, the high-temperature approximation can be used instead of
         #       the direct sum approach. This also works well.
 
         # q_r = (
@@ -295,7 +295,7 @@ class Band:
 
         # Herzberg pp. 249-251, eqs. (V, 48-53)
 
-        # NOTE: 10/16/24 - Every transition has 6 total lines (3 main + 3 satellite) except for the
+        # NOTE: 24/10/16 - Every transition has 6 total lines (3 main + 3 satellite) except for the
         #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite).
 
         lines: list[Line] = []

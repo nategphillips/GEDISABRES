@@ -26,7 +26,7 @@ def main() -> None:
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
-    # TODO: 10/25/24 - Implement an option for switching between equilibrium and nonequilibrium
+    # TODO: 24/10/25 - Implement an option for switching between equilibrium and nonequilibrium
     #       simulations.
 
     temp: float = 300.0

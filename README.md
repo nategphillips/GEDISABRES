@@ -1,6 +1,6 @@
 # spectra
 
-A tool for simulating the Schumann–Runge bands of molecular oxygen written in Python. Built using NumPy, Polars, PySide6, and SciPy, `spectra` is designed to be easily understood and modified.
+A tool for simulating the Schumann–Runge bands of molecular oxygen written in Python. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, `spectra` is designed to be easily understood and modified.
 
 The capabilities of `spectra` are briefly summarized below. More detailed theory and notation are explained in the included document.
 

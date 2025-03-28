@@ -257,6 +257,9 @@ class GUI(QMainWindow):
         self.open_button = QPushButton("Open File")
         self.open_button.clicked.connect(self.add_sample)
         run_layout.addWidget(self.open_button)
+        self.export_button = QPushButton("Export Table")
+        self.export_button.clicked.connect(self.export_current_table)
+        run_layout.addWidget(self.export_button)
         layout.addWidget(group_run)
 
         return top_widget
@@ -581,6 +584,44 @@ class GUI(QMainWindow):
 
         print(f"Time to create table: {time.time() - start_table_time} s")
         print(f"Total time: {time.time() - start_time} s\n")
+
+    def export_current_table(self) -> None:
+        """Export the currently displayed table to a CSV file."""
+        current_widget: QWidget = self.tab_widget.currentWidget()
+
+        # TODO: 25/03/28 - Currently only the currently selected table is grabbed and exported. In
+        #       the future, there should be an option to export any number of tables.
+        table_view = current_widget.findChild(QTableView)
+        if table_view is None:
+            QMessageBox.information(
+                self,
+                "Error",
+                "No table view found in this tab.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        model: MyTable = table_view.model()
+        if not hasattr(model, "_df"):
+            QMessageBox.information(
+                self,
+                "Error",
+                "This table does not support CSV export.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        df: pl.DataFrame = model._df
+
+        filename, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        if filename:
+            try:
+                df.write_csv(filename)
+                QMessageBox.information(
+                    self, "Success", "Table exported successfully.", QMessageBox.StandardButton.Ok
+                )
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", f"An error occurred: {e}")
 
 
 class WavenumberAxis(pg.AxisItem):

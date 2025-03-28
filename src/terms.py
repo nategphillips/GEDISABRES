@@ -48,7 +48,7 @@ def rotational_term(state: State, v_qn: int, j_qn: int, branch_idx: int) -> floa
     ld: float = lookup_table["lamda_D"][v_qn]
     gd: float = lookup_table["gamma_D"][v_qn]
 
-    # NOTE: 11/05/24 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
+    # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
     #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
     #       elements are used to solve for the energy eigenvalues, the constants from Yu are changed
     #       to fit the convention used by Cheung. See the table below for details.

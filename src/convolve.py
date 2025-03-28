@@ -35,7 +35,7 @@ def broadening_fn(
         + line.fwhm_doppler(fwhm_selections["doppler"]) ** 2
     )
 
-    # NOTE: 10/25/14 - Since predissociating repulsive states have no interfering absorption, the
+    # NOTE: 24/10/25 - Since predissociating repulsive states have no interfering absorption, the
     #       broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
 
     # Add the effects of natural, collisional, and predissociation broadening to get the full

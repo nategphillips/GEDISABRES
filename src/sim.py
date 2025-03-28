@@ -165,7 +165,7 @@ class Sim:
 
     def get_vib_partition_fn(self) -> float:
         """Return the vibrational partition function."""
-        # NOTE: 10/22/24 - The maximum vibrational quantum number is dictated by the tabulated data
+        # NOTE: 24/10/22 - The maximum vibrational quantum number is dictated by the tabulated data
         #       available.
         match self.sim_type:
             case SimType.EMISSION:
@@ -177,12 +177,12 @@ class Sim:
 
         q_v: float = 0.0
 
-        # NOTE: 10/22/24 - The vibrational partition function is always computed using a set number
+        # NOTE: 24/10/22 - The vibrational partition function is always computed using a set number
         #       of vibrational bands to ensure an accurate estimate of the state sum is obtained.
         #       This approach is used to ensure the sum is calculated correctly regardless of the
         #       number of vibrational bands simulated by the user.
         for v_qn in range(0, v_qn_max):
-            # NOTE: 10/25/24 - The zero-point vibrational energy is used as a reference to which all
+            # NOTE: 24/10/25 - The zero-point vibrational energy is used as a reference to which all
             #       other vibrational energies are measured. This ensures the state sum begins at a
             #       value of 1 when v = 0.
             q_v += np.exp(
@@ -203,7 +203,7 @@ class Sim:
 
         q_e: float = 0.0
 
-        # NOTE: 10/25/24 - This sum is basically unnecessary since the energies of electronic states
+        # NOTE: 24/10/25 - This sum is basically unnecessary since the energies of electronic states
         #       above the ground state are so high. This means that any contribution to the
         #       electronic partition function from anything other than the ground state is
         #       negligible.

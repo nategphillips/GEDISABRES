@@ -80,21 +80,24 @@ class Band:
         return np.linspace(wns_line.min() - padding, wns_line.max() + padding, granularity)
 
     def intensities_conv(
-        self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
+        self,
+        fwhm_selections: dict[str, bool],
+        inst_broadening_wl: float,
+        wavenumbers_conv: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         """Return an array of convolved intensities.
 
         Args:
             fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
             inst_broadening_wl (float): Instrument broadening FWHM in [nm].
-            granularity (int): Number of points on the wavenumber axis.
+            wavenumbers_conv (NDArray[np.float64]): The convolved wavelengths to use.
 
         Returns:
             NDArray[np.float64]: A continuous range of intensities.
         """
-        return convolve.convolve_brod(
+        return convolve.convolve(
             self.lines,
-            self.wavenumbers_conv(inst_broadening_wl, granularity),
+            wavenumbers_conv,
             fwhm_selections,
             inst_broadening_wl,
         )

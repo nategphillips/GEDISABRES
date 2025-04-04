@@ -72,7 +72,7 @@ def broadening_fn(
     return np.real(wofz(z)) / (fwhm_gaussian * np.sqrt(2 * np.pi))
 
 
-def convolve_brod(
+def convolve(
     lines: list[Line],
     wavenumbers_conv: NDArray[np.float64],
     fwhm_selections: dict[str, bool],

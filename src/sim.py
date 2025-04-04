@@ -107,15 +107,12 @@ class Sim:
         )
         intensities_conv: NDArray[np.float64] = np.zeros_like(wavenumbers_conv)
 
-        # Since each band is defined on a different wavenumber interval, they must each be
-        # interpolated onto the new domain so that they can be summed at each point.
+        # The wavelength axis is common to all vibrational bands so that their contributions to the
+        # spectra can be summed.
         for band in self.bands:
-            interpolated_intensity: NDArray[np.float64] = np.interp(
-                wavenumbers_conv,
-                band.wavenumbers_conv(inst_broadening_wl, granularity),
-                band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity),
+            intensities_conv += band.intensities_conv(
+                fwhm_selections, inst_broadening_wl, wavenumbers_conv
             )
-            intensities_conv += interpolated_intensity
 
         return wavenumbers_conv, intensities_conv
 

@@ -124,7 +124,11 @@ def plot_conv_sep(
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
     max_intensity: float = max(
-        band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity).max()
+        band.intensities_conv(
+            fwhm_selections,
+            inst_broadening_wl,
+            band.wavenumbers_conv(inst_broadening_wl, granularity),
+        ).max()
         for band in sim.bands
     )
 
@@ -133,7 +137,9 @@ def plot_conv_sep(
             band.wavenumbers_conv(inst_broadening_wl, granularity)
         )
         intensities_conv: NDArray[np.float64] = band.intensities_conv(
-            fwhm_selections, inst_broadening_wl, granularity
+            fwhm_selections,
+            inst_broadening_wl,
+            band.wavenumbers_conv(inst_broadening_wl, granularity),
         )
 
         plot_widget.plot(

@@ -65,7 +65,11 @@ def main() -> None:
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity).max()
+        band.intensities_conv(
+            fwhm_selections,
+            inst_broadening_wl,
+            band.wavenumbers_conv(inst_broadening_wl, granularity),
+        ).max()
         for band in sim.bands
     )
 
@@ -73,7 +77,12 @@ def main() -> None:
     for band in sim.bands:
         plt.plot(
             band.wavenumbers_conv(inst_broadening_wl, granularity),
-            band.intensities_conv(fwhm_selections, inst_broadening_wl, granularity) / max_intensity,
+            band.intensities_conv(
+                fwhm_selections,
+                inst_broadening_wl,
+                band.wavenumbers_conv(inst_broadening_wl, granularity),
+            )
+            / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 

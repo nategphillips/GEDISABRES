@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QSpinBox,
     QTableView,
     QTabWidget,
@@ -198,32 +199,80 @@ class GUI(QMainWindow):
         group_bands: QGroupBox = QGroupBox("Bands")
         bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
-        # Row: Band ranges entry.
+        # TODO: 25/04/09 - Changing the mode from specific bands to band ranges resizes the UI,
+        #       which is really annoying. Fix this in the future.
+
+        # Add radio buttons for selection mode
+        band_selection_layout = QHBoxLayout()
+        self.radio_specific_bands = QRadioButton("Specific Bands")
+        self.radio_specific_bands.setChecked(True)
+        self.radio_band_ranges = QRadioButton("Band Ranges")
+        band_selection_layout.addWidget(self.radio_specific_bands)
+        band_selection_layout.addWidget(self.radio_band_ranges)
+        bands_layout.addLayout(band_selection_layout)
+
+        # Connect radio buttons to toggle band input method
+        self.radio_specific_bands.toggled.connect(self.toggle_band_input_method)
+
+        # Create container for specific bands input
+        self.specific_bands_container = QWidget()
+        specific_bands_layout = QVBoxLayout(self.specific_bands_container)
+        specific_bands_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Row: Band ranges entry (specific bands method)
         band_range_layout = QHBoxLayout()
-        band_range_label = QLabel("Band Ranges (format: v'-v''):")
+        band_range_label = QLabel("Bands:")
         self.band_ranges_line_edit = QLineEdit(DEFAULT_BANDS)
         band_range_layout.addWidget(band_range_label)
         band_range_layout.addWidget(self.band_ranges_line_edit)
-        bands_layout.addLayout(band_range_layout)
+        specific_bands_layout.addLayout(band_range_layout)
 
-        # Row: Broadening checkboxes.
-        checkbox_layout = QHBoxLayout()
-        self.checkbox_instrument = QCheckBox("Instrument Broadening")
-        self.checkbox_instrument.setChecked(True)
-        self.checkbox_doppler = QCheckBox("Doppler Broadening")
-        self.checkbox_doppler.setChecked(True)
-        self.checkbox_natural = QCheckBox("Natural Broadening")
-        self.checkbox_natural.setChecked(True)
-        self.checkbox_collisional = QCheckBox("Collisional Broadening")
-        self.checkbox_collisional.setChecked(True)
-        self.checkbox_predissociation = QCheckBox("Predissociation Broadening")
-        self.checkbox_predissociation.setChecked(True)
-        checkbox_layout.addWidget(self.checkbox_instrument)
-        checkbox_layout.addWidget(self.checkbox_doppler)
-        checkbox_layout.addWidget(self.checkbox_natural)
-        checkbox_layout.addWidget(self.checkbox_collisional)
-        checkbox_layout.addWidget(self.checkbox_predissociation)
-        bands_layout.addLayout(checkbox_layout)
+        # Create container for band ranges input
+        self.band_ranges_container = QWidget()
+        band_ranges_layout = QGridLayout(self.band_ranges_container)
+        band_ranges_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Upper state vibrational levels
+        v_up_min_label = QLabel("v' min:")
+        self.v_up_min_spinbox = QSpinBox()
+        self.v_up_min_spinbox.setRange(0, 99)
+        self.v_up_min_spinbox.setValue(0)
+
+        v_up_max_label = QLabel("v' max:")
+        self.v_up_max_spinbox = QSpinBox()
+        self.v_up_max_spinbox.setRange(0, 99)
+        self.v_up_max_spinbox.setValue(10)
+
+        # Lower state vibrational levels
+        v_lo_min_label = QLabel("v'' min:")
+        self.v_lo_min_spinbox = QSpinBox()
+        self.v_lo_min_spinbox.setRange(0, 99)
+        self.v_lo_min_spinbox.setValue(5)
+
+        v_lo_max_label = QLabel("v'' max:")
+        self.v_lo_max_spinbox = QSpinBox()
+        self.v_lo_max_spinbox.setRange(0, 99)
+        self.v_lo_max_spinbox.setValue(5)
+
+        # Add upper state widgets to grid
+        band_ranges_layout.addWidget(v_up_min_label, 0, 0)
+        band_ranges_layout.addWidget(self.v_up_min_spinbox, 0, 1)
+        band_ranges_layout.addWidget(v_up_max_label, 0, 2)
+        band_ranges_layout.addWidget(self.v_up_max_spinbox, 0, 3)
+
+        # Add lower state widgets to grid
+        band_ranges_layout.addWidget(v_lo_min_label, 1, 0)
+        band_ranges_layout.addWidget(self.v_lo_min_spinbox, 1, 1)
+        band_ranges_layout.addWidget(v_lo_max_label, 1, 2)
+        band_ranges_layout.addWidget(self.v_lo_max_spinbox, 1, 3)
+
+        # Initial setup - hide band ranges, show specific bands
+        self.band_ranges_container.hide()
+
+        # Add both containers to the bands layout
+        bands_layout.addWidget(self.specific_bands_container)
+        bands_layout.addWidget(self.band_ranges_container)
+
         layout.addWidget(group_bands)
 
         # --- Group 2: Instrument Broadening value ---
@@ -232,6 +281,25 @@ class GUI(QMainWindow):
         self.inst_broadening_spinbox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
         inst_layout.addWidget(self.inst_broadening_spinbox)
+
+        # Row: Broadening checkboxes.
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument")
+        self.checkbox_instrument.setChecked(True)
+        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_doppler.setChecked(True)
+        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_natural.setChecked(True)
+        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_collisional.setChecked(True)
+        self.checkbox_predissociation = QCheckBox("Predissociation")
+        self.checkbox_predissociation.setChecked(True)
+        checkbox_layout.addWidget(self.checkbox_instrument)
+        checkbox_layout.addWidget(self.checkbox_doppler)
+        checkbox_layout.addWidget(self.checkbox_natural)
+        checkbox_layout.addWidget(self.checkbox_collisional)
+        checkbox_layout.addWidget(self.checkbox_predissociation)
+        inst_layout.addLayout(checkbox_layout)
         layout.addWidget(group_inst_broadening)
 
         # --- Group 3: Granularity ---
@@ -267,6 +335,19 @@ class GUI(QMainWindow):
         layout.addWidget(group_run)
 
         return top_widget
+
+    def toggle_band_input_method(self, checked: bool) -> None:
+        """Toggle between band input methods based on radio button selection.
+
+        Args:
+            checked (bool): True if specific bands radio button is checked
+        """
+        if checked:
+            self.specific_bands_container.show()
+            self.band_ranges_container.hide()
+        else:
+            self.specific_bands_container.hide()
+            self.band_ranges_container.show()
 
     def create_main_panel(self) -> QWidget:
         """Create the main panel with table tabs on the left and a plot on the right."""
@@ -453,8 +534,8 @@ class GUI(QMainWindow):
         for range_str in band_ranges_str.split(","):
             if "-" in range_str.strip():
                 try:
-                    lower_band, upper_band = map(int, range_str.split("-"))
-                    bands.append((lower_band, upper_band))
+                    v_up, v_lo = map(int, range_str.split("-"))
+                    bands.append((v_up, v_lo))
                 except ValueError:
                     QMessageBox.information(
                         self,
@@ -487,7 +568,50 @@ class GUI(QMainWindow):
 
         pres: float = self.pressure_spinbox.value()
         sim_type: SimType = SimType[self.sim_type_combo.currentText().upper()]
-        bands: list[tuple[int, int]] = self.parse_band_ranges()
+
+        # Get bands based on the selected method
+        if self.radio_specific_bands.isChecked():
+            # Use the existing parse_band_ranges method
+            bands: list[tuple[int, int]] = self.parse_band_ranges()
+            if not bands:
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "No valid band ranges specified. Please check your input.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+        else:
+            # Use the new band range spinboxes
+            v_up_min: int = self.v_up_min_spinbox.value()
+            v_up_max: int = self.v_up_max_spinbox.value()
+            v_lo_min: int = self.v_lo_min_spinbox.value()
+            v_lo_max: int = self.v_lo_max_spinbox.value()
+
+            # Validate input
+            if v_up_min > v_up_max or v_lo_min > v_lo_max:
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "Invalid band range: min value cannot be greater than max value.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+
+            # Generate band combinations based on the ranges
+            if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
+                bands = [(v_up_min, v_lo_min)]
+            elif v_up_min == v_up_max:
+                bands = [(v_up_min, v_lo) for v_lo in range(v_lo_min, v_lo_max + 1)]
+            elif v_lo_min == v_lo_max:
+                bands = [(v_up, v_lo_min) for v_up in range(v_up_min, v_up_max + 1)]
+            else:
+                bands = [
+                    (v_up, v_lo)
+                    for v_up in range(v_up_min, v_up_max + 1)
+                    for v_lo in range(v_lo_min, v_lo_max + 1)
+                ]
+
         rot_lvls = np.arange(0, self.num_lines_spinbox.value())
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))

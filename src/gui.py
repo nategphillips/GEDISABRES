@@ -117,6 +117,16 @@ class MyTable(QAbstractTableModel):
             return None
         if role == Qt.ItemDataRole.DisplayRole:
             value = self._df[index.row(), index.column()]
+            column_name = self._df.columns[index.column()]
+
+            # NOTE: 25/04/10 - This only changes the values displayed to the user using the built-in
+            #       table view. If the table is exported, the underlying dataframe is used instead,
+            #       which retains the full-precision values calculated by the simulation.
+            if isinstance(value, float):
+                if "Intensity" in column_name:
+                    return f"{value:.4e}"
+                return f"{value:.4f}"
+
             return str(value)
         return None
 
@@ -137,7 +147,12 @@ def create_dataframe_tab(df: pl.DataFrame, tab_label: str) -> QWidget:
     table_view = QTableView()
     model = MyTable(df)
     table_view.setModel(model)
-    table_view.resizeColumnsToContents()
+
+    # TODO: 25/04/10 - Enabling column resizing dramatically increases the time it takes to render
+    #       tables with even a moderate number of bands. Keeping this disabled unless there's a
+    #       faster way to achieve the same thing.
+    # table_view.resizeColumnsToContents()
+
     layout.addWidget(table_view)
 
     return widget

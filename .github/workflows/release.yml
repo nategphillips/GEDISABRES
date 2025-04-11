@@ -23,7 +23,7 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           pip install pyinstaller matplotlib numpy polars pyqtgraph pyside6-essentials scipy
-          pyinstaller --onefile --add-data "data;data" src/gui.py
+          pyinstaller --onefile --noconsole --add-data "data;data" src/gui.py
 
       - name: Set environment variables
         run: |

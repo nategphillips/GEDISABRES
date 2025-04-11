@@ -1,0 +1,51 @@
+name: Build and release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Build executable with PyInstaller
+        run: |
+          pip install pyinstaller matplotlib numpy polars pyqtgraph pyside6-essentials scipy
+          pyinstaller --onefile --add-data "data;data" src/gui.py
+
+      - name: Set environment variables
+        run: |
+          echo "TAG_NAME=${{ github.ref }}" | sed 's|refs/tags/||' >> $GITHUB_ENV
+          echo "REPO_NAME=$(basename $GITHUB_REPOSITORY)" >> $GITHUB_ENV
+          echo "ZIP_NAME=$(basename $GITHUB_REPOSITORY)-${{ github.ref }}" | sed 's|refs/tags/||' >> $GITHUB_ENV
+        shell: bash
+
+      - name: Package release assets
+        run: |
+          mkdir release
+          copy dist\gui.exe release\
+          xcopy /E /I data release\data
+          powershell Compress-Archive -Path release\* -DestinationPath release\$env:ZIP_NAME.zip
+        shell: pwsh
+
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          name: ${{ env.TAG_NAME }}
+          files: release/${{ env.ZIP_NAME }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

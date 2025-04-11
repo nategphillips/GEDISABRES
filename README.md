@@ -77,7 +77,19 @@ All user-accessible options are visible in the GUI, including vibrational band s
 
 ## Installation
 
-This repository uses the [uv](https://github.com/astral-sh/uv) package manager for Python. After installing uv, the necessary packages can be installed in a virtual environment by navigating to the repository's root directory and installing the dependencies:
+### From an Executable
+
+Go to the [releases tab](https://github.com/nategphillips/spectra/releases) of this repository and download the latest compressed archive specific to your operating system. Extract the contents and run the binary file contained inside.
+
+### From Source
+
+On your PC, navigate to a directory of your choice and run
+
+```bash
+git clone https://github.com/nategphillips/spectra
+```
+
+to download the source code directly. This repository uses the [uv](https://github.com/astral-sh/uv) package manager for Python. Install uv using the instructions on their [website](https://docs.astral.sh/uv/). Once uv is installed, the packages required for `spectra` can be added in a virtual environment by navigating to the repository's root directory and installing the dependencies:
 
 ```bash
 uv sync
@@ -104,6 +116,7 @@ uv run ./gui.py
 - [ ] Implement electronic spectra for atomic species
 - [ ] Include the ability to view and edit the rotational Hamiltonian on a per-term basis
 
-### Other
+### Packaging
 
-- [ ] Package a pre-compiled binary to improve user experience
+- [x] Package a pre-compiled binary to improve user experience
+- [ ] Implement a splash screen to show that the program is loading

@@ -982,11 +982,6 @@ class SplashScreen(QWidget):
             "The Schumann-Runge Bands of Molecular Oxygen",
         )
 
-        # Version.
-        version_font: QFont = QFont("Arial", 10)
-        painter.setFont(version_font)
-        painter.drawText(0, 130, self.width(), 20, Qt.AlignmentFlag.AlignCenter, "v0.1.0")
-
         # Status text.
         status_font: QFont = QFont("Arial", 10)
         painter.setFont(status_font)

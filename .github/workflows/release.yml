@@ -17,7 +17,7 @@ jobs:
           - os: macos-latest
             archive_ext: "macos.tar.gz"
           - os: ubuntu-latest
-            archive_ext: "ubuntu.tar.gz"
+            archive_ext: "linux.tar.gz"
           - os: windows-latest
             archive_ext: "windows.zip"
 

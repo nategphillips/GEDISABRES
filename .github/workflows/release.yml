@@ -17,7 +17,7 @@ jobs:
           - os: macos-latest
             archive_ext: "macos.tar.gz"
           - os: ubuntu-latest
-            archive_ext: "ubuntu.tar.gz"
+            archive_ext: "linux.tar.gz"
           - os: windows-latest
             archive_ext: "windows.zip"
 
@@ -44,9 +44,9 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            uv run pyinstaller --onefile --noconsole --name spectra --add-data "data;data" src/main.py
+            uv run pyinstaller --onefile --noconsole --name spectra --add-data "data;data" --add-data "img;img" --icon=img/icon.ico src/main.py
           else
-            uv run pyinstaller --onefile --noconsole --name spectra --add-data "data:data" src/main.py
+            uv run pyinstaller --onefile --noconsole --name spectra --add-data "data:data" --add-data "img:img" src/main.py
           fi
         shell: bash
 

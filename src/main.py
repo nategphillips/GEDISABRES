@@ -9,8 +9,17 @@ from typing import TYPE_CHECKING
 import numpy as np
 import polars as pl
 import pyqtgraph as pg
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, QPoint, QRect, Qt
-from PySide6.QtGui import QValidator
+from PySide6.QtCore import (
+    QAbstractTableModel,
+    QModelIndex,
+    QObject,
+    QPoint,
+    QRect,
+    Qt,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen, QValidator
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -868,11 +877,172 @@ class WavenumberAxis(pg.AxisItem):
         return strings
 
 
+class LoadingWorker(QObject):
+    """Worker class to handle initialization tasks and report progress."""
+
+    progress_updated: Signal = Signal(int, str)
+    finished: Signal = Signal()
+
+    def __init__(self) -> None:
+        """Initialize class variables."""
+        super().__init__()
+
+    def run_initialization(self) -> None:
+        """Run all initialization tasks sequentially.
+
+        The emitters are completely arbitrary and don't represent the actual state of the program,
+        they're just here to make loading look a bit cooler.
+        """
+        self.progress_updated.emit(0, "Starting application...")
+
+        self.progress_updated.emit(20, "Initializing UI components...")
+
+        self.progress_updated.emit(60, "Preparing main window...")
+        self.main_window: GUI = GUI()
+
+        self.progress_updated.emit(90, "Almost ready...")
+
+        self.progress_updated.emit(100, "Done!")
+        self.finished.emit()
+
+
+class SplashScreen(QWidget):
+    """A custom splash screen with progress bar for application startup."""
+
+    def __init__(self) -> None:
+        """Initialize class variables."""
+        super().__init__()
+
+        # Remove window frame and make the background transparent.
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(600, 400)
+        self.center()
+
+        self.progress_value: int = 0
+        self.status_message: str = "Loading..."
+
+        self.worker: LoadingWorker = LoadingWorker()
+        self.worker.progress_updated.connect(self.update_progress)
+        self.worker.finished.connect(self.on_initialization_complete)
+
+        # Start initialization process with a slight delay to allow the splash screen to show.
+        QTimer.singleShot(1000, self.worker.run_initialization)
+
+    def center(self) -> None:
+        """Center the window on the screen."""
+        qr: QRect = self.frameGeometry()
+        qp: QPoint = self.screen().availableGeometry().center()
+        qr.moveCenter(qp)
+        self.move(qr.topLeft())
+
+    def update_progress(self, value: int, message: str) -> None:
+        """Update the progress bar value and message."""
+        self.progress_value = value
+        self.status_message = message
+        self.repaint()
+
+    def on_initialization_complete(self) -> None:
+        """Handle completion of initialization."""
+        self.main_window: GUI = self.worker.main_window
+        self.close()
+        self.main_window.show()
+
+    def paintEvent(self, _: QPaintEvent) -> None:  # noqa: N802
+        """Custom paint event to draw the splash screen.
+
+        Args:
+            _ (QPaintEvent): Contains event parameters for paint events.
+        """
+        painter: QPainter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Rounded rectangular background.
+        painter.setBrush(QColor(30, 30, 30))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(0, 0, self.width(), self.height(), 20, 20)
+
+        # Application title.
+        painter.setPen(QColor(255, 255, 255))
+        title_font: QFont = QFont("Arial", 24, QFont.Weight.Bold)
+        painter.setFont(title_font)
+        painter.drawText(
+            0, 60, self.width(), 40, Qt.AlignmentFlag.AlignCenter, "Diatomic Molecular Simulation"
+        )
+
+        # Subtitle.
+        subtitle_font: QFont = QFont("Arial", 12)
+        painter.setFont(subtitle_font)
+        painter.drawText(
+            0,
+            100,
+            self.width(),
+            30,
+            Qt.AlignmentFlag.AlignCenter,
+            "The Schumann-Runge Bands of Molecular Oxygen",
+        )
+
+        # Version.
+        version_font: QFont = QFont("Arial", 10)
+        painter.setFont(version_font)
+        painter.drawText(0, 130, self.width(), 20, Qt.AlignmentFlag.AlignCenter, "v0.1.0")
+
+        # Status text.
+        status_font: QFont = QFont("Arial", 10)
+        painter.setFont(status_font)
+        painter.drawText(
+            20,
+            self.height() - 50,
+            self.width() - 40,
+            20,
+            Qt.AlignmentFlag.AlignCenter,
+            self.status_message,
+        )
+
+        # Progress bar background.
+        painter.setBrush(QColor(50, 50, 50))
+        painter.drawRoundedRect(20, self.height() - 30, self.width() - 40, 10, 5, 5)
+
+        # Progress bar.
+        progress_width: int = int((self.width() - 40) * (self.progress_value / 100))
+        painter.setBrush(QColor(0, 123, 255))
+        painter.drawRoundedRect(20, self.height() - 30, progress_width, 10, 5, 5)
+
+        # O2 molecule visualization.
+        painter.setPen(QPen(QColor(255, 255, 255), 2))
+        painter.setBrush(QColor(200, 200, 255, 150))
+
+        # Two oxygen atoms.
+        center_x: int = self.width() // 2
+        center_y: int = self.height() // 2
+        radius: int = 40
+        distance: int = 100
+
+        # Left oxygen atom.
+        painter.drawEllipse(
+            center_x - distance // 2 - radius // 2, center_y - radius // 2, radius, radius
+        )
+
+        # Right oxygen atom.
+        painter.drawEllipse(
+            center_x + distance // 2 - radius // 2, center_y - radius // 2, radius, radius
+        )
+
+        # Bond between atoms.
+        painter.setPen(QPen(QColor(150, 150, 255), 4))
+        painter.drawLine(
+            center_x - distance // 2 + radius // 2,
+            center_y,
+            center_x + distance // 2 - radius // 2,
+            center_y,
+        )
+
+
 def main() -> None:
     """Entry point."""
     app: QApplication = QApplication(sys.argv)
-    window: GUI = GUI()
-    window.show()
+    splash: SplashScreen = SplashScreen()
+    splash.show()
     sys.exit(app.exec())
 
 

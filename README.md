@@ -107,6 +107,7 @@ uv run ./main.py
 
 - [x] Switch to PyQtGraph instead of Matplotlib for improved plot performance
 - [x] Add the ability to export rotational line data from the built-in spreadsheet
+- [x] Make a custom GUI icon
 - [ ] Build a more intuitive interface for adding/removing simulated and experimental data, especially once multiple molecules are added
 - [ ] Design and implement a GUI for LIF computations, including estimated fluorescence yield and the ability to search for rotational line overlaps
 
@@ -120,4 +121,4 @@ uv run ./main.py
 
 - [x] Package a pre-compiled binary to improve user experience
 - [x] Implement a splash screen to show that the program is loading
-- [ ] Create an icon for the executable files
+- [x] Create an icon executable file (Windows only for now)

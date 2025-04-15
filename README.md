@@ -119,4 +119,5 @@ uv run ./main.py
 ### Packaging
 
 - [x] Package a pre-compiled binary to improve user experience
-- [ ] Implement a splash screen to show that the program is loading
+- [x] Implement a splash screen to show that the program is loading
+- [ ] Create an icon for the executable files

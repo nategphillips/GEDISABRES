@@ -66,58 +66,113 @@ class MyDoubleSpinBox(QDoubleSpinBox):
     notation.
     """
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self) -> None:
+        """Initialize class variables."""
+        super().__init__()
         self.setRange(-1e99, 1e99)
         self.setDecimals(6)
         self.setKeyboardTracking(False)
 
-    def valueFromText(self, text: str) -> float:
+    def valueFromText(self, text: str) -> float:  # noqa: N802
+        """Reads text from the input field and converts it to a float.
+
+        Args:
+            text (str): Input text.
+
+        Returns:
+            float: Converted value.
+        """
         try:
             return float(text)
         except ValueError:
             return 0.0
 
-    def textFromValue(self, value: float) -> str:
+    def textFromValue(self, value: float) -> str:  # noqa: N802
+        """Displays the input parameter using f-strings.
+
+        Args:
+            value (float): Input float.
+
+        Returns:
+            str: Displayed text.
+        """
         return f"{value:g}"
 
-    def validate(self, text: str, pos: int):
-        # Allow empty input.
+    def validate(self, text: str, pos: int) -> tuple[QValidator.State, str, int]:
+        """Checks user input and returns the correct state.
+
+        Args:
+            text (str): Input text.
+            pos (int): Position in the string.
+
+        Returns:
+            tuple[QValidator.State, str, int]: The current state, input text, and string position.
+        """
         if text == "":
             return (QValidator.State.Intermediate, text, pos)
         try:
-            # Try converting to float.
             float(text)
             return (QValidator.State.Acceptable, text, pos)
         except ValueError:
-            # If the text contains an 'e' or 'E', it might be a partial scientific notation.
+            # If the string cannot immediately be converted to a float, first check for scientific
+            # notation and return an intermediate state if found.
             if "e" in text.lower():
-                parts = text.lower().split("e")
-                # Allow cases like "1e", "1e-", or "1e+".
-                if len(parts) == 2 and (parts[1] == "" or parts[1] in ["-", "+"]):
+                parts: list[str] = text.lower().split("e")
+                num_parts: int = 2
+                if len(parts) == num_parts and (parts[1] == "" or parts[1] in ["-", "+"]):
                     return (QValidator.State.Intermediate, text, pos)
             return (QValidator.State.Invalid, text, pos)
 
 
 class MyTable(QAbstractTableModel):
-    """A simple model to interface a Qt view with a DataFrame."""
+    """A simple model to interface a Qt view with a Polars DataFrame."""
 
-    def __init__(self, df: pl.DataFrame, parent=None):
-        super().__init__(parent)
-        self._df = df
+    def __init__(self, df: pl.DataFrame) -> None:
+        """Initialize class variables.
 
-    def rowCount(self, parent=QModelIndex()):
-        return self._df.height
+        Args:
+            df (pl.DataFrame): A Polars `DataFrame`.
+        """
+        super().__init__()
+        self.df: pl.DataFrame = df
 
-    def columnCount(self, parent=QModelIndex()):
-        return self._df.width
+    def rowCount(self, _: QModelIndex = QModelIndex()) -> int:  # noqa: N802
+        """Get the height of the table.
 
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        Args:
+            _ (QModelIndex, optional): Parent class used to locate data. Defaults to QModelIndex().
+
+        Returns:
+            int: Table height.
+        """
+        return self.df.height
+
+    def columnCount(self, _: QModelIndex = QModelIndex()) -> int:  # noqa: N802
+        """Get the width of the table.
+
+        Args:
+            _ (QModelIndex, optional): Parent class used to locate data. Defaults to QModelIndex().
+
+        Returns:
+            int: Table width.
+        """
+        return self.df.width
+
+    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> str | None:
+        """Validates and formats data displayed in the table.
+
+        Args:
+            index (QModelIndex): Parent class used to locate data.
+            role (int, optional): Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
+
+        Returns:
+            str | None: The formatted text.
+        """
         if not index.isValid():
             return None
         if role == Qt.ItemDataRole.DisplayRole:
-            value = self._df[index.row(), index.column()]
-            column_name = self._df.columns[index.column()]
+            value: int | float | str = self.df[index.row(), index.column()]
+            column_name: str = self.df.columns[index.column()]
 
             # NOTE: 25/04/10 - This only changes the values displayed to the user using the built-in
             #       table view. If the table is exported, the underlying dataframe is used instead,
@@ -130,22 +185,43 @@ class MyTable(QAbstractTableModel):
             return str(value)
         return None
 
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+    def headerData(  # noqa: N802
+        self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole
+    ) -> str | None:
+        """Sets data for the given role and section in the header with the specified orientation.
+
+        Args:
+            section (int): For horizontal headers, the section number corresponds to the column
+                number. For vertical headers, the section number corresponds to the row number.
+            orientation (Qt.Orientation): The header orientation.
+            role (int, optional): Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
+
+        Returns:
+            str | None: Header data.
+        """
         if role != Qt.ItemDataRole.DisplayRole:
             return None
         if orientation == Qt.Orientation.Horizontal:
-            return str(self._df.columns[section])
+            return str(self.df.columns[section])
         if orientation == Qt.Orientation.Vertical:
             return str(section)
         return None
 
 
-def create_dataframe_tab(df: pl.DataFrame, tab_label: str) -> QWidget:
-    """Create a QWidget containing a QTableView to display the DataFrame."""
-    widget = QWidget()
-    layout = QVBoxLayout(widget)
-    table_view = QTableView()
-    model = MyTable(df)
+def create_dataframe_tab(df: pl.DataFrame, _: str) -> QWidget:
+    """Create a QWidget containing a QTableView to display the DataFrame.
+
+    Args:
+        df (pl.DataFrame): Data to be displayed in the tab.
+        _ (str): The tab label.
+
+    Returns:
+        QWidget: A QWidget containing a QTableView to display the DataFrame.
+    """
+    widget: QWidget = QWidget()
+    layout: QVBoxLayout = QVBoxLayout(widget)
+    table_view: QTableView = QTableView()
+    model: MyTable = MyTable(df)
     table_view.setModel(model)
 
     # TODO: 25/04/10 - Enabling column resizing dramatically increases the time it takes to render
@@ -162,6 +238,7 @@ class GUI(QMainWindow):
     """The GUI implemented with PySide6."""
 
     def __init__(self) -> None:
+        """Initialize class variables."""
         super().__init__()
 
         pg.setConfigOption("background", (30, 30, 30))
@@ -193,158 +270,149 @@ class GUI(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout: QVBoxLayout = QVBoxLayout(central_widget)
 
-        # Top panel (above)
         top_panel: QWidget = self.create_top_panel()
         main_layout.addWidget(top_panel)
 
-        # Main panel (table and plot)
         main_panel: QWidget = self.create_main_panel()
         main_layout.addWidget(main_panel, stretch=1)
 
-        # Bottom panel (input entries and combos)
         bottom_panel: QWidget = self.create_bottom_panel()
         main_layout.addWidget(bottom_panel)
 
-    def create_top_panel(self) -> QWidget:
-        """Create the top panel with band ranges, broadening, granularity, and run controls."""
+    def create_top_panel(self) -> QWidget:  # noqa: PLR0915
+        """Create the top panel with band ranges, broadening, granularity, and run controls.
+
+        Returns:
+            QWidget: The top panel widget.
+        """
         top_widget: QWidget = QWidget()
         layout: QHBoxLayout = QHBoxLayout(top_widget)
 
-        # --- Group 1: Bands and broadening checkboxes ---
+        # Specific bands or band range inputs.
         group_bands: QGroupBox = QGroupBox("Bands")
         bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
         # TODO: 25/04/09 - Changing the mode from specific bands to band ranges resizes the UI,
         #       which is really annoying. Fix this in the future.
 
-        # Add radio buttons for selection mode
-        band_selection_layout = QHBoxLayout()
-        self.radio_specific_bands = QRadioButton("Specific Bands")
+        band_selection_layout: QHBoxLayout = QHBoxLayout()
+        self.radio_specific_bands: QRadioButton = QRadioButton("Specific Bands")
         self.radio_specific_bands.setChecked(True)
-        self.radio_band_ranges = QRadioButton("Band Ranges")
+        self.radio_band_ranges: QRadioButton = QRadioButton("Band Ranges")
         band_selection_layout.addWidget(self.radio_specific_bands)
         band_selection_layout.addWidget(self.radio_band_ranges)
         bands_layout.addLayout(band_selection_layout)
 
-        # Connect radio buttons to toggle band input method
         self.radio_specific_bands.toggled.connect(self.toggle_band_input_method)
 
-        # Create container for specific bands input
-        self.specific_bands_container = QWidget()
-        specific_bands_layout = QVBoxLayout(self.specific_bands_container)
+        # Specific band input.
+        self.specific_bands_container: QWidget = QWidget()
+        specific_bands_layout: QVBoxLayout = QVBoxLayout(self.specific_bands_container)
         specific_bands_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Row: Band ranges entry (specific bands method)
-        band_range_layout = QHBoxLayout()
-        band_range_label = QLabel("Bands:")
-        self.band_ranges_line_edit = QLineEdit(DEFAULT_BANDS)
-        band_range_layout.addWidget(band_range_label)
-        band_range_layout.addWidget(self.band_ranges_line_edit)
-        specific_bands_layout.addLayout(band_range_layout)
+        band_layout: QHBoxLayout = QHBoxLayout()
+        band_label: QLabel = QLabel("Bands:")
+        self.band_line_edit: QLineEdit = QLineEdit(DEFAULT_BANDS)
+        band_layout.addWidget(band_label)
+        band_layout.addWidget(self.band_line_edit)
+        specific_bands_layout.addLayout(band_layout)
 
-        # Create container for band ranges input
-        self.band_ranges_container = QWidget()
-        band_ranges_layout = QGridLayout(self.band_ranges_container)
+        # Band range input.
+        self.band_ranges_container: QWidget = QWidget()
+        band_ranges_layout: QGridLayout = QGridLayout(self.band_ranges_container)
         band_ranges_layout.setContentsMargins(0, 0, 0, 0)
 
-        # Upper state vibrational levels
-        v_up_min_label = QLabel("v' min:")
-        self.v_up_min_spinbox = QSpinBox()
+        v_up_min_label: QLabel = QLabel("v' min:")
+        self.v_up_min_spinbox: QSpinBox = QSpinBox()
         self.v_up_min_spinbox.setRange(0, 99)
         self.v_up_min_spinbox.setValue(0)
 
-        v_up_max_label = QLabel("v' max:")
-        self.v_up_max_spinbox = QSpinBox()
+        v_up_max_label: QLabel = QLabel("v' max:")
+        self.v_up_max_spinbox: QSpinBox = QSpinBox()
         self.v_up_max_spinbox.setRange(0, 99)
         self.v_up_max_spinbox.setValue(10)
 
-        # Lower state vibrational levels
-        v_lo_min_label = QLabel("v'' min:")
-        self.v_lo_min_spinbox = QSpinBox()
+        v_lo_min_label: QLabel = QLabel("v'' min:")
+        self.v_lo_min_spinbox: QSpinBox = QSpinBox()
         self.v_lo_min_spinbox.setRange(0, 99)
         self.v_lo_min_spinbox.setValue(5)
 
-        v_lo_max_label = QLabel("v'' max:")
-        self.v_lo_max_spinbox = QSpinBox()
+        v_lo_max_label: QLabel = QLabel("v'' max:")
+        self.v_lo_max_spinbox: QSpinBox = QSpinBox()
         self.v_lo_max_spinbox.setRange(0, 99)
         self.v_lo_max_spinbox.setValue(5)
 
-        # Add upper state widgets to grid
         band_ranges_layout.addWidget(v_up_min_label, 0, 0)
         band_ranges_layout.addWidget(self.v_up_min_spinbox, 0, 1)
         band_ranges_layout.addWidget(v_up_max_label, 0, 2)
         band_ranges_layout.addWidget(self.v_up_max_spinbox, 0, 3)
 
-        # Add lower state widgets to grid
         band_ranges_layout.addWidget(v_lo_min_label, 1, 0)
         band_ranges_layout.addWidget(self.v_lo_min_spinbox, 1, 1)
         band_ranges_layout.addWidget(v_lo_max_label, 1, 2)
         band_ranges_layout.addWidget(self.v_lo_max_spinbox, 1, 3)
 
-        # Initial setup - hide band ranges, show specific bands
         self.band_ranges_container.hide()
 
-        # Add both containers to the bands layout
         bands_layout.addWidget(self.specific_bands_container)
         bands_layout.addWidget(self.band_ranges_container)
 
         layout.addWidget(group_bands)
 
-        # --- Group 2: Instrument Broadening value ---
-        group_inst_broadening = QGroupBox("Instrument Broadening [nm]")
-        inst_layout = QHBoxLayout(group_inst_broadening)
-        self.inst_broadening_spinbox = MyDoubleSpinBox()
+        # Broadening inputs.
+        group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
+        broadening_layout: QHBoxLayout = QHBoxLayout(group_broadening)
+        self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        inst_layout.addWidget(self.inst_broadening_spinbox)
+        broadening_layout.addWidget(self.inst_broadening_spinbox)
 
-        # Row: Broadening checkboxes.
-        checkbox_layout = QHBoxLayout()
-        self.checkbox_instrument = QCheckBox("Instrument")
+        checkbox_layout: QHBoxLayout = QHBoxLayout()
+        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument")
         self.checkbox_instrument.setChecked(True)
-        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
         self.checkbox_doppler.setChecked(True)
-        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_natural: QCheckBox = QCheckBox("Natural")
         self.checkbox_natural.setChecked(True)
-        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
         self.checkbox_collisional.setChecked(True)
-        self.checkbox_predissociation = QCheckBox("Predissociation")
+        self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
         self.checkbox_predissociation.setChecked(True)
         checkbox_layout.addWidget(self.checkbox_instrument)
         checkbox_layout.addWidget(self.checkbox_doppler)
         checkbox_layout.addWidget(self.checkbox_natural)
         checkbox_layout.addWidget(self.checkbox_collisional)
         checkbox_layout.addWidget(self.checkbox_predissociation)
-        inst_layout.addLayout(checkbox_layout)
-        layout.addWidget(group_inst_broadening)
+        broadening_layout.addLayout(checkbox_layout)
+        layout.addWidget(group_broadening)
 
-        # --- Group 3: Granularity ---
-        group_granularity = QGroupBox("Granularity")
-        gran_layout = QHBoxLayout(group_granularity)
-        self.granularity_spinbox = QSpinBox()
+        # Granularity input.
+        group_granularity: QGroupBox = QGroupBox("Granularity")
+        granularity_layout: QHBoxLayout = QHBoxLayout(group_granularity)
+        self.granularity_spinbox: QSpinBox = QSpinBox()
         self.granularity_spinbox.setMaximum(10000000)
         self.granularity_spinbox.setValue(DEFAULT_GRANULARITY)
-        gran_layout.addWidget(self.granularity_spinbox)
+        granularity_layout.addWidget(self.granularity_spinbox)
         layout.addWidget(group_granularity)
 
-        # --- Group 4: Rotational lines ---
-        group_lines = QGroupBox("Rotational Lines")
-        lines_layout = QHBoxLayout(group_lines)
-        self.num_lines_spinbox = QSpinBox()
+        # Rotational line input.
+        group_lines: QGroupBox = QGroupBox("Rotational Lines")
+        lines_layout: QHBoxLayout = QHBoxLayout(group_lines)
+        self.num_lines_spinbox: QSpinBox = QSpinBox()
         self.num_lines_spinbox.setMaximum(10000)
         self.num_lines_spinbox.setValue(DEFAULT_LINES)
         lines_layout.addWidget(self.num_lines_spinbox)
         layout.addWidget(group_lines)
 
-        # --- Group 5: Action buttons ---
-        group_run = QGroupBox("Actions")
-        run_layout = QHBoxLayout(group_run)
-        self.run_button = QPushButton("Run Simulation")
+        # Run controls.
+        group_run: QGroupBox = QGroupBox("Actions")
+        run_layout: QHBoxLayout = QHBoxLayout(group_run)
+        self.run_button: QPushButton = QPushButton("Run Simulation")
         self.run_button.clicked.connect(self.add_simulation)
         run_layout.addWidget(self.run_button)
-        self.open_button = QPushButton("Open File")
+        self.open_button: QPushButton = QPushButton("Open File")
         self.open_button.clicked.connect(self.add_sample)
         run_layout.addWidget(self.open_button)
-        self.export_button = QPushButton("Export Table")
+        self.export_button: QPushButton = QPushButton("Export Table")
         self.export_button.clicked.connect(self.export_current_table)
         run_layout.addWidget(self.export_button)
         layout.addWidget(group_run)
@@ -366,21 +434,19 @@ class GUI(QMainWindow):
 
     def create_main_panel(self) -> QWidget:
         """Create the main panel with table tabs on the left and a plot on the right."""
-        main_widget = QWidget()
-        layout = QHBoxLayout(main_widget)
+        main_widget: QWidget = QWidget()
+        layout: QHBoxLayout = QHBoxLayout(main_widget)
 
-        # --- Left side: QTabWidget for tables ---
-        self.tab_widget = QTabWidget()
-        # Add an initial empty tab (using an empty DataFrame)
-        empty_df = pl.DataFrame()
-        empty_tab = create_dataframe_tab(empty_df, "v'-v''")
+        # Tabs containing tables.
+        self.tab_widget: QTabWidget = QTabWidget()
+        empty_df: pl.DataFrame = pl.DataFrame()
+        empty_tab: QWidget = create_dataframe_tab(empty_df, "v'-v''")
         self.tab_widget.addTab(empty_tab, "v'-v''")
         layout.addWidget(self.tab_widget, stretch=1)
 
-        # --- Right side: Plot area ---
-        self.plot_widget = pg.PlotWidget()
+        # Plot area.
+        self.plot_widget: pg.PlotWidget = pg.PlotWidget()
 
-        # Adds a legend at the top right of the plot.
         self.plot_widget.addLegend(offset=(0, 1))
         self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
         self.plot_widget.setLabel("top", "Wavenumber, ν [cm<sup>-1</sup>]")
@@ -388,7 +454,6 @@ class GUI(QMainWindow):
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
 
-        # Initial arbitrary wavelength range
         self.plot_widget.setXRange(100, 200)
 
         layout.addWidget(self.plot_widget, stretch=2)
@@ -396,37 +461,42 @@ class GUI(QMainWindow):
 
         return main_widget
 
-    def create_bottom_panel(self) -> QWidget:
-        """Create the bottom panel with temperature, pressure, and combo selections."""
-        bottom_widget = QWidget()
-        layout = QHBoxLayout(bottom_widget)
+    def create_bottom_panel(self) -> QWidget:  # noqa: PLR0915
+        """Create the bottom panel with temperature, pressure, and combo selections.
 
-        # --- Left: Input entries for temperature and pressure ---
-        entries_widget = QWidget()
-        entries_layout = QGridLayout(entries_widget)
+        Returns:
+            QWidget: The bottom panel widget.
+        """
+        bottom_widget: QWidget = QWidget()
+        layout: QHBoxLayout = QHBoxLayout(bottom_widget)
 
-        # Row 0: Equilibrium temperature.
-        self.temp_label = QLabel("Temperature [K]:")
-        self.temp_spinbox = MyDoubleSpinBox()
+        # Temperature and pressure inputs.
+        entries_widget: QWidget = QWidget()
+        entries_layout: QGridLayout = QGridLayout(entries_widget)
+
+        # Equilibrium temperature input.
+        self.temp_label: QLabel = QLabel("Temperature [K]:")
+        self.temp_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.temp_spinbox.setValue(DEFAULT_TEMPERATURE)
         entries_layout.addWidget(self.temp_label, 0, 0)
         entries_layout.addWidget(self.temp_spinbox, 0, 1)
 
-        # Nonequilibrium temperatures (hidden initially)
-        self.temp_trn_label = QLabel("Translational Temp [K]:")
-        self.temp_trn_spinbox = MyDoubleSpinBox()
+        # Nonequilibrium temperature input.
+        self.temp_trn_label: QLabel = QLabel("Translational Temp. [K]:")
+        self.temp_trn_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.temp_trn_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_elc_label = QLabel("Electronic Temp [K]:")
-        self.temp_elc_spinbox = MyDoubleSpinBox()
+        self.temp_elc_label: QLabel = QLabel("Electronic Temp. [K]:")
+        self.temp_elc_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.temp_elc_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_vib_label = QLabel("Vibrational Temp [K]:")
-        self.temp_vib_spinbox = MyDoubleSpinBox()
+        self.temp_vib_label: QLabel = QLabel("Vibrational Temp. [K]:")
+        self.temp_vib_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.temp_vib_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_rot_label = QLabel("Rotational Temp [K]:")
-        self.temp_rot_spinbox = MyDoubleSpinBox()
+        self.temp_rot_label: QLabel = QLabel("Rotational Temp. [K]:")
+        self.temp_rot_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.temp_rot_spinbox.setValue(DEFAULT_TEMPERATURE)
 
-        for w in (
+        # Show equilibrium temperature input by default.
+        for widget in (
             self.temp_trn_label,
             self.temp_trn_spinbox,
             self.temp_elc_label,
@@ -436,7 +506,7 @@ class GUI(QMainWindow):
             self.temp_rot_label,
             self.temp_rot_spinbox,
         ):
-            w.hide()
+            widget.hide()
 
         entries_layout.addWidget(self.temp_trn_label, 0, 2)
         entries_layout.addWidget(self.temp_trn_spinbox, 0, 3)
@@ -447,7 +517,7 @@ class GUI(QMainWindow):
         entries_layout.addWidget(self.temp_rot_label, 0, 8)
         entries_layout.addWidget(self.temp_rot_spinbox, 0, 9)
 
-        # Row 1: Pressure.
+        # Pressure input.
         pressure_label = QLabel("Pressure [Pa]:")
         self.pressure_spinbox = MyDoubleSpinBox()
         self.pressure_spinbox.setValue(DEFAULT_PRESSURE)
@@ -456,28 +526,28 @@ class GUI(QMainWindow):
 
         layout.addWidget(entries_widget)
 
-        # --- Right: Combo boxes ---
-        combos_widget = QWidget()
-        combos_layout = QGridLayout(combos_widget)
+        # Simulation and plot parameters.
+        combos_widget: QWidget = QWidget()
+        combos_layout: QGridLayout = QGridLayout(combos_widget)
 
         # Temperature Type.
-        temp_type_label = QLabel("Temperature Type:")
-        self.temp_type_combo = QComboBox()
+        temp_type_label: QLabel = QLabel("Temperature Type:")
+        self.temp_type_combo: QComboBox = QComboBox()
         self.temp_type_combo.addItems(["Equilibrium", "Nonequilibrium"])
         self.temp_type_combo.currentTextChanged.connect(self.switch_temp_mode)
         combos_layout.addWidget(temp_type_label, 0, 0)
         combos_layout.addWidget(self.temp_type_combo, 0, 1)
 
         # Simulation Type.
-        sim_type_label = QLabel("Simulation Type:")
-        self.sim_type_combo = QComboBox()
+        sim_type_label: QLabel = QLabel("Simulation Type:")
+        self.sim_type_combo: QComboBox = QComboBox()
         self.sim_type_combo.addItems(["Absorption", "Emission"])
         combos_layout.addWidget(sim_type_label, 1, 0)
         combos_layout.addWidget(self.sim_type_combo, 1, 1)
 
         # Plot Type.
-        plot_type_label = QLabel("Plot Type:")
-        self.plot_type_combo = QComboBox()
+        plot_type_label: QLabel = QLabel("Plot Type:")
+        self.plot_type_combo: QComboBox = QComboBox()
         self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
         combos_layout.addWidget(plot_type_label, 2, 0)
         combos_layout.addWidget(self.plot_type_combo, 2, 1)
@@ -487,7 +557,7 @@ class GUI(QMainWindow):
         return bottom_widget
 
     def add_sample(self) -> None:
-        """Open a CSV file and adds a new tab showing its contents."""
+        """Open a CSV file and add a new tab showing the contents."""
         filename, _ = QFileDialog.getOpenFileName(
             parent=self,
             caption="Open File",
@@ -513,7 +583,6 @@ class GUI(QMainWindow):
 
         plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
 
-        # Update the wavelength range automatically based on the plotted data.
         self.plot_widget.autoRange()
 
     def switch_temp_mode(self) -> None:
@@ -542,8 +611,12 @@ class GUI(QMainWindow):
             self.temp_spinbox.show()
 
     def parse_band_ranges(self) -> list[tuple[int, int]]:
-        """Parse comma-separated band ranges from user input."""
-        band_ranges_str: str = self.band_ranges_line_edit.text()
+        """Parse comma-separated band ranges from user input.
+
+        Returns:
+            list[tuple[int, int]]: A list of vibrational bands, e.g. [(1, 2), (3, 4)].
+        """
+        band_ranges_str: str = self.band_line_edit.text()
         bands: list[tuple[int, int]] = []
 
         for range_str in band_ranges_str.split(","):
@@ -569,8 +642,11 @@ class GUI(QMainWindow):
         return bands
 
     def add_simulation(self) -> None:
-        """Run a simulation instance and update the plot and table tabs."""
+        """Run a simulation instance, then update the plot and table tabs."""
         start_time: float = time.time()
+
+        # TODO: 25/04/14 - Split this method up. Process the temperature mode, parse the bands,
+        #       create the simulation, plot the data, and finally make a new tab in the table.
 
         # Determine temperatures based on mode.
         temp: float = self.temp_spinbox.value()
@@ -584,9 +660,7 @@ class GUI(QMainWindow):
         pres: float = self.pressure_spinbox.value()
         sim_type: SimType = SimType[self.sim_type_combo.currentText().upper()]
 
-        # Get bands based on the selected method
         if self.radio_specific_bands.isChecked():
-            # Use the existing parse_band_ranges method
             bands: list[tuple[int, int]] = self.parse_band_ranges()
             if not bands:
                 QMessageBox.warning(
@@ -597,13 +671,11 @@ class GUI(QMainWindow):
                 )
                 return
         else:
-            # Use the new band range spinboxes
             v_up_min: int = self.v_up_min_spinbox.value()
             v_up_max: int = self.v_up_max_spinbox.value()
             v_lo_min: int = self.v_lo_min_spinbox.value()
             v_lo_max: int = self.v_lo_max_spinbox.value()
 
-            # Validate input
             if v_up_min > v_up_max or v_lo_min > v_lo_max:
                 QMessageBox.warning(
                     self,
@@ -613,7 +685,7 @@ class GUI(QMainWindow):
                 )
                 return
 
-            # Generate band combinations based on the ranges
+            # Generate band combinations based on the given ranges.
             if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
                 bands = [(v_up_min, v_lo_min)]
             elif v_up_min == v_up_max:
@@ -627,7 +699,7 @@ class GUI(QMainWindow):
                     for v_lo in range(v_lo_min, v_lo_max + 1)
                 ]
 
-        rot_lvls = np.arange(0, self.num_lines_spinbox.value())
+        rot_lvls: NDArray[np.int64] = np.arange(0, self.num_lines_spinbox.value())
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
         state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)
@@ -693,7 +765,6 @@ class GUI(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
 
-        # Update the wavelength range automatically based on the plotted data.
         self.plot_widget.autoRange()
 
         print(f"Time to create plot: {time.time() - start_plot_time} s")
@@ -734,7 +805,9 @@ class GUI(QMainWindow):
 
         # TODO: 25/03/28 - Currently only the currently selected table is grabbed and exported. In
         #       the future, there should be an option to export any number of tables.
+
         table_view = current_widget.findChild(QTableView)
+
         if table_view is None:
             QMessageBox.information(
                 self,
@@ -745,7 +818,7 @@ class GUI(QMainWindow):
             return
 
         model: MyTable = table_view.model()
-        if not hasattr(model, "_df"):
+        if not hasattr(model, "df"):
             QMessageBox.information(
                 self,
                 "Error",
@@ -754,7 +827,7 @@ class GUI(QMainWindow):
             )
             return
 
-        df: pl.DataFrame = model._df
+        df: pl.DataFrame = model.df
 
         filename, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
         if filename:
@@ -770,10 +843,11 @@ class GUI(QMainWindow):
 class WavenumberAxis(pg.AxisItem):
     """A custom x-axis displaying wavenumbers."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize class variables."""
         super().__init__(*args, **kwargs)
 
-    def tickStrings(self, wavelengths: list[float], *_) -> list[str]:
+    def tickStrings(self, wavelengths: list[float], *_) -> list[str]:  # noqa: N802
         """Return the wavenumber strings that are placed next to ticks.
 
         Args:

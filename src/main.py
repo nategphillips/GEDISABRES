@@ -19,7 +19,7 @@ from PySide6.QtCore import (
     QTimer,
     Signal,
 )
-from PySide6.QtGui import QColor, QFont, QPainter, QPaintEvent, QPen, QValidator
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPaintEvent, QPen, QValidator
 from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
@@ -1041,8 +1041,13 @@ class SplashScreen(QWidget):
 def main() -> None:
     """Entry point."""
     app: QApplication = QApplication(sys.argv)
+
+    app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
+    app.setWindowIcon(app_icon)
+
     splash: SplashScreen = SplashScreen()
     splash.show()
+
     sys.exit(app.exec())
 
 

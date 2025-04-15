@@ -98,7 +98,7 @@ uv sync
 Then, navigate to the `src/` directory and run the GUI:
 
 ```bash
-uv run ./gui.py
+uv run ./main.py
 ```
 
 ## Roadmap

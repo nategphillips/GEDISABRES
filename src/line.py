@@ -65,6 +65,10 @@ class Line:
     def fwhm_predissociation(self, is_selected: bool) -> float:
         """Return the predissociation broadening FWHM in [1/cm].
 
+        The predissociation FWHM linewidths are computed using a polynomial fit given in the 1985
+        paper "Rotational Variation of Predissociation Linewidths in the Schumann-Runge Bands of O2"
+        by B. R. Lewis et al.
+
         Args:
             is_selected (bool): True if predissociation broadening should be simulated.
 
@@ -87,12 +91,16 @@ class Line:
             a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
             x: int = self.j_qn_up * (self.j_qn_up + 1)
 
+            # Predissociation broadening in [1/cm].
             return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
 
         return 0.0
 
     def fwhm_natural(self, is_selected: bool) -> float:
         """Return the natural broadening FWHM in [1/cm].
+
+        The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book
+        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
 
         Args:
             is_selected (bool): True if natural broadening should be simulated.
@@ -122,6 +130,9 @@ class Line:
 
     def fwhm_collisional(self, is_selected: bool) -> float:
         """Return the collisional broadening FWHM in [1/cm].
+
+        The collisional FWHM linewidths are computed using Equation 8.18 in the 2016 book
+        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
 
         Args:
             is_selected (bool): True if collisional broadening should be simulated.
@@ -172,6 +183,9 @@ class Line:
     def fwhm_doppler(self, is_selected: bool) -> float:
         """Return the Doppler broadening FWHM in [1/cm].
 
+        The doppler FWHM linewidths are computed using Equation 8.24 in the 2016 book "Spectroscopy
+        and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
+
         Args:
             is_selected (bool): True if Doppler broadening should be simulated.
 
@@ -193,6 +207,9 @@ class Line:
 
     def fwhm_instrument(self, is_selected: bool, inst_broadening_wl: float) -> float:
         """Return the instrument broadening FWHM in [1/cm].
+
+        The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
+        then converted to units of [1/cm].
 
         Args:
             is_selected (bool): True if instrument broadening should be simulated.

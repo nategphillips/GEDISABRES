@@ -376,7 +376,7 @@ class GUI(QMainWindow):
         broadening_layout.addWidget(self.inst_broadening_spinbox)
 
         checkbox_layout: QHBoxLayout = QHBoxLayout()
-        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument")
+        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument FWHM")
         self.checkbox_instrument.setChecked(True)
         self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
         self.checkbox_doppler.setChecked(True)

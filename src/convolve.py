@@ -47,29 +47,42 @@ def broadening_fn(
         + line.fwhm_predissociation(fwhm_selections["predissociation"])
     )
 
+    # NOTE: 25/04/25 - The forms of the Gaussian and Lorentzian PDFs used here are written in terms
+    #       of the FWHM. More commonly, the Gaussian PDF is written in terms of σ, the standard
+    #       deviation, and the Lorentzian is written in terms of γ, the half-width at half-maximum.
+
     # If only Gaussian FWHM parameters are present, then return a Gaussian profile.
     if (fwhm_gaussian > 0.0) and (fwhm_lorentzian == 0.0):
-        return np.exp(-((wavenumbers_conv - line.wavenumber) ** 2) / (2 * fwhm_gaussian**2)) / (
-            fwhm_gaussian * np.sqrt(2 * np.pi)
+        return (
+            (2 / fwhm_gaussian)
+            * np.sqrt(np.log(2) / np.pi)
+            * np.exp(-4 * np.log(2) * ((wavenumbers_conv - line.wavenumber) / fwhm_gaussian) ** 2)
         )
 
     # Similarly, if only Lorentzian FWHM parameters exist, then return a Lorentzian profile.
     if (fwhm_gaussian == 0.0) and (fwhm_lorentzian > 0.0):
         return np.divide(
             fwhm_lorentzian,
-            (np.pi * ((wavenumbers_conv - line.wavenumber) ** 2 + fwhm_lorentzian**2)),
+            (2 * np.pi * ((wavenumbers_conv - line.wavenumber) ** 2 + (fwhm_lorentzian / 2) ** 2)),
         )
 
     # TODO: 25/02/14 - Should check if both Gaussian and Lorentzian FWHM params are zero here and
     #       return an error if so.
 
+    # The FWHM of the Gaussian PDF is 2 * sigma * sqrt(2 * ln(2)), where sigma is the standard
+    # deviation.
+    gaussian_stddev: float = fwhm_gaussian / (2 * np.sqrt(2 * np.log(2)))
+
+    # The FWHM of the Lorentzian PDF is 2 * gamma, where gamma is the half-width at half-maximum.
+    lorentzian_hwhm: float = fwhm_lorentzian / 2
+
     # Otherwise, compute the argument of the complex Faddeeva function and return a Voigt profile.
-    z: NDArray[np.float64] = ((wavenumbers_conv - line.wavenumber) + 1j * fwhm_lorentzian) / (
-        fwhm_gaussian * np.sqrt(2)
+    z: NDArray[np.float64] = ((wavenumbers_conv - line.wavenumber) + 1j * lorentzian_hwhm) / (
+        gaussian_stddev * np.sqrt(2)
     )
 
     # The probability density function for the Voigt profile.
-    return np.real(wofz(z)) / (fwhm_gaussian * np.sqrt(2 * np.pi))
+    return np.real(wofz(z)) / (gaussian_stddev * np.sqrt(2 * np.pi))
 
 
 def convolve(

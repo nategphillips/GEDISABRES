@@ -5,12 +5,12 @@ description = "A tool for simulating diatomic spectra."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "matplotlib>=3.10.1",
-    "numpy>=2.2.3",
-    "polars>=1.24.0",
+    "matplotlib>=3.10.3",
+    "numpy>=2.2.5",
+    "polars>=1.29.0",
     "pyqtgraph>=0.13.7",
-    "pyside6-essentials>=6.8.2.1",
-    "scipy>=1.15.2",
+    "pyside6-essentials>=6.9.0",
+    "scipy>=1.15.3",
 ]
 
 [tool.ruff]

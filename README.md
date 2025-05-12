@@ -66,8 +66,8 @@ Four plot types are currently implemented:
 
 An equilibrium simulation of $\text{O}_2^{16}$ using the following parameters is shown below.
 
-- $(v', v'') = (2, 0)$ and $(4, 1)$
-- $N_\text{max} = 35$
+- $(v', v'') = (0, 5)$ through $(10, 5)$
+- $N_\text{max} = 40$
 - $T=300$ $\text{K}$
 - $p=101325$ $\text{Pa}$
 

@@ -1,7 +1,7 @@
 # module plot.py
 """Contains functions used for plotting."""
 
-# Copyright (C) 2025 Nathan Phillips
+# Copyright (C) 2025 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

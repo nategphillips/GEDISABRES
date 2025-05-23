@@ -1,7 +1,7 @@
 # module main.py
 """A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
 
-# Copyright (C) 2025 Nathan Phillips
+# Copyright (C) 2025 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

@@ -1,7 +1,7 @@
 # module simtype.py
 """Contains the implementation of the SimType class."""
 
-# Copyright (C) 2025 Nathan G. Phillips
+# Copyright (C) 2023-2025 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

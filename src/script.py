@@ -1,7 +1,7 @@
 # module script.py
 """This module demonstrates how to use the capabilities of pyGEONOSIS without using the GUI."""
 
-# Copyright (C) 2025 Nathan G. Phillips
+# Copyright (C) 2023-2025 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

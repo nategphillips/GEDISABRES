@@ -5,12 +5,13 @@ description = "A tool for simulating the Schumann-Runge (B-X) bands of molecular
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "matplotlib>=3.10.3",
-    "numpy>=2.2.5",
-    "polars>=1.29.0",
-    "pyqtgraph>=0.13.7",
-    "pyside6-essentials>=6.9.0",
-    "scipy>=1.15.3",
+    # Pyside6 version 6.9.1 breaks plotting entirely. Pin all versions to prevent future breakage.
+    "matplotlib==3.10.3",
+    "numpy==2.2.6",
+    "polars==1.30.0",
+    "pyqtgraph==0.13.7",
+    "pyside6-essentials==6.9.0",
+    "scipy==1.15.3",
 ]
 
 [tool.ruff]

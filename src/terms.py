@@ -63,11 +63,23 @@ def rotational_term(state: State, v_qn: int, j_qn: int, branch_idx: int) -> floa
     ld: float = lookup_table["lamda_D"][v_qn]
     gd: float = lookup_table["gamma_D"][v_qn]
 
+    # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
+    # state of the Schumann-Runge bands" by Cheung, et al.
+
+    # References to Yu refer to "High resolution spectral analysis of oxygen. IV. Energy levels,
+    # partition sums, band constants, RKR potentials, Franck-Condon factors involving the X3Σg-,
+    # a1Δg, and b1Σg+ states" by Yu et al.
+
     # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
     #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
     #       elements are used to solve for the energy eigenvalues, the constants from Yu are changed
-    #       to fit the convention used by Cheung. See the table below for details.
-    #
+    #       to fit the convention used by Cheung. The Cheung convention also matches that of
+    #       PGOPHER, which is my preferred convention (see https://pgopher.chm.bris.ac.uk/Help/linham.htm).
+    #       The table below details the changes made to Yu's constants.
+
+    # The Cheung Hamiltonian is listed on p. 2 of thier paper. Yu's Hamiltonian is listed on p. 3 of
+    # "High resolution spectral analysis of oxygen. I. Isotopically invariant Dunham fit for the
+    # X3Σg-, a1Δg, and b1Σg+ states".
     #       Cheung  | Yu
     #       --------|------------
     #       D       | -D
@@ -83,7 +95,7 @@ def rotational_term(state: State, v_qn: int, j_qn: int, branch_idx: int) -> floa
     # of N.
     x: int = j_qn * (j_qn + 1)
 
-    # The four Hamiltonian matrix elements given in Cheung.
+    # The four Hamiltonian matrix elements given on p. 3 of Cheung.
     h11: float = (
         b * (x + 2)
         - d * (x**2 + 8 * x + 4)

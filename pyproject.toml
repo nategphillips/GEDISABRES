@@ -9,11 +9,11 @@ dependencies = [
     # See https://github.com/pyqtgraph/pyqtgraph/issues/3321 and https://bugreports.qt.io/browse/PYSIDE-3115.
     # Fixed in PyQt 6.9.2, just waiting for the release.
     "matplotlib==3.10.3",
-    "numpy==2.3.0",
+    "numpy==2.3.1",
     "polars==1.31.0",
     "pyqtgraph==0.13.7",
     "pyside6-essentials==6.9.0",
-    "scipy==1.15.3",
+    "scipy==1.16.0",
 ]
 
 [tool.ruff]

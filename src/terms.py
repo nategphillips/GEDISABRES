@@ -19,10 +19,13 @@
 from typing import TYPE_CHECKING
 
 import numpy as np
+from hamilterm import numerics
 
 from state import State
 
 if TYPE_CHECKING:
+    from fractions import Fraction
+
     from numpy.typing import NDArray
 
 
@@ -79,31 +82,46 @@ def rotational_term(state: State, v_qn: int, j_qn: int, branch_idx: int) -> floa
         ld *= 2
         gd *= 2
 
-    # The Hamiltonian from Cheung is written in Hund's case (a) representation, so J is used instead
-    # of N.
-    x: int = j_qn * (j_qn + 1)
+    # # The Hamiltonian from Cheung is written in Hund's case (a) representation, so J is used instead
+    # # of N.
+    # x: int = j_qn * (j_qn + 1)
 
-    # The four Hamiltonian matrix elements given in Cheung.
-    h11: float = (
-        b * (x + 2)
-        - d * (x**2 + 8 * x + 4)
-        - 4 / 3 * l
-        - 2 * g
-        - 4 / 3 * ld * (x + 2)
-        - 4 * gd * (x + 1)
+    # # The four Hamiltonian matrix elements given in Cheung.
+    # h11: float = (
+    #     b * (x + 2)
+    #     - d * (x**2 + 8 * x + 4)
+    #     - 4 / 3 * l
+    #     - 2 * g
+    #     - 4 / 3 * ld * (x + 2)
+    #     - 4 * gd * (x + 1)
+    # )
+    # h12: float = -2 * np.sqrt(x) * (b - 2 * d * (x + 1) - g / 2 - 2 / 3 * ld - gd / 2 * (x + 4))
+    # h21: float = h12
+    # h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
+
+    # hamiltonian: NDArray[np.float64] = np.array([[h11, h12], [h21, h22]])
+    # f1, f3 = np.linalg.eigvals(hamiltonian)
+
+    term_symbol: str = "3Sigma"
+
+    consts: numerics.Constants = numerics.Constants(
+        rotational=numerics.RotationalConsts(B=b, D=d),
+        spin_spin=numerics.SpinSpinConsts(lamda=l, lambda_D=ld),
+        spin_rotation=numerics.SpinRotationConsts(gamma=g, gamma_D=gd),
     )
-    h12: float = -2 * np.sqrt(x) * (b - 2 * d * (x + 1) - g / 2 - 2 / 3 * ld - gd / 2 * (x + 4))
-    h21: float = h12
-    h22: float = b * x - d * (x**2 + 4 * x) + 2 / 3 * l - g + 2 / 3 * x * ld - 3 * x * gd
 
-    hamiltonian: NDArray[np.float64] = np.array([[h11, h12], [h21, h22]])
-    f1, f3 = np.linalg.eigvals(hamiltonian)
+    s_qn, lambda_qn = numerics.parse_term_symbol(term_symbol)
+    basis_fns: list[tuple[int, Fraction, Fraction]] = numerics.generate_basis_fns(s_qn, lambda_qn)
+    h_mat: NDArray[np.float64] = numerics.build_hamiltonian(basis_fns, s_qn, j_qn, consts)
+
+    # The Hamiltonian matrix is always Hermitian, so eigvalsh can be used.
+    f1, f2, f3 = np.linalg.eigvalsh(h_mat)
 
     match branch_idx:
         case 1:
             return f1
         case 2:
-            return b * x - d * x**2 + 2 / 3 * l - g + 2 / 3 * x * ld - x * gd
+            return f2  # b * x - d * x**2 + 2 / 3 * l - g + 2 / 3 * x * ld - x * gd
         case 3:
             return f3
         case _:

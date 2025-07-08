@@ -5,6 +5,7 @@ description = "A tool for simulating the Schumann-Runge (B-X) bands of molecular
 readme = "README.md"
 requires-python = "==3.13.5"
 dependencies = [
+    "hamilterm",
     # Pyside6 version 6.9.1 breaks plotting entirely. Pin all versions to prevent future breakage.
     # See https://github.com/pyqtgraph/pyqtgraph/issues/3321 and https://bugreports.qt.io/browse/PYSIDE-3115.
     # Fixed in PyQt 6.9.2, just waiting for the release.
@@ -41,3 +42,6 @@ extend-select = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.uv.sources]
+hamilterm = { git = "https://github.com/nategphillips/hamilterm" }

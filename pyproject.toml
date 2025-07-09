@@ -12,6 +12,9 @@ dependencies = [
     "matplotlib==3.10.3",
     "numpy==2.3.1",
     "polars==1.31.0",
+    # Temporarily using my fork of the py3nj (https://github.com/fujiisoup/py3nj) package since I
+    # fixed a naming bug. Will use the actual package once the fix is merged.
+    "py3nj",
     "pyqtgraph==0.13.7",
     "pyside6-essentials==6.9.0",
     "scipy==1.16.0",
@@ -45,3 +48,4 @@ convention = "google"
 
 [tool.uv.sources]
 hamilterm = { git = "https://github.com/nategphillips/hamilterm" }
+py3nj = { git = "https://github.com/nategphillips/py3nj" }

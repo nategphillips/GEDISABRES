@@ -231,6 +231,14 @@ wheels = [
 ]
 
 [[package]]
+name = "py3nj"
+version = "0.2.2"
+source = { git = "https://github.com/nategphillips/py3nj#eb5eaab7f225935d44d8ecfb3f5828fb54a73339" }
+dependencies = [
+    { name = "numpy" },
+]
+
+[[package]]
 name = "pygeonosis"
 version = "0.1.0"
 source = { virtual = "." }
@@ -239,6 +247,7 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "polars" },
+    { name = "py3nj" },
     { name = "pyqtgraph" },
     { name = "pyside6-essentials" },
     { name = "scipy" },
@@ -250,6 +259,7 @@ requires-dist = [
     { name = "matplotlib", specifier = "==3.10.3" },
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },
+    { name = "py3nj", git = "https://github.com/nategphillips/py3nj" },
     { name = "pyqtgraph", specifier = "==0.13.7" },
     { name = "pyside6-essentials", specifier = "==6.9.0" },
     { name = "scipy", specifier = "==1.16.0" },

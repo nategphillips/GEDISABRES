@@ -21,15 +21,11 @@ James O. Hornkohl, Christian G. Parigger, and László Nemes.
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from fractions import Fraction
-from typing import TYPE_CHECKING
 
 import numpy as np
 from hamilterm import numerics as num
 from numpy.typing import NDArray
-from sympy.physics.quantum.cg import CG
-
-if TYPE_CHECKING:
-    import sympy as sp
+from py3nj import clebsch_gordan
 
 
 class Line:
@@ -89,16 +85,30 @@ def honl_london_factor(
         for m in range(unitary_lo.shape[0]):
             delta_omega: Fraction = omega_basis_up[n] - omega_basis_lo[m]
 
-            # FIXME: 25/07/09 - Using sympy to numerically compute the Clebsch-Gordan coefficients
-            #        is certainly not the most efficient way to do things. Change in the future.
-            cg: sp.Expr = CG(
-                j_qn_lo,
-                omega_basis_lo[m],
-                transition_order,
-                delta_omega,
-                j_qn_up,
-                omega_basis_up[n],
-            ).doit()
+            # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
+            #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the
+            #       Ninja build system to be installed. On Windows, Quickstart Fortran
+            #       (https://github.com/LKedward/quickstart-fortran) installs a MinGW backend along
+            #       with GFortran and the Ninja build system. Word of caution: if you have multiple
+            #       MinGW or GFortran versions installed, make sure to move the Quickstart Fortran
+            #       versions to the top of your PATH, or the build might fail! Linux is more
+            #       straightforward, just ensure that GFortran and Ninja are installed via the
+            #       appropriate package manager and you're good to go.
+
+            # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ
+            #       can be half-integers, Ω = Λ + Σ is generally a half-integer. The arguments
+            #       passed to the CG method are doubled so that half-integer values are properly
+            #       handled, see https://py3nj.readthedocs.io/en/master/examples.html for details.
+            #       Hornkohl, et al. list the CG coefficient as ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩.
+            cg: np.float64 | NDArray[np.float64] = clebsch_gordan(
+                int(2 * j_qn_lo),
+                int(2 * transition_order),
+                int(2 * j_qn_up),
+                int(2 * omega_basis_lo[m]),
+                int(2 * delta_omega),
+                int(2 * omega_basis_up[n]),
+                ignore_invalid=True,
+            )
 
             total += unitary_up[n, branch_idx_up] * cg * unitary_lo[m, branch_idx_lo]
 

@@ -105,33 +105,6 @@ def honl_london_factor(
     return abs(total) ** 2 * (2 * j_qn_lo + 1)
 
 
-def term_value(
-    branch_idx: int, unitary: NDArray[np.float64], hamiltonian: NDArray[np.float64]
-) -> float:
-    """Computes the rotational term value of a rotational line.
-
-    Algorithm based on Equation 21 in Hornkohl, et al.
-
-    Args:
-        branch_idx (int): Branch index
-        unitary (NDArray[np.float64]): Unitary matrix
-        hamiltonian (NDArray[np.float64]): Hamiltonian matrix
-
-    Returns:
-        float: The rotational term value
-    """
-    # FIXME: 25/07/09 - This function is unnecessary and redundant since the eigenvalues for each
-    #        Hamiltonian are already computed when np.eigh() is called. Need to figure out how the
-    #        eigenvalues obtained using np.eigh() map to the rotational lines.
-    total: float = 0.0
-
-    for n in range(unitary.shape[0]):
-        for m in range(unitary.shape[0]):
-            total += unitary[n, branch_idx] * hamiltonian[n, m] * unitary[m, branch_idx]
-
-    return total
-
-
 term_symbol_up: str = "3Sigma"
 term_symbol_lo: str = "3Sigma"
 
@@ -164,7 +137,7 @@ for j_qn_up in range(0, j_qn_up_max + 1):
     hamiltonian_up: NDArray[np.float64] = num.build_hamiltonian(
         basis_fns_up, s_qn_up, j_qn_up, consts_up
     )
-    _, unitary_up = np.linalg.eigh(hamiltonian_up)
+    eigenvals_up, unitary_up = np.linalg.eigh(hamiltonian_up)
 
     # R Branch: J'' = J' - 1
     # Q Branch: J'' = J'
@@ -174,22 +147,24 @@ for j_qn_up in range(0, j_qn_up_max + 1):
 
     hamiltonian_lo_list: list[NDArray[np.float64]] = []
     unitary_lo_list: list[NDArray[np.float64]] = []
+    eigenvals_lo_list: list[NDArray[np.float64]] = []
 
     for j_qn_lo in j_qn_lo_list:
         hamiltonian_lo: NDArray[np.float64] = num.build_hamiltonian(
             basis_fns_lo, s_qn_lo, j_qn_lo, consts_lo
         )
-        _, unitary_lo = np.linalg.eigh(hamiltonian_lo)
+        eigenvals_lo, unitary_lo = np.linalg.eigh(hamiltonian_lo)
         hamiltonian_lo_list.append(hamiltonian_lo)
         unitary_lo_list.append(unitary_lo)
+        eigenvals_lo_list.append(eigenvals_lo)
 
     for branch_idx_up in range(unitary_up.shape[1]):
         # Only needs to be computed once for each upper branch.
-        term_value_up: float = term_value(branch_idx_up, unitary_up, hamiltonian_up)
+        term_value_up: float = eigenvals_up[branch_idx_up]
 
         for branch_idx_lo in range(unitary_lo_list[0].shape[1]):
-            for j_qn_lo, hamiltonian_lo, unitary_lo, branch_label in zip(
-                j_qn_lo_list, hamiltonian_lo_list, unitary_lo_list, branch_labels
+            for j_qn_lo, hamiltonian_lo, unitary_lo, eigenvals_lo, branch_label in zip(
+                j_qn_lo_list, hamiltonian_lo_list, unitary_lo_list, eigenvals_lo_list, branch_labels
             ):
                 hlf: float = honl_london_factor(
                     branch_idx_up,
@@ -202,7 +177,7 @@ for j_qn_up in range(0, j_qn_up_max + 1):
                     omega_basis_lo,
                 )
                 if hlf > 1e-6:
-                    term_value_lo: float = term_value(branch_idx_lo, unitary_lo, hamiltonian_lo)
+                    term_value_lo: float = eigenvals_lo[branch_idx_lo]
                     wavenumber: float = term_value_up - term_value_lo
                     lines.append(
                         Line(

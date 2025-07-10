@@ -89,13 +89,16 @@ def honl_london_factor(
             #       passed to the CG method are doubled so that half-integer values are properly
             #       handled, see https://py3nj.readthedocs.io/en/master/examples.html for details.
             #       Hornkohl, et al. list the CG coefficient as ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩.
+            # FIXME: 25/07/10 - As written, this expression might only be valid for emission.
+            #        Need to compare line strengths with the algebraic HLFs used in previous
+            #        versions of the code.
             cg: np.float64 | NDArray[np.float64] = clebsch_gordan(
-                int(2 * j_qn_lo),
-                int(2 * transition_order),
-                int(2 * j_qn_up),
-                int(2 * omega_basis_lo[m]),
-                int(2 * delta_omega),
-                int(2 * omega_basis_up[n]),
+                two_j1=int(2 * j_qn_lo),
+                two_j2=int(2 * transition_order),
+                two_j3=int(2 * j_qn_up),
+                two_m1=int(2 * omega_basis_lo[m]),
+                two_m2=int(2 * delta_omega),
+                two_m3=int(2 * omega_basis_up[n]),
                 ignore_invalid=True,
             )
 

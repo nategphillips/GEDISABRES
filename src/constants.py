@@ -53,3 +53,7 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
     "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3}
 }
+
+# A somewhat arbitrary cutoff value for the Hönl-London factors. If the HLF of a line is lower than
+# this value, the transition is considered "forbidden" and the line is not simulated.
+HONL_LONDON_CUTOFF: float = 1e-6

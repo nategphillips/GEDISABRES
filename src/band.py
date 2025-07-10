@@ -21,6 +21,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import numpy as np
+from hamilterm import numerics
+from py3nj import clebsch_gordan
 
 import constants
 import convolve
@@ -30,9 +32,76 @@ from line import Line
 from simtype import SimType
 
 if TYPE_CHECKING:
+    from fractions import Fraction
+
     from numpy.typing import NDArray
 
     from sim import Sim
+
+
+def honl_london_factor(
+    i: int,
+    j: int,
+    unitary_up: NDArray[np.float64],
+    unitary_lo: NDArray[np.float64],
+    j_qn_up: int,
+    j_qn_lo: int,
+    omega_basis_up: list[Fraction],
+    omega_basis_lo: list[Fraction],
+    transition_order: int = 1,
+) -> float:
+    """Computes the Hönl-London factor of a rotational line.
+
+    Algorithm based on Equation 22 in Hornkohl, et al.
+
+    Args:
+        i (int): Column index of the upper state unitary matrix.
+        j (int): Column index of the lower state unitary matrix.
+        unitary_up (NDArray[np.float64]): Upper state unitary matrix.
+        unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
+        j_qn_up (int): Upper state rotational quantum number J'.
+        j_qn_lo (int): Lower state rotational quantum number J''.
+        omega_basis_up (list[Fraction]): Upper state Ω quantum numbers.
+        omega_basis_lo (list[Fraction]): Lower state Ω quantum numbers.
+        transition_order (int, optional): Transition order. Defaults to 1.
+
+    Returns:
+        float: The Hönl-London factor.
+    """
+    total: float = 0.0
+
+    for n in range(unitary_up.shape[0]):
+        for m in range(unitary_lo.shape[0]):
+            delta_omega: Fraction = omega_basis_up[n] - omega_basis_lo[m]
+
+            # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
+            #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the
+            #       Ninja build system to be installed. On Windows, Quickstart Fortran
+            #       (https://github.com/LKedward/quickstart-fortran) installs a MinGW backend along
+            #       with GFortran and the Ninja build system. Word of caution: if you have multiple
+            #       MinGW or GFortran versions installed, make sure to move the Quickstart Fortran
+            #       versions to the top of your PATH, or the build might fail! Linux is more
+            #       straightforward, just ensure that GFortran and Ninja are installed via the
+            #       appropriate package manager and you're good to go.
+
+            # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ
+            #       can be half-integers, Ω = Λ + Σ is generally a half-integer. The arguments
+            #       passed to the CG method are doubled so that half-integer values are properly
+            #       handled, see https://py3nj.readthedocs.io/en/master/examples.html for details.
+            #       Hornkohl, et al. list the CG coefficient as ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩.
+            cg: np.float64 | NDArray[np.float64] = clebsch_gordan(
+                int(2 * j_qn_lo),
+                int(2 * transition_order),
+                int(2 * j_qn_up),
+                int(2 * omega_basis_lo[m]),
+                int(2 * delta_omega),
+                int(2 * omega_basis_up[n]),
+                ignore_invalid=True,
+            )
+
+            total += unitary_up[n, i] * cg * unitary_lo[m, j]
+
+    return abs(total) ** 2 * (2 * j_qn_lo + 1)
 
 
 class Band:
@@ -176,6 +245,10 @@ class Band:
     def get_rot_partition_fn(self) -> float:
         """Return the rotational partition function, Q_r.
 
+        The rotational partition function is computed using the high-temperature approximation,
+        given by Equation 2.21 in the 2016 book "Spectroscopy and Optical Diagnostics for Gases" by
+        Ronald K. Hanson et al.
+
         Returns:
             float: The rotational partition function, Q_r.
         """
@@ -190,33 +263,15 @@ class Band:
                 state = self.sim.state_lo
                 v_qn = self.v_qn_lo
 
-        q_r: float = 0.0
-
-        # NOTE: 24/10/22 - The rotational partition function is always computed using the same
-        #       number of lines. At reasonable temperatures (~300 K), only around 50 rotational
-        #       lines contribute to the state sum. However, at high temperatures (~3000 K), at least
-        #       100 lines need to be considered to obtain an accurate estimate of the state sum.
-        #       This approach is used to ensure the sum is calculated correctly regardless of the
-        #       number of rotational lines simulated by the user.
-        for j_qn in range(201):
-            # TODO: 24/10/22 - Not sure which branch index should be used here. The triplet energies
-            #       are all close together, so it shouldn't matter too much. Averaging could work,
-            #       but I'm not sure if this is necessary.
-            q_r += (2 * j_qn + 1) * np.exp(
-                -terms.rotational_term(state, v_qn, j_qn, 2)
-                * constants.PLANC
-                * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_rot)
-            )
-
-        # NOTE: 24/10/22 - Alternatively, the high-temperature approximation can be used instead of
-        #       the direct sum approach. This also works well.
-
-        # q_r = (
-        #     constants.BOLTZ
-        #     * self.sim.temp_rot
-        #     / (constants.PLANC * constants.LIGHT * state.constants["B"][v_qn])
-        # )
+        # TODO: 25/07/10 - For now, use the high-temperature approximation instead of directly
+        #       computing the sum. Now that rotational term values are directly associated with
+        #       rotational lines instead of being computed separately, computing the sum would
+        #       require a bit more logic, and I'm not sure it's worth it.
+        q_r = (
+            constants.BOLTZ
+            * self.sim.temp_rot
+            / (constants.PLANC * constants.LIGHT * state.constants["B"][v_qn])
+        )
 
         # The state sum must be divided by the symmetry parameter to account for identical
         # rotational orientations in space.
@@ -228,118 +283,179 @@ class Band:
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
+        # FIXME: 25/07/10 - Use the State class to automatically pull the correct term symbols for
+        #        the molecule in question.
+        term_symbol_up: str = "3Sigma"
+        term_symbol_lo: str = "3Sigma"
+
+        # TODO: 25/07/10 - There's certainly a better way to get the constants from the State
+        #       class into the form used in Hamilterm.
+        table_up: dict[str, list[float]] = self.sim.state_up.constants
+        table_lo: dict[str, list[float]] = self.sim.state_lo.constants
+
+        b_up: float = table_up["B"][self.v_qn_up]
+        d_up: float = table_up["D"][self.v_qn_up]
+        l_up: float = table_up["lamda"][self.v_qn_up]
+        g_up: float = table_up["gamma"][self.v_qn_up]
+        ld_up: float = table_up["lamda_D"][self.v_qn_up]
+        gd_up: float = table_up["gamma_D"][self.v_qn_up]
+
+        b_lo: float = table_lo["B"][self.v_qn_lo]
+        d_lo: float = table_lo["D"][self.v_qn_lo]
+        l_lo: float = table_lo["lamda"][self.v_qn_lo]
+        g_lo: float = table_lo["gamma"][self.v_qn_lo]
+        ld_lo: float = table_lo["lamda_D"][self.v_qn_lo]
+        gd_lo: float = table_lo["gamma_D"][self.v_qn_lo]
+
+        # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
+        #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
+        #       elements are used to solve for the energy eigenvalues, the constants from Yu are
+        #       changed to fit the convention used by Cheung. See the table below for details.
+        #
+        #       Cheung  | Yu
+        #       --------|------------
+        #       D       | -D
+        #       lamda_D | 2 * lamda_D
+        #       gamma_D | 2 * gamma_D
+        # TODO: 25/07/10 - At some point, notation used by pyGEONOSIS should be standardized (it
+        #       already mostly is) such that the constants supplied must follow the correct form.
+        #       This case in particular makes the issues obvious (i.e. hardcoding a workaround).
+
+        if self.sim.state_lo.name == "X3Sg-":
+            d_lo *= -1
+            ld_lo *= 2
+            gd_lo *= 2
+
+        consts_up: numerics.Constants = numerics.Constants(
+            rotational=numerics.RotationalConsts(B=b_up, D=d_up),
+            spin_spin=numerics.SpinSpinConsts(lamda=l_up, lambda_D=ld_up),
+            spin_rotation=numerics.SpinRotationConsts(gamma=g_up, gamma_D=gd_up),
+        )
+        consts_lo: numerics.Constants = numerics.Constants(
+            rotational=numerics.RotationalConsts(B=b_lo, D=d_lo),
+            spin_spin=numerics.SpinSpinConsts(lamda=l_lo, lambda_D=ld_lo),
+            spin_rotation=numerics.SpinRotationConsts(gamma=g_lo, gamma_D=gd_lo),
+        )
+
+        s_qn_up, lambda_qn_up = numerics.parse_term_symbol(term_symbol_up)
+        basis_fns_up: list[tuple[int, Fraction, Fraction]] = numerics.generate_basis_fns(
+            s_qn_up, lambda_qn_up
+        )
+        s_qn_lo, lambda_qn_lo = numerics.parse_term_symbol(term_symbol_lo)
+        basis_fns_lo: list[tuple[int, Fraction, Fraction]] = numerics.generate_basis_fns(
+            s_qn_lo, lambda_qn_lo
+        )
+
+        omega_basis_up: list[Fraction] = [omega for (_, _, omega) in basis_fns_up]
+        omega_basis_lo: list[Fraction] = [omega for (_, _, omega) in basis_fns_lo]
+
+        # FIXME: 25/07/10 - Make a simulation take in J' max instead of "rotational levels".
+        j_qn_up_max: int = self.sim.rot_lvls.max()
+
         lines: list[Line] = []
 
-        for n_qn_up in self.sim.rot_lvls:
-            for n_qn_lo in self.sim.rot_lvls:
-                # Ensure the rotational selection rules corresponding to each electronic state are
-                # properly followed.
-                if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(n_qn_lo):
-                    lines.extend(self.allowed_branches(n_qn_up, n_qn_lo))
-
-        return lines
-
-    def allowed_branches(self, n_qn_up: int, n_qn_lo: int) -> list[Line]:
-        """Determine the selection rules for Hund's case (b).
-
-        Args:
-            n_qn_up (int): Upper state rotational quantum number N'.
-            n_qn_lo (int): Lower state rotational quantum number N''.
-
-        Raises:
-            ValueError: If the spin multiplicity of the two electronic states do not match.
-
-        Returns:
-            list[Line]: A list of `Line` objects for all allowed branches.
-        """
-        # For Σ-Σ transitions, the rotational selection rules are ∆N = ±1, ∆N ≠ 0.
-        # Herzberg p. 244, eq. (V, 44)
-
-        lines: list[Line] = []
-
-        # Determine how many lines should be present in the fine structure of the molecule due to
-        # the effects of spin multiplicity.
-        if self.sim.state_up.spin_multiplicity == self.sim.state_lo.spin_multiplicity:
-            branch_range: range = range(1, self.sim.state_up.spin_multiplicity + 1)
-        else:
-            raise ValueError("Spin multiplicity of the two electronic states do not match.")
-
-        delta_n_qn: int = n_qn_up - n_qn_lo
-
-        # R branch
-        if delta_n_qn == 1:
-            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "R"))
-        # Q branch
-        if delta_n_qn == 0:
-            # Note that the Q branch doesn't exist for the Schumann-Runge bands of O2.
-            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "Q"))
-        # P branch
-        elif delta_n_qn == -1:
-            lines.extend(self.branch_index(n_qn_up, n_qn_lo, branch_range, "P"))
-
-        return lines
-
-    def branch_index(
-        self, n_qn_up: int, n_qn_lo: int, branch_range: range, branch_name: str
-    ) -> list[Line]:
-        """Return the rotational lines within a given branch.
-
-        Args:
-            n_qn_up (int): Upper state rotational quantum number N'.
-            n_qn_lo (int): Lower state rotational quantum number N''.
-            branch_range (range): Range of branches corresponding to the spin multiplicity.
-            branch_name (str): The name of the branch, e.g. R, Q, or P.
-
-        Returns:
-            list[Line]: A list of `Line` objects within a given branch.
-        """
-
-        def add_line(branch_idx_up: int, branch_idx_lo: int, is_satellite: bool) -> None:
-            """Create and append a rotational line."""
-            lines.append(
-                Line(
-                    sim=self.sim,
-                    band=self,
-                    n_qn_up=n_qn_up,
-                    n_qn_lo=n_qn_lo,
-                    j_qn_up=utils.n_to_j(n_qn_up, branch_idx_up),
-                    j_qn_lo=utils.n_to_j(n_qn_lo, branch_idx_lo),
-                    branch_idx_up=branch_idx_up,
-                    branch_idx_lo=branch_idx_lo,
-                    branch_name=branch_name,
-                    is_satellite=is_satellite,
-                )
+        for j_qn_up in range(0, j_qn_up_max + 1):
+            hamiltonian_up: NDArray[np.float64] = numerics.build_hamiltonian(
+                basis_fns_up, s_qn_up, j_qn_up, consts_up
             )
+            eigenvals_up, unitary_up = np.linalg.eigh(hamiltonian_up)
 
-        # Herzberg pp. 249-251, eqs. (V, 48-53)
+            # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
+            #       branch transition is forbidden.
+            # TODO: 25/07/10 - See also Herzberg p. 243 stating that if Ω = 0 for both electronic
+            #       states, the Q branch transition is forbidden.
+            # FIXME: 25/07/10 - Implement parity calculations and see if these rules are enforced
+            #        automatically
+            # R Branch: J'' = J' - 1
+            # Q Branch: J'' = J'
+            # P Branch: J'' = J' + 1
+            if lambda_qn_up == lambda_qn_lo:
+                j_qn_lo_list: list[int] = [j_qn_up - 1, j_qn_up + 1]
+                branch_names: list[str] = ["R", "P"]
+            else:
+                j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
+                branch_names = ["R", "Q", "P"]
 
-        # NOTE: 24/10/16 - Every transition has 6 total lines (3 main + 3 satellite) except for the
-        #       N' = 0 to N'' = 1 transition, which has 3 total lines (1 main + 2 satellite).
+            hamiltonian_lo_list: list[NDArray[np.float64]] = []
+            unitary_lo_list: list[NDArray[np.float64]] = []
+            eigenvals_lo_list: list[NDArray[np.float64]] = []
 
-        lines: list[Line] = []
+            for j_qn_lo in j_qn_lo_list:
+                hamiltonian_lo: NDArray[np.float64] = numerics.build_hamiltonian(
+                    basis_fns_lo, s_qn_lo, j_qn_lo, consts_lo
+                )
+                eigenvals_lo, unitary_lo = np.linalg.eigh(hamiltonian_lo)
+                hamiltonian_lo_list.append(hamiltonian_lo)
+                unitary_lo_list.append(unitary_lo)
+                eigenvals_lo_list.append(eigenvals_lo)
 
-        # Handle the special case where N' = 0 (only the P1, PQ12, and PQ13 lines exist).
-        if n_qn_up == 0:
-            if branch_name == "P":
-                add_line(1, 1, False)
-            for branch_idx_lo in (2, 3):
-                add_line(1, branch_idx_lo, True)
+            for i in range(unitary_up.shape[1]):
+                # Only needs to be computed once for each upper branch.
+                rot_term_value_up: float = eigenvals_up[i]
 
-            return lines
+                # All the unitary matrices within a given electronic state will have the same
+                # dimensions since the Hamiltonian is of a fixed dimension for said state.
+                for j in range(unitary_lo_list[0].shape[1]):
+                    # NOTE: 25/07/10 - The dimensions of the unitary matrices determine how many
+                    #       branches exist for the given transition, but they are zero-indexed.
+                    #       Standard spectroscopic notation gives branch indices as one-indexed
+                    #       values, so we make that change here.
+                    branch_idx_up: int = i + 1
+                    branch_idx_lo: int = j + 1
 
-        # Handle regular cases for other N'.
-        for branch_idx_up in branch_range:
-            for branch_idx_lo in branch_range:
-                # Main branches: R1, R2, R3, P1, P2, P3
-                if branch_idx_up == branch_idx_lo:
-                    add_line(branch_idx_up, branch_idx_lo, False)
-                # Satellite branches: RQ31, RQ32, RQ21
-                elif (
-                    (branch_name == "R")
-                    and (branch_idx_up > branch_idx_lo)
-                    or (branch_name == "P")
-                    and (branch_idx_up < branch_idx_lo)
-                ):
-                    add_line(branch_idx_up, branch_idx_lo, True)
+                    n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
+                    n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
+
+                    # Ensure the rotational selection rules corresponding to each electronic state
+                    # are properly followed. In this case, the oxygen nucleus has zero nuclear spin
+                    # angular momentum, meaning symmetry considerations demand that N may only have
+                    # odd values.
+                    # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
+                    #        enforced automatically.
+                    if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
+                        n_qn_lo
+                    ):
+                        for j_qn_lo, hamiltonian_lo, unitary_lo, eigenvals_lo, branch_name in zip(
+                            j_qn_lo_list,
+                            hamiltonian_lo_list,
+                            unitary_lo_list,
+                            eigenvals_lo_list,
+                            branch_names,
+                        ):
+                            hlf: float = honl_london_factor(
+                                i=i,
+                                j=j,
+                                unitary_up=unitary_up,
+                                unitary_lo=unitary_lo,
+                                j_qn_up=j_qn_up,
+                                j_qn_lo=j_qn_lo,
+                                omega_basis_up=omega_basis_up,
+                                omega_basis_lo=omega_basis_lo,
+                            )
+                            if hlf > constants.HONL_LONDON_CUTOFF:
+                                rot_term_value_lo: float = eigenvals_lo[j]
+
+                                # Denote satellite branches for use in plotting.
+                                is_satellite = False
+                                if branch_idx_up != branch_idx_lo:
+                                    is_satellite = True
+
+                                lines.append(
+                                    Line(
+                                        sim=self.sim,
+                                        band=self,
+                                        j_qn_up=j_qn_up,
+                                        j_qn_lo=j_qn_lo,
+                                        n_qn_up=n_qn_up,
+                                        n_qn_lo=n_qn_lo,
+                                        branch_idx_up=branch_idx_up,
+                                        branch_idx_lo=branch_idx_lo,
+                                        branch_name=branch_name,
+                                        is_satellite=is_satellite,
+                                        honl_london_factor=hlf,
+                                        rot_term_value_up=rot_term_value_up,
+                                        rot_term_value_lo=rot_term_value_lo,
+                                    )
+                                )
 
         return lines

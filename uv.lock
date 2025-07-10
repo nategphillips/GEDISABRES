@@ -62,7 +62,7 @@ wheels = [
 [[package]]
 name = "hamilterm"
 version = "0.1.0"
-source = { git = "https://github.com/nategphillips/hamilterm#1bab051d5cefb2e3f356a1a18ef5b936ce51a534" }
+source = { git = "https://github.com/nategphillips/hamilterm?rev=1bab051d5cefb2e3f356a1a18ef5b936ce51a534#1bab051d5cefb2e3f356a1a18ef5b936ce51a534" }
 dependencies = [
     { name = "numpy" },
     { name = "sympy" },
@@ -233,7 +233,7 @@ wheels = [
 [[package]]
 name = "py3nj"
 version = "0.2.2"
-source = { git = "https://github.com/nategphillips/py3nj#eb5eaab7f225935d44d8ecfb3f5828fb54a73339" }
+source = { git = "https://github.com/fujiisoup/py3nj?rev=098e40e433d6c1f32b1b488519bbae40f40b812b#098e40e433d6c1f32b1b488519bbae40f40b812b" }
 dependencies = [
     { name = "numpy" },
 ]
@@ -255,11 +255,11 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm" },
+    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=1bab051d5cefb2e3f356a1a18ef5b936ce51a534" },
     { name = "matplotlib", specifier = "==3.10.3" },
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },
-    { name = "py3nj", git = "https://github.com/nategphillips/py3nj" },
+    { name = "py3nj", git = "https://github.com/fujiisoup/py3nj?rev=098e40e433d6c1f32b1b488519bbae40f40b812b" },
     { name = "pyqtgraph", specifier = "==0.13.7" },
     { name = "pyside6-essentials", specifier = "==6.9.0" },
     { name = "scipy", specifier = "==1.16.0" },

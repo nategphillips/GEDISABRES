@@ -288,7 +288,14 @@ class Band:
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
+        # FIXME: 25/07/11 - The lines being generated are not correct when comparing the rotational
+        #        quantum numbers with previous versions of the code. Not sure if this is because
+        #        we're now iterating over J instead of N. Try implementing previous hard-coded
+        #        selection rules verbatim to recreate the correct lines, then check Honl-London
+        #        factors to narrow down the problem
+
         start_time: float = time.time()
+
         # FIXME: 25/07/10 - Use the State class to automatically pull the correct term symbols for
         #        the molecule in question.
         term_symbol_up: str = "3Sigma"

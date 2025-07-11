@@ -740,7 +740,7 @@ class GUI(QMainWindow):
             temp_vib=temp_vib,
             temp_rot=temp_rot,
             pressure=pres,
-            bands=bands,
+            bands_input=bands,
         )
 
         print(f"Time to create sim: {time.time() - start_time} s")

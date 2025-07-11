@@ -18,6 +18,8 @@
 
 from __future__ import annotations
 
+import time
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -121,10 +123,6 @@ class Band:
         self.sim: Sim = sim
         self.v_qn_up: int = v_qn_up
         self.v_qn_lo: int = v_qn_lo
-        self.band_origin: float = self.get_band_origin()
-        self.rot_part: float = self.get_rot_partition_fn()
-        self.vib_boltz_frac: float = self.get_vib_boltz_frac()
-        self.lines: list[Line] = self.get_lines()
 
     def wavenumbers_line(self) -> NDArray[np.float64]:
         """Return an array of wavenumbers, one for each line.
@@ -189,7 +187,8 @@ class Band:
             inst_broadening_wl,
         )
 
-    def get_vib_boltz_frac(self) -> float:
+    @cached_property
+    def vib_boltz_frac(self) -> float:
         """Return the vibrational Boltzmann fraction N_v / N.
 
         Returns:
@@ -212,10 +211,11 @@ class Band:
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_vib)
             )
-            / self.sim.vib_part
+            / self.sim.vib_partition_fn
         )
 
-    def get_band_origin(self) -> float:
+    @cached_property
+    def band_origin(self) -> float:
         """Return the band origin in [1/cm].
 
         Returns:
@@ -245,7 +245,8 @@ class Band:
             - (lower_state["G"][self.v_qn_lo] - lower_state["G"][0])
         )
 
-    def get_rot_partition_fn(self) -> float:
+    @cached_property
+    def rot_partition_fn(self) -> float:
         """Return the rotational partition function, Q_r.
 
         The rotational partition function is computed using the high-temperature approximation,
@@ -280,12 +281,14 @@ class Band:
         # rotational orientations in space.
         return q_r / self.sim.molecule.symmetry_param
 
-    def get_lines(self) -> list[Line]:
+    @cached_property
+    def lines(self) -> list[Line]:
         """Return a list of all allowed rotational lines.
 
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
+        start_time: float = time.time()
         # FIXME: 25/07/10 - Use the State class to automatically pull the correct term symbols for
         #        the molecule in question.
         term_symbol_up: str = "3Sigma"
@@ -461,4 +464,5 @@ class Band:
                                     )
                                 )
 
+        print(f"Time to compute lines: {time.time() - start_time} s")
         return lines

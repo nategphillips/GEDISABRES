@@ -30,7 +30,7 @@ def j_to_n(j_qn: int, branch_idx: int) -> int:
     Args:
         j_qn (int): Rotational quantum number J.
         branch_idx (int): Branch index. The total number of branches (and therefore the conversion
-            from N to J) is dependent on the spin multiplicity of the molecule.
+            from J to N) is dependent on the spin multiplicity of the molecule.
 
     Raises:
         ValueError: If the branch index cannot be found.
@@ -49,35 +49,6 @@ def j_to_n(j_qn: int, branch_idx: int) -> int:
         case 3:
             # F3: N = J + 1
             return j_qn + 1
-        case _:
-            raise ValueError(f"Unknown branch index: {branch_idx}.")
-
-
-def n_to_j(n_qn: int, branch_idx: int) -> int:
-    """Convert the rotational quantum number from N to J.
-
-    Args:
-        n_qn (int): Rotational quantum number N.
-        branch_idx (int): Branch index. The total number of branches (and therefore the conversion
-            from N to J) is dependent on the spin multiplicity of the molecule.
-
-    Raises:
-        ValueError: If the branch index cannot be found.
-
-    Returns:
-        int: The rotational quantum number J.
-    """
-    # For Hund's case (b), spin multiplicity 3.
-    match branch_idx:
-        case 1:
-            # F1: J = N + 1
-            return n_qn + 1
-        case 2:
-            # F2: J = N
-            return n_qn
-        case 3:
-            # F3: J = N - 1
-            return n_qn - 1
         case _:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
 

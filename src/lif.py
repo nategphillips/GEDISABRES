@@ -228,7 +228,7 @@ def get_sim(
         temp_vib=temp,
         temp_rot=temp,
         pressure=pres,
-        bands=bands,
+        bands_input=bands,
     )
 
 

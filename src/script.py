@@ -57,7 +57,7 @@ def main() -> None:
         temp_vib=temp,
         temp_rot=temp,
         pressure=101325.0,
-        bands=bands,
+        bands_input=bands,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(

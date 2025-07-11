@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -80,9 +81,6 @@ class Line:
         self.honl_london_factor: float = honl_london_factor
         self.rot_term_value_up: float = rot_term_value_up
         self.rot_term_value_lo: float = rot_term_value_lo
-        self.wavenumber: float = self.get_wavenumber()
-        self.rot_boltz_frac: float = self.get_rot_boltz_frac()
-        self.intensity: float = self.get_intensity()
 
     def fwhm_predissociation(self, is_selected: bool) -> float:
         """Return the predissociation broadening FWHM in [1/cm].
@@ -251,7 +249,8 @@ class Line:
 
         return 0.0
 
-    def get_wavenumber(self) -> float:
+    @cached_property
+    def wavenumber(self) -> float:
         """Return the wavenumber in [1/cm].
 
         Returns:
@@ -263,7 +262,8 @@ class Line:
         # Herzberg p. 168, eq. (IV, 24)
         return self.band.band_origin + (self.rot_term_value_up - self.rot_term_value_lo)
 
-    def get_intensity(self) -> float:
+    @cached_property
+    def intensity(self) -> float:
         """Return the intensity.
 
         Returns:
@@ -290,7 +290,8 @@ class Line:
             * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
         )
 
-    def get_rot_boltz_frac(self) -> float:
+    @cached_property
+    def rot_boltz_frac(self) -> float:
         """Return the rotational Boltzmann fraction, N_J / N.
 
         Returns:
@@ -312,5 +313,5 @@ class Line:
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_rot)
             )
-            / self.band.rot_part
+            / self.band.rot_partition_fn
         )

@@ -23,7 +23,9 @@ from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
+from hamilterm import constants as hconsts
 from hamilterm import numerics
+from hamilterm import utils as hutils
 from py3nj import clebsch_gordan
 
 import constants
@@ -339,23 +341,23 @@ class Band:
             ld_lo *= 2
             gd_lo *= 2
 
-        consts_up: numerics.Constants = numerics.Constants(
-            rotational=numerics.RotationalConsts(B=b_up, D=d_up),
-            spin_spin=numerics.SpinSpinConsts(lamda=l_up, lambda_D=ld_up),
-            spin_rotation=numerics.SpinRotationConsts(gamma=g_up, gamma_D=gd_up),
+        consts_up: hconsts.NumericConstants = hconsts.NumericConstants(
+            rotational=hconsts.RotationalConsts.numeric(B=b_up, D=d_up),
+            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_up, lambda_D=ld_up),
+            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_up, gamma_D=gd_up),
         )
-        consts_lo: numerics.Constants = numerics.Constants(
-            rotational=numerics.RotationalConsts(B=b_lo, D=d_lo),
-            spin_spin=numerics.SpinSpinConsts(lamda=l_lo, lambda_D=ld_lo),
-            spin_rotation=numerics.SpinRotationConsts(gamma=g_lo, gamma_D=gd_lo),
+        consts_lo: hconsts.NumericConstants = hconsts.NumericConstants(
+            rotational=hconsts.RotationalConsts.numeric(B=b_lo, D=d_lo),
+            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_lo, lambda_D=ld_lo),
+            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_lo, gamma_D=gd_lo),
         )
 
-        s_qn_up, lambda_qn_up = numerics.parse_term_symbol(term_symbol_up)
-        basis_fns_up: list[tuple[int, Fraction, Fraction]] = numerics.generate_basis_fns(
+        s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
+        basis_fns_up: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(
             s_qn_up, lambda_qn_up
         )
-        s_qn_lo, lambda_qn_lo = numerics.parse_term_symbol(term_symbol_lo)
-        basis_fns_lo: list[tuple[int, Fraction, Fraction]] = numerics.generate_basis_fns(
+        s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol(term_symbol_lo)
+        basis_fns_lo: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(
             s_qn_lo, lambda_qn_lo
         )
 
@@ -368,10 +370,9 @@ class Band:
         lines: list[Line] = []
 
         for j_qn_up in range(0, j_qn_up_max + 1):
-            hamiltonian_up: NDArray[np.float64] = numerics.build_hamiltonian(
-                basis_fns_up, s_qn_up, j_qn_up, consts_up
-            )
-            eigenvals_up, unitary_up = np.linalg.eigh(hamiltonian_up)
+            comp_up = numerics.NumericComputation(term_symbol_up, consts_up, j_qn_up)
+            eigenvals_up = comp_up.eigenvalues
+            unitary_up = comp_up.eigenvectors
 
             # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
             #       branch transition is forbidden.
@@ -389,16 +390,14 @@ class Band:
                 j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
                 branch_names = ["R", "Q", "P"]
 
-            hamiltonian_lo_list: list[NDArray[np.float64]] = []
             unitary_lo_list: list[NDArray[np.float64]] = []
             eigenvals_lo_list: list[NDArray[np.float64]] = []
 
             for j_qn_lo in j_qn_lo_list:
-                hamiltonian_lo: NDArray[np.float64] = numerics.build_hamiltonian(
-                    basis_fns_lo, s_qn_lo, j_qn_lo, consts_lo
-                )
-                eigenvals_lo, unitary_lo = np.linalg.eigh(hamiltonian_lo)
-                hamiltonian_lo_list.append(hamiltonian_lo)
+                comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_qn_lo)
+                eigenvals_lo = comp_lo.eigenvalues
+                unitary_lo = comp_lo.eigenvectors
+
                 unitary_lo_list.append(unitary_lo)
                 eigenvals_lo_list.append(eigenvals_lo)
 
@@ -428,9 +427,8 @@ class Band:
                     if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
                         n_qn_lo
                     ):
-                        for j_qn_lo, hamiltonian_lo, unitary_lo, eigenvals_lo, branch_name in zip(
+                        for j_qn_lo, unitary_lo, eigenvals_lo, branch_name in zip(
                             j_qn_lo_list,
-                            hamiltonian_lo_list,
                             unitary_lo_list,
                             eigenvals_lo_list,
                             branch_names,

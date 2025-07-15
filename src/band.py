@@ -366,10 +366,22 @@ class Band:
 
         # FIXME: 25/07/10 - Make a simulation take in J' max instead of "rotational levels".
         j_qn_up_max: int = self.sim.rot_lvls.max()
+        j_qn_up_min: int = 0
 
         lines: list[Line] = []
 
-        for j_qn_up in range(0, j_qn_up_max + 1):
+        # Precompute lower state eigenvalues and eigenvectors since adjacent J' values share 2 out
+        # of 3 J'' values. For example, if J' = 1, then J'' = 0, 1, 2; if J' = 2, then J'' = 1, 2, 3
+        # and so on.
+        eigenvals_lo_list: dict[int, NDArray[np.float64]] = {}
+        unitary_lo_list: dict[int, NDArray[np.float64]] = {}
+
+        for j_qn_lo in range(j_qn_up_min - 1, j_qn_up_max + 2):
+            comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_qn_lo)
+            eigenvals_lo_list[j_qn_lo] = comp_lo.eigenvalues
+            unitary_lo_list[j_qn_lo] = comp_lo.eigenvectors
+
+        for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
             comp_up = numerics.NumericComputation(term_symbol_up, consts_up, j_qn_up)
             eigenvals_up = comp_up.eigenvalues
             unitary_up = comp_up.eigenvectors
@@ -390,17 +402,6 @@ class Band:
                 j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
                 branch_names = ["R", "Q", "P"]
 
-            unitary_lo_list: list[NDArray[np.float64]] = []
-            eigenvals_lo_list: list[NDArray[np.float64]] = []
-
-            for j_lo_loop in j_qn_lo_list:
-                comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_lo_loop)
-                eigenvals_lo = comp_lo.eigenvalues
-                unitary_lo = comp_lo.eigenvectors
-
-                unitary_lo_list.append(unitary_lo)
-                eigenvals_lo_list.append(eigenvals_lo)
-
             for i in range(unitary_up.shape[1]):
                 # Only needs to be computed once for each upper branch.
                 rot_term_value_up: float = eigenvals_up[i]
@@ -417,19 +418,17 @@ class Band:
 
                     n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
 
-                    # Ensure the rotational selection rules corresponding to each electronic state
-                    # are properly followed. In this case, the oxygen nucleus has zero nuclear spin
-                    # angular momentum, meaning symmetry considerations demand that N may only have
-                    # odd values.
-                    # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
-                    #        enforced automatically.
-                    for j_qn_lo, unitary_lo, eigenvals_lo, branch_name in zip(
-                        j_qn_lo_list,
-                        unitary_lo_list,
-                        eigenvals_lo_list,
-                        branch_names,
-                    ):
+                    for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
+                        eigenvals_lo = eigenvals_lo_list[j_qn_lo]
+                        unitary_lo = unitary_lo_list[j_qn_lo]
                         n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
+
+                        # Ensure the rotational selection rules corresponding to each electronic
+                        # state are properly followed. In this case, the oxygen nucleus has zero
+                        # nuclear spin angular momentum, meaning symmetry considerations demand that
+                        # N may only have odd values.
+                        # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
+                        #        enforced automatically.
                         if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
                             n_qn_lo
                         ):

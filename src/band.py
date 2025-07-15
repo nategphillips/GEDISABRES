@@ -387,20 +387,25 @@ class Band:
             unitary_up = comp_up.eigenvectors
 
             # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
-            #       branch transition is forbidden.
-            # TODO: 25/07/10 - See also Herzberg p. 243 stating that if Ω = 0 for both electronic
-            #       states, the Q branch transition is forbidden.
-            # FIXME: 25/07/10 - Implement parity calculations and see if these rules are enforced
-            #        automatically
+            #       branch transition is forbidden. See also Herzberg p. 243 stating that if Ω = 0
+            #       for both electronic states, the Q branch transition is forbidden. The
+            #       Hönl-London factors should enforce these automatically.
+            # TODO: 25/07/15 - The branches are labeled with respect to J' and J'', while the old
+            #       version of the code labeled the branches with respect to N' and N''. The
+            #       differences can be seen on the J' = 1, J'' = 1, N' = 0, N'' = 1 line:
+            #
+            #            J' | J'' | N' | N'' | Branch |
+            #            ---|-----|----|-----|--------|
+            #       old: 1  | 1   | 0  | 1   | P_12   | - w.r.t J
+            #       new: 1  | 1   | 0  | 1   | Q_12   | - w.r.t N
+            #
+            #       Consider adding two branch labels: one with respect to J and the other with
+            #       respect to N. PGOPHER does this as well.
+            j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
             # R Branch: J'' = J' - 1
             # Q Branch: J'' = J'
             # P Branch: J'' = J' + 1
-            if lambda_qn_up == lambda_qn_lo:
-                j_qn_lo_list: list[int] = [j_qn_up - 1, j_qn_up + 1]
-                branch_names: list[str] = ["R", "P"]
-            else:
-                j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
-                branch_names = ["R", "Q", "P"]
+            branch_names = ["R", "Q", "P"]
 
             for i in range(unitary_up.shape[1]):
                 # Only needs to be computed once for each upper branch.
@@ -422,6 +427,15 @@ class Band:
                         eigenvals_lo = eigenvals_lo_list[j_qn_lo]
                         unitary_lo = unitary_lo_list[j_qn_lo]
                         n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
+
+                        # TODO: 25/07/15 - This is a placeholder for what should be more strict
+                        #       rules. In "PGOPHER: A program for simulating rotational,
+                        #       vibrational and electronic spectra" by Colin M. Western, the low
+                        #       quantum number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and
+                        #       J ≥ |N - S|. For now, just enforce the bare minimum to keep N from
+                        #       being negative.
+                        if n_qn_up < 0 or n_qn_lo < 0:
+                            continue
 
                         # Ensure the rotational selection rules corresponding to each electronic
                         # state are properly followed. In this case, the oxygen nucleus has zero

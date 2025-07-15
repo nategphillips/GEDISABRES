@@ -76,7 +76,7 @@ def honl_london_factor(
 
     for n in range(unitary_up.shape[0]):
         for m in range(unitary_lo.shape[0]):
-            delta_omega: Fraction = omega_basis_up[n] - omega_basis_lo[m]
+            delta_omega: Fraction = omega_basis_lo[m] - omega_basis_up[n]
 
             # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
             #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the
@@ -92,10 +92,21 @@ def honl_london_factor(
             #       can be half-integers, Ω = Λ + Σ is generally a half-integer. The arguments
             #       passed to the CG method are doubled so that half-integer values are properly
             #       handled, see https://py3nj.readthedocs.io/en/master/examples.html for details.
-            #       Hornkohl, et al. list the CG coefficient as ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩.
-            # FIXME: 25/07/10 - As written, this expression might only be valid for emission.
-            #        Need to compare line strengths with the algebraic HLFs used in previous
-            #        versions of the code.
+
+            # FIXME: 25/07/15 - Hornkohl, et al. list the Clebsch-Gordan coefficient as
+            #        ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩, but using this formula does not align with
+            #        either experimental data or previous versions of the code. Using either
+            #        ⟨J'', Ω''; q, Ω'' - Ω'|J', Ω'⟩ or ⟨J', Ω'; q, Ω' - Ω''|J'', Ω''⟩ (they output
+            #        exactly the same values) aligns nearly perfectly with the old code and compares
+            #        to the experimental spectra much better, at least in absorption. Not sure if
+            #        this is a typo in the paper, or a case of different definitions appearing in
+            #        different sources.
+
+            # FIXME: 25/07/15 - In "Spectroscopy of Low Temperature Plasma" by Ochkin (Appendix E),
+            #        the Wigner 3j coefficients in the HLFs are defined slightly differently and are
+            #        multiplied by (2J' + 1) * (2J'' + 1) for Hund's case (a) transitions. The paper
+            #        "A comment on Hönl-London factors" by Hansson has yet another form of the
+            #        Wigner 3j coefficients that are used. I need to sort this out eventually.
             cg: np.float64 | NDArray[np.float64] = clebsch_gordan(
                 two_j1=int(2 * j_qn_lo),
                 two_j2=int(2 * transition_order),
@@ -332,6 +343,7 @@ class Band:
         #       D       | -D
         #       lamda_D | 2 * lamda_D
         #       gamma_D | 2 * gamma_D
+
         # TODO: 25/07/10 - At some point, notation used by pyGEONOSIS should be standardized (it
         #       already mostly is) such that the constants supplied must follow the correct form.
         #       This case in particular makes the issues obvious (i.e. hardcoding a workaround).
@@ -390,6 +402,7 @@ class Band:
             #       branch transition is forbidden. See also Herzberg p. 243 stating that if Ω = 0
             #       for both electronic states, the Q branch transition is forbidden. The
             #       Hönl-London factors should enforce these automatically.
+
             # TODO: 25/07/15 - The branches are labeled with respect to J' and J'', while the old
             #       version of the code labeled the branches with respect to N' and N''. The
             #       differences can be seen on the J' = 1, J'' = 1, N' = 0, N'' = 1 line:
@@ -421,6 +434,17 @@ class Band:
                     branch_idx_up: int = i + 1
                     branch_idx_lo: int = j + 1
 
+                    # TODO: 25/07/15 - N values should eventually be calculated in a more general
+                    #       manner that supports any type of spin multiplicity. The possible values
+                    #       of N range from J - S to J + S for each state, upper and lower. For an
+                    #       example 3Σ state with J' = 1 and J'' = 2:
+                    #
+                    #       J'  = 1: N'  = 0, 1, 2
+                    #       J'' = 2: N'' = 1, 2, 3
+                    #
+                    #       Every combination of N' and N'' within a given (J', J'') pair then
+                    #       uniquely describes a rotational line, with the Hönl-London factors
+                    #       enforcing the selection rules.
                     n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
 
                     for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
@@ -441,6 +465,7 @@ class Band:
                         # state are properly followed. In this case, the oxygen nucleus has zero
                         # nuclear spin angular momentum, meaning symmetry considerations demand that
                         # N may only have odd values.
+
                         # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
                         #        enforced automatically.
                         if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(

@@ -393,8 +393,8 @@ class Band:
             unitary_lo_list: list[NDArray[np.float64]] = []
             eigenvals_lo_list: list[NDArray[np.float64]] = []
 
-            for j_qn_lo in j_qn_lo_list:
-                comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_qn_lo)
+            for j_lo_loop in j_qn_lo_list:
+                comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_lo_loop)
                 eigenvals_lo = comp_lo.eigenvalues
                 unitary_lo = comp_lo.eigenvectors
 
@@ -416,7 +416,6 @@ class Band:
                     branch_idx_lo: int = j + 1
 
                     n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
-                    n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
 
                     # Ensure the rotational selection rules corresponding to each electronic state
                     # are properly followed. In this case, the oxygen nucleus has zero nuclear spin
@@ -424,14 +423,15 @@ class Band:
                     # odd values.
                     # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
                     #        enforced automatically.
-                    if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
-                        n_qn_lo
+                    for j_qn_lo, unitary_lo, eigenvals_lo, branch_name in zip(
+                        j_qn_lo_list,
+                        unitary_lo_list,
+                        eigenvals_lo_list,
+                        branch_names,
                     ):
-                        for j_qn_lo, unitary_lo, eigenvals_lo, branch_name in zip(
-                            j_qn_lo_list,
-                            unitary_lo_list,
-                            eigenvals_lo_list,
-                            branch_names,
+                        n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
+                        if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
+                            n_qn_lo
                         ):
                             hlf: float = honl_london_factor(
                                 i=i,

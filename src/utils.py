@@ -39,16 +39,17 @@ def j_to_n(j_qn: int, branch_idx: int) -> int:
         int: The rotational quantum number N.
     """
     # For Hund's case (b), spin multiplicity 3.
+    # FIXME: 25/07/15 - Swapped cases 1 and 3, which now produces the correct (J', J'')-(N', N'')
+    #        pairs, but the branch naming seems to be reversed from PGOPHER. (P13 instead of P31.)
+    #        This behavior should get fixed once values of N are computed from J - S to J + S
+    #        instead of being hard coded like this.
     match branch_idx:
         case 1:
-            # F1: N = J - 1
-            return j_qn - 1
+            return j_qn + 1
         case 2:
-            # F2: N = J
             return j_qn
         case 3:
-            # F3: N = J + 1
-            return j_qn + 1
+            return j_qn - 1
         case _:
             raise ValueError(f"Unknown branch index: {branch_idx}.")
 

@@ -473,8 +473,10 @@ class Band:
                         #       quantum number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and
                         #       J ≥ |N - S|. For now, just enforce the bare minimum to keep N from
                         #       being negative.
-                        if n_qn_up < 0 or n_qn_lo < 0:
-                            continue
+
+                        # Removing this for now so bad quantum numbers are obvious in the table.
+                        # if n_qn_up < 0 or n_qn_lo < 0:
+                        #     continue
 
                         # Ensure the rotational selection rules corresponding to each electronic
                         # state are properly followed. In this case, the oxygen nucleus has zero

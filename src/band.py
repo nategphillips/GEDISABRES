@@ -50,8 +50,8 @@ def honl_london_factor(
     unitary_lo: NDArray[np.float64],
     j_qn_up: int,
     j_qn_lo: int,
-    omega_basis_up: list[Fraction],
-    omega_basis_lo: list[Fraction],
+    omega_basis_up: NDArray,
+    omega_basis_lo: NDArray,
     transition_order: int = 1,
 ) -> float:
     """Computes the Hönl-London factor of a rotational line.
@@ -65,61 +65,67 @@ def honl_london_factor(
         unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
         j_qn_up (int): Upper state rotational quantum number J'.
         j_qn_lo (int): Lower state rotational quantum number J''.
-        omega_basis_up (list[Fraction]): Upper state Ω quantum numbers.
-        omega_basis_lo (list[Fraction]): Lower state Ω quantum numbers.
+        omega_basis_up (NDArray): Upper state Ω' quantum numbers.
+        omega_basis_lo (NDArray): Lower state Ω'' quantum numbers.
         transition_order (int, optional): Transition order. Defaults to 1.
 
     Returns:
         float: The Hönl-London factor.
     """
-    total: float = 0.0
+    # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
+    #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the Ninja
+    #       build system to be installed. On Windows, Quickstart Fortran
+    #       (https://github.com/LKedward/quickstart-fortran) installs a MinGW backend along with
+    #       GFortran and the Ninja build system. Word of caution: if you have multiple MinGW or
+    #       GFortran versions installed, make sure to move the Quickstart Fortran versions to the
+    #       top of your PATH, or the build might fail! Linux is more straightforward, just ensure
+    #       that GFortran and Ninja are installed via the appropriate package manager and you're
+    #       good to go.
 
-    for n in range(unitary_up.shape[0]):
-        for m in range(unitary_lo.shape[0]):
-            delta_omega: Fraction = omega_basis_lo[m] - omega_basis_up[n]
+    two_j1: int = int(2 * j_qn_lo)
+    two_j2: int = int(2 * transition_order)
+    two_j3: int = int(2 * j_qn_up)
 
-            # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
-            #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the
-            #       Ninja build system to be installed. On Windows, Quickstart Fortran
-            #       (https://github.com/LKedward/quickstart-fortran) installs a MinGW backend along
-            #       with GFortran and the Ninja build system. Word of caution: if you have multiple
-            #       MinGW or GFortran versions installed, make sure to move the Quickstart Fortran
-            #       versions to the top of your PATH, or the build might fail! Linux is more
-            #       straightforward, just ensure that GFortran and Ninja are installed via the
-            #       appropriate package manager and you're good to go.
+    # (m, 1) matrix containing all lower state Ω'' values
+    two_m1: NDArray[np.int64] = (2 * omega_basis_lo).astype(int)[:, None]
+    # (1, n) matrix containing all upper state Ω' values
+    two_m3: NDArray[np.int64] = (2 * omega_basis_up).astype(int)[None, :]
+    # (m, n) matrix containing all (Ω'', Ω') pairs
+    two_m2: NDArray[np.int64] = two_m1 - two_m3
 
-            # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ
-            #       can be half-integers, Ω = Λ + Σ is generally a half-integer. The arguments
-            #       passed to the CG method are doubled so that half-integer values are properly
-            #       handled, see https://py3nj.readthedocs.io/en/master/examples.html for details.
+    # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ can be
+    #       half-integers, Ω = Λ + Σ is generally a half-integer. The arguments passed to the CG
+    #       method are doubled so that half-integer values are properly handled, see
+    #       https://py3nj.readthedocs.io/en/master/examples.html for details.
 
-            # FIXME: 25/07/15 - Hornkohl, et al. list the Clebsch-Gordan coefficient as
-            #        ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩, but using this formula does not align with
-            #        either experimental data or previous versions of the code. Using either
-            #        ⟨J'', Ω''; q, Ω'' - Ω'|J', Ω'⟩ or ⟨J', Ω'; q, Ω' - Ω''|J'', Ω''⟩ (they output
-            #        exactly the same values) aligns nearly perfectly with the old code and compares
-            #        to the experimental spectra much better, at least in absorption. Not sure if
-            #        this is a typo in the paper, or a case of different definitions appearing in
-            #        different sources.
+    # Clebsch-Gordan coefficients for all (Ω'', Ω') pairs - (m, n)
+    cg: NDArray = clebsch_gordan(
+        two_j1=two_j1,
+        two_j2=two_j2,
+        two_j3=two_j3,
+        two_m1=two_m1,
+        two_m2=two_m2,
+        two_m3=two_m3,
+        ignore_invalid=True,
+    )
 
-            # FIXME: 25/07/15 - In "Spectroscopy of Low Temperature Plasma" by Ochkin (Appendix E),
-            #        the Wigner 3j coefficients in the HLFs are defined slightly differently and are
-            #        multiplied by (2J' + 1) * (2J'' + 1) for Hund's case (a) transitions. The paper
-            #        "A comment on Hönl-London factors" by Hansson has yet another form of the
-            #        Wigner 3j coefficients that are used. I need to sort this out eventually.
-            cg: np.float64 | NDArray[np.float64] = clebsch_gordan(
-                two_j1=int(2 * j_qn_lo),
-                two_j2=int(2 * transition_order),
-                two_j3=int(2 * j_qn_up),
-                two_m1=int(2 * omega_basis_lo[m]),
-                two_m2=int(2 * delta_omega),
-                two_m3=int(2 * omega_basis_up[n]),
-                ignore_invalid=True,
-            )
+    # FIXME: 25/07/15 - Hornkohl, et al. list the Clebsch-Gordan coefficient as
+    #        ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩, but using this formula does not align with either
+    #        experimental data or previous versions of the code. Using either
+    #        ⟨J'', Ω''; q, Ω'' - Ω'|J', Ω'⟩ or ⟨J', Ω'; q, Ω' - Ω''|J'', Ω''⟩ (they output exactly
+    #        the same values) aligns nearly perfectly with the old code and compares to the
+    #        experimental spectra much better, at least in absorption. Not sure if this is a typo in
+    #        the paper, or a case of different definitions appearing in different sources.
 
-            total += unitary_up[n, i] * cg * unitary_lo[m, j]
+    # Use Einstein summation convention to compute U'_{n}CG_{mn}U''_{m}
+    transition_amplitude: float = np.einsum("n,mn,m", unitary_up[:, i], cg, unitary_lo[:, j])
 
-    return abs(total) ** 2 * (2 * j_qn_lo + 1)
+    # FIXME: 25/07/15 - In "Spectroscopy of Low Temperature Plasma" by Ochkin (Appendix E), the
+    #        Wigner 3j coefficients in the HLFs are defined slightly differently and are multiplied
+    #        by (2J' + 1) * (2J'' + 1) for Hund's case (a) transitions. The paper "A comment on
+    #        Hönl-London factors" by Hansson has yet another form of the Wigner 3j coefficients that
+    #        are used. I need to sort this out eventually.
+    return (2 * j_qn_lo + 1) * abs(transition_amplitude) ** 2
 
 
 class Band:
@@ -307,8 +313,6 @@ class Band:
         #        selection rules verbatim to recreate the correct lines, then check Honl-London
         #        factors to narrow down the problem
 
-        start_time: float = time.time()
-
         # FIXME: 25/07/10 - Use the State class to automatically pull the correct term symbols for
         #        the molecule in question.
         term_symbol_up: str = "3Sigma"
@@ -373,8 +377,8 @@ class Band:
             s_qn_lo, lambda_qn_lo
         )
 
-        omega_basis_up: list[Fraction] = [omega for (_, _, omega) in basis_fns_up]
-        omega_basis_lo: list[Fraction] = [omega for (_, _, omega) in basis_fns_lo]
+        omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
+        omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
 
         # FIXME: 25/07/10 - Make a simulation take in J' max instead of "rotational levels".
         j_qn_up_max: int = self.sim.rot_lvls.max()
@@ -518,5 +522,4 @@ class Band:
                                     )
                                 )
 
-        print(f"Time to compute lines: {time.time() - start_time} s")
         return lines

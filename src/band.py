@@ -382,6 +382,23 @@ class Band:
 
         lines: list[Line] = []
 
+        # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat (~14 ms)
+        #       faster than computing them inside the main loop. This is somewhat surprising to me
+        #       considering this method actually requires somewhat more memory overhead. Some very
+        #       rough benchmarks are listed below:
+        #
+        #                    20x specific bands   | 5x band ranges
+        #                    ---------------------|-------------------
+        #       inside loop: 0.7735961437225342 s | 0.7343460819937966 s
+        #       precomputed: 0.7578609466552735 s | 0.7206905841827392 s
+        eigenvals_up_list: dict[int, NDArray[np.float64]] = {}
+        unitary_up_list: dict[int, NDArray[np.float64]] = {}
+
+        for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
+            comp_up = numerics.NumericComputation(term_symbol_up, consts_up, j_qn_up)
+            eigenvals_up_list[j_qn_up] = comp_up.eigenvalues
+            unitary_up_list[j_qn_up] = comp_up.eigenvectors
+
         # Precompute lower state eigenvalues and eigenvectors since adjacent J' values share 2 out
         # of 3 J'' values. For example, if J' = 1, then J'' = 0, 1, 2; if J' = 2, then J'' = 1, 2, 3
         # and so on.
@@ -394,10 +411,6 @@ class Band:
             unitary_lo_list[j_qn_lo] = comp_lo.eigenvectors
 
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
-            comp_up = numerics.NumericComputation(term_symbol_up, consts_up, j_qn_up)
-            eigenvals_up = comp_up.eigenvalues
-            unitary_up = comp_up.eigenvectors
-
             # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
             #       branch transition is forbidden. See also Herzberg p. 243 stating that if Ω = 0
             #       for both electronic states, the Q branch transition is forbidden. The
@@ -420,9 +433,9 @@ class Band:
             # P Branch: J'' = J' + 1
             branch_names = ["R", "Q", "P"]
 
-            for i in range(unitary_up.shape[1]):
+            for i in range(unitary_up_list[0].shape[1]):
                 # Only needs to be computed once for each upper branch.
-                rot_term_value_up: float = eigenvals_up[i]
+                rot_term_value_up: float = eigenvals_up_list[j_qn_up][i]
 
                 # All the unitary matrices within a given electronic state will have the same
                 # dimensions since the Hamiltonian is of a fixed dimension for said state.
@@ -448,8 +461,6 @@ class Band:
                     n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
 
                     for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
-                        eigenvals_lo = eigenvals_lo_list[j_qn_lo]
-                        unitary_lo = unitary_lo_list[j_qn_lo]
                         n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
 
                         # TODO: 25/07/15 - This is a placeholder for what should be more strict
@@ -474,15 +485,15 @@ class Band:
                             hlf: float = honl_london_factor(
                                 i=i,
                                 j=j,
-                                unitary_up=unitary_up,
-                                unitary_lo=unitary_lo,
+                                unitary_up=unitary_up_list[j_qn_up],
+                                unitary_lo=unitary_lo_list[j_qn_lo],
                                 j_qn_up=j_qn_up,
                                 j_qn_lo=j_qn_lo,
                                 omega_basis_up=omega_basis_up,
                                 omega_basis_lo=omega_basis_lo,
                             )
                             if hlf > constants.HONL_LONDON_CUTOFF:
-                                rot_term_value_lo: float = eigenvals_lo[j]
+                                rot_term_value_lo: float = eigenvals_lo_list[j_qn_lo][j]
 
                                 # Denote satellite branches for use in plotting.
                                 is_satellite = False

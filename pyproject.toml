@@ -45,7 +45,7 @@ extend-select = [
 convention = "google"
 
 [tool.uv.sources]
-hamilterm = { git = "https://github.com/nategphillips/hamilterm", rev = "64bcf12bcf282cbbfd01cf57a47d93ec226ab79c" }
+hamilterm = { git = "https://github.com/nategphillips/hamilterm", branch = "vectorize" }
 py3nj = { git = "https://github.com/fujiisoup/py3nj", rev = "098e40e433d6c1f32b1b488519bbae40f40b812b" }
 
 [tool.uv]

@@ -18,7 +18,6 @@
 
 from __future__ import annotations
 
-import time
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -399,7 +398,9 @@ class Band:
         unitary_up_list: dict[int, NDArray[np.float64]] = {}
 
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
-            comp_up = numerics.NumericComputation(term_symbol_up, consts_up, j_qn_up)
+            comp_up = numerics.NumericComputation(
+                term_symbol_up, consts_up, j_qn_up, max_n_power=4, max_acomm_power=2
+            )
             eigenvals_up_list[j_qn_up] = comp_up.eigenvalues
             unitary_up_list[j_qn_up] = comp_up.eigenvectors
 
@@ -410,7 +411,9 @@ class Band:
         unitary_lo_list: dict[int, NDArray[np.float64]] = {}
 
         for j_qn_lo in range(j_qn_up_min - 1, j_qn_up_max + 2):
-            comp_lo = numerics.NumericComputation(term_symbol_lo, consts_lo, j_qn_lo)
+            comp_lo = numerics.NumericComputation(
+                term_symbol_lo, consts_lo, j_qn_lo, max_n_power=4, max_acomm_power=2
+            )
             eigenvals_lo_list[j_qn_lo] = comp_lo.eigenvalues
             unitary_lo_list[j_qn_lo] = comp_lo.eigenvectors
 

@@ -42,17 +42,15 @@ if TYPE_CHECKING:
     from sim import Sim
 
 
-def honl_london_factor(
-    i: int,
-    j: int,
-    unitary_up: NDArray[np.float64],
-    unitary_lo: NDArray[np.float64],
+def honl_london_matrix(
     j_qn_up: int,
     j_qn_lo: int,
-    omega_basis_up: NDArray,
-    omega_basis_lo: NDArray,
+    unitary_up: NDArray[np.float64],
+    unitary_lo: NDArray[np.float64],
+    omega_basis_up: NDArray[np.float64],
+    omega_basis_lo: NDArray[np.float64],
     transition_order: int = 1,
-) -> float:
+) -> NDArray[np.float64]:
     """Computes the Hönl-London factor of a rotational line.
 
     Algorithm based on Equation 22 in Hornkohl, et al.
@@ -64,12 +62,13 @@ def honl_london_factor(
         unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
         j_qn_up (int): Upper state rotational quantum number J'.
         j_qn_lo (int): Lower state rotational quantum number J''.
-        omega_basis_up (NDArray): Upper state Ω' quantum numbers.
-        omega_basis_lo (NDArray): Lower state Ω'' quantum numbers.
+        omega_basis_up (NDArray[np.float64]): Upper state Ω' quantum numbers.
+        omega_basis_lo (NDArray[np.float64]): Lower state Ω'' quantum numbers.
         transition_order (int, optional): Transition order. Defaults to 1.
 
     Returns:
-        float: The Hönl-London factor.
+        NDArray[np.float64]: The (num_branches_up, num_branches_low) dimensional Hönl-London factor
+            matrix corresponding to the given (J', J'') pair.
     """
     # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
     #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the Ninja
@@ -97,7 +96,7 @@ def honl_london_factor(
     #       method are doubled so that half-integer values are properly handled, see
     #       https://py3nj.readthedocs.io/en/master/examples.html for details.
 
-    # Clebsch-Gordan coefficients for all (Ω'', Ω') pairs - (m, n)
+    # Clebsch-Gordan coefficients for all (Ω'', Ω') pairs, has dimension (m, n)
     cg: NDArray = clebsch_gordan(
         two_j1=two_j1,
         two_j2=two_j2,
@@ -116,15 +115,16 @@ def honl_london_factor(
     #        experimental spectra much better, at least in absorption. Not sure if this is a typo in
     #        the paper, or a case of different definitions appearing in different sources.
 
-    # Use Einstein summation convention to compute U'_{n}CG_{mn}U''_{m}
-    transition_amplitude: float = np.einsum("n,mn,m", unitary_up[:, i], cg, unitary_lo[:, j])
+    # Compute the matrix of all possible transitions for a given (J', J'') pair. This results in an
+    # (m, n) dimensional matrix, with one HLF for each (i, j) branch index pair.
+    transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg.T @ unitary_lo
 
     # FIXME: 25/07/15 - In "Spectroscopy of Low Temperature Plasma" by Ochkin (Appendix E), the
     #        Wigner 3j coefficients in the HLFs are defined slightly differently and are multiplied
     #        by (2J' + 1) * (2J'' + 1) for Hund's case (a) transitions. The paper "A comment on
     #        Hönl-London factors" by Hansson has yet another form of the Wigner 3j coefficients that
     #        are used. I need to sort this out eventually.
-    return (2 * j_qn_lo + 1) * abs(transition_amplitude) ** 2
+    return (2 * j_qn_lo + 1) * np.abs(transition_amplitude) ** 2
 
 
 class Band:
@@ -383,8 +383,6 @@ class Band:
         j_qn_up_max: int = self.sim.rot_lvls.max()
         j_qn_up_min: int = 0
 
-        lines: list[Line] = []
-
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat (~14 ms)
         #       faster than computing them inside the main loop. This is somewhat surprising to me
         #       considering this method actually requires somewhat more memory overhead. Some very
@@ -394,34 +392,96 @@ class Band:
         #                    ---------------------|-------------------
         #       inside loop: 0.7735961437225342 s | 0.7343460819937966 s
         #       precomputed: 0.7578609466552735 s | 0.7206905841827392 s
-        eigenvals_up_list: dict[int, NDArray[np.float64]] = {}
-        unitary_up_list: dict[int, NDArray[np.float64]] = {}
+        eigenvals_up_cache: dict[int, NDArray[np.float64]] = {}
+        unitary_up_cache: dict[int, NDArray[np.float64]] = {}
 
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
             comp_up = numerics.NumericComputation(
                 term_symbol_up, consts_up, j_qn_up, max_n_power=4, max_acomm_power=2
             )
-            eigenvals_up_list[j_qn_up] = comp_up.eigenvalues
-            unitary_up_list[j_qn_up] = comp_up.eigenvectors
+            eigenvals_up_cache[j_qn_up] = comp_up.eigenvalues
+            unitary_up_cache[j_qn_up] = comp_up.eigenvectors
 
         # Precompute lower state eigenvalues and eigenvectors since adjacent J' values share 2 out
         # of 3 J'' values. For example, if J' = 1, then J'' = 0, 1, 2; if J' = 2, then J'' = 1, 2, 3
         # and so on.
-        eigenvals_lo_list: dict[int, NDArray[np.float64]] = {}
-        unitary_lo_list: dict[int, NDArray[np.float64]] = {}
+        eigenvals_lo_cache: dict[int, NDArray[np.float64]] = {}
+        unitary_lo_cache: dict[int, NDArray[np.float64]] = {}
 
         for j_qn_lo in range(j_qn_up_min - 1, j_qn_up_max + 2):
             comp_lo = numerics.NumericComputation(
                 term_symbol_lo, consts_lo, j_qn_lo, max_n_power=4, max_acomm_power=2
             )
-            eigenvals_lo_list[j_qn_lo] = comp_lo.eigenvalues
-            unitary_lo_list[j_qn_lo] = comp_lo.eigenvectors
+            eigenvals_lo_cache[j_qn_lo] = comp_lo.eigenvalues
+            unitary_lo_cache[j_qn_lo] = comp_lo.eigenvectors
+
+        # In the case of a 3x3 Hamiltonian, the number of branches will be 3. Since the Hamiltonian
+        # (and therefore unitary matrices) are always square, either dimension can be used.
+        num_branches_up: int = unitary_up_cache[0].shape[0]
+        num_branches_lo: int = unitary_lo_cache[0].shape[0]
+
+        # Branch indices should range from 1 to the dimension of the Hamiltonian.
+        branch_up_range: range = range(1, num_branches_up + 1)
+        branch_lo_range: range = range(1, num_branches_lo + 1)
+
+        # Each (J', J'') pair will have an associated Hönl-London factor matrix with the dimensions
+        # (num_branches_up, branch_branches_lo). For example, each (J', J'') pair for a 3x3
+        # Hamiltonian will have an associated 3x3 HLF matrix. Each entry within the matrix
+        # corresponds to a possible (i, j) combination, where i and j are the upper and lower branch
+        # index labels, respectively.
+        hlf_matrix_cache: dict[tuple[int, int], NDArray[np.float64]] = {}
+        # The allowed values of N'' are cached since each J'' value can be encountered multiple
+        # times. For example, J' = 1, J' = 2, and J' = 3 all share J'' = 1.
+        n_lo_cache: dict[int, list[int]] = {}
+        allow_lo_cache: dict[int, NDArray[np.bool]] = {}
+
+        # R Branch: ΔJ = J' - J'' = +1
+        # Q Branch: ΔJ = J' - J'' = 0
+        # P Branch: ΔJ = J' - J'' = -1
+        branch_names: list[str] = ["R", "Q", "P"]
+
+        lines: list[Line] = []
 
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
+            # TODO: 25/07/15 - N values should eventually be calculated in a more general manner
+            #       that supports any type of spin multiplicity. The possible values of N range from
+            #       J - S to J + S for each state, upper and lower. For an example 3Σ state with
+            #       J' = 1 and J'' = 2:
+            #
+            #       J'  = 1: N'  = 0, 1, 2
+            #       J'' = 2: N'' = 1, 2, 3
+            #
+            #       Every combination of N' and N'' within a given (J', J'') pair then uniquely
+            #       describes a rotational line, with the Hönl-London factors enforcing the
+            #       selection rules.
+
+            # Get all possible N' values for each J'.
+            n_up_vals: list[int] = [
+                utils.j_to_n(j_qn_up, branch_idx_up) for branch_idx_up in branch_up_range
+            ]
+            # TODO: 25/07/10 - Implement parity calculations and see if this rule is enforced
+            #       automatically.
+
+            # Check if the generated N' values are valid according to the selection rules of the
+            # given electronic state. For example, molecular oxygen nucleus has zero nuclear spin
+            # angular momentum, which places certain restrictions on the allowed rotational quantum
+            # numbers.
+            allow_up: NDArray[np.bool] = np.array(
+                [self.sim.state_up.is_allowed(n_qn_up) for n_qn_up in n_up_vals]
+            )
+
+            # Upper state eigenvalues, dimension (1, num_branches_up).
+            eigenvals_up: NDArray[np.float64] = eigenvals_up_cache[j_qn_up]
+            # Upper state unitary matrix, dimension (num_branches_up, num_branches_up).
+            unitary_up: NDArray[np.float64] = unitary_up_cache[j_qn_up]
+
             # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
             #       branch transition is forbidden. See also Herzberg p. 243 stating that if Ω = 0
             #       for both electronic states, the Q branch transition is forbidden. The
             #       Hönl-London factors should enforce these automatically.
+
+            # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
+            j_qn_lo_list: list[int] = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
 
             # TODO: 25/07/15 - The branches are labeled with respect to J' and J'', while the old
             #       version of the code labeled the branches with respect to N' and N''. The
@@ -434,97 +494,88 @@ class Band:
             #
             #       Consider adding two branch labels: one with respect to J and the other with
             #       respect to N. PGOPHER does this as well.
-            j_qn_lo_list = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
-            # R Branch: J'' = J' - 1
-            # Q Branch: J'' = J'
-            # P Branch: J'' = J' + 1
-            branch_names = ["R", "Q", "P"]
 
-            for i in range(unitary_up_list[0].shape[1]):
-                # Only needs to be computed once for each upper branch.
-                rot_term_value_up: float = eigenvals_up_list[j_qn_up][i]
+            for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
+                # If J'' has not yet been encountered, compute its allowed N'' values.
+                if j_qn_lo not in n_lo_cache:
+                    n_lo_cache[j_qn_lo] = [utils.j_to_n(j_qn_lo, b) for b in branch_lo_range]
+                    allow_lo_cache[j_qn_lo] = np.array(
+                        [self.sim.state_lo.is_allowed(n) for n in n_lo_cache[j_qn_lo]]
+                    )
 
-                # All the unitary matrices within a given electronic state will have the same
-                # dimensions since the Hamiltonian is of a fixed dimension for said state.
-                for j in range(unitary_lo_list[0].shape[1]):
-                    # NOTE: 25/07/10 - The dimensions of the unitary matrices determine how many
-                    #       branches exist for the given transition, but they are zero-indexed.
-                    #       Standard spectroscopic notation gives branch indices as one-indexed
-                    #       values, so we make that change here.
-                    branch_idx_up: int = i + 1
-                    branch_idx_lo: int = j + 1
+                # Get all allowed N'' values for each J''.
+                n_lo_vals: list[int] = n_lo_cache[j_qn_lo]
+                allow_lo: NDArray[np.bool] = allow_lo_cache[j_qn_lo]
 
-                    # TODO: 25/07/15 - N values should eventually be calculated in a more general
-                    #       manner that supports any type of spin multiplicity. The possible values
-                    #       of N range from J - S to J + S for each state, upper and lower. For an
-                    #       example 3Σ state with J' = 1 and J'' = 2:
-                    #
-                    #       J'  = 1: N'  = 0, 1, 2
-                    #       J'' = 2: N'' = 1, 2, 3
-                    #
-                    #       Every combination of N' and N'' within a given (J', J'') pair then
-                    #       uniquely describes a rotational line, with the Hönl-London factors
-                    #       enforcing the selection rules.
-                    n_qn_up = utils.j_to_n(j_qn_up, branch_idx_up)
+                key: tuple[int, int] = (j_qn_up, j_qn_lo)
+                # Check if the HLFs for the given (J', J'') pair have already been computed.
+                hlf_mat: NDArray[np.float64] | None = hlf_matrix_cache.get(key)
 
-                    for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
-                        n_qn_lo = utils.j_to_n(j_qn_lo, branch_idx_lo)
+                if hlf_mat is None:
+                    # Lower state unitary matrix, dimension (num_branches_lo, num_branches_lo).
+                    unitary_lo: NDArray[np.float64] = unitary_lo_cache[j_qn_lo]
 
-                        # TODO: 25/07/15 - This is a placeholder for what should be more strict
-                        #       rules. In "PGOPHER: A program for simulating rotational,
-                        #       vibrational and electronic spectra" by Colin M. Western, the low
-                        #       quantum number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and
-                        #       J ≥ |N - S|. For now, just enforce the bare minimum to keep N from
-                        #       being negative.
+                    # Hönl-London factor matrix for the given (J', J'') combination, has dimensions
+                    # (num_branches_up, branch_branches_lo).
+                    hlf_mat = honl_london_matrix(
+                        j_qn_up=j_qn_up,
+                        j_qn_lo=j_qn_lo,
+                        unitary_up=unitary_up,
+                        unitary_lo=unitary_lo,
+                        omega_basis_up=omega_basis_up,
+                        omega_basis_lo=omega_basis_lo,
+                        transition_order=1,
+                    )
+                    hlf_matrix_cache[key] = hlf_mat
 
-                        # Removing this for now so bad quantum numbers are obvious in the table.
-                        # if n_qn_up < 0 or n_qn_lo < 0:
-                        #     continue
+                # Enforce the Hönl-London cutoff and allowed rotational quantum number conditions
+                # for each branch index pair (i, j), has dimensions
+                # (num_branches_up, branch_branches_lo).
+                mask: NDArray[np.bool] = (
+                    (hlf_mat > constants.HONL_LONDON_CUTOFF) & allow_up[:, None] & allow_lo[None, :]
+                )
+                # Get the row and column (i, j) indices where the mask is true.
+                i_range, j_range = np.nonzero(mask)
 
-                        # Ensure the rotational selection rules corresponding to each electronic
-                        # state are properly followed. In this case, the oxygen nucleus has zero
-                        # nuclear spin angular momentum, meaning symmetry considerations demand that
-                        # N may only have odd values.
+                # Upper state eigenvalues, dimension (1, num_branches_lo).
+                eigenvals_lo: NDArray[np.float64] = eigenvals_lo_cache[j_qn_lo]
 
-                        # FIXME: 25/07/10 - Implement parity calculations and see if this rule is
-                        #        enforced automatically.
-                        if self.sim.state_up.is_allowed(n_qn_up) & self.sim.state_lo.is_allowed(
-                            n_qn_lo
-                        ):
-                            hlf: float = honl_london_factor(
-                                i=i,
-                                j=j,
-                                unitary_up=unitary_up_list[j_qn_up],
-                                unitary_lo=unitary_lo_list[j_qn_lo],
-                                j_qn_up=j_qn_up,
-                                j_qn_lo=j_qn_lo,
-                                omega_basis_up=omega_basis_up,
-                                omega_basis_lo=omega_basis_lo,
-                            )
-                            if hlf > constants.HONL_LONDON_CUTOFF:
-                                rot_term_value_lo: float = eigenvals_lo_list[j_qn_lo][j]
+                for i, j in zip(i_range.tolist(), j_range.tolist()):
+                    branch_idx_up: int = branch_up_range[i]
+                    branch_idx_lo: int = branch_lo_range[j]
+                    n_qn_up: int = n_up_vals[i]
+                    n_qn_lo: int = n_lo_vals[j]
+                    hlf: float = float(hlf_mat[i, j])
+                    eigenval_up: float = float(eigenvals_up[i])
+                    eigenval_lo: float = float(eigenvals_lo[j])
 
-                                # Denote satellite branches for use in plotting.
-                                is_satellite = False
-                                if branch_idx_up != branch_idx_lo:
-                                    is_satellite = True
+                    # TODO: 25/07/15 - This is a placeholder for what should be more strict rules.
+                    #       In "PGOPHER: A program for simulating rotational, vibrational and
+                    #       electronic spectra" by Colin M. Western, the low quantum number rules
+                    #       are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
 
-                                lines.append(
-                                    Line(
-                                        sim=self.sim,
-                                        band=self,
-                                        j_qn_up=j_qn_up,
-                                        j_qn_lo=j_qn_lo,
-                                        n_qn_up=n_qn_up,
-                                        n_qn_lo=n_qn_lo,
-                                        branch_idx_up=branch_idx_up,
-                                        branch_idx_lo=branch_idx_lo,
-                                        branch_name=branch_name,
-                                        is_satellite=is_satellite,
-                                        honl_london_factor=hlf,
-                                        rot_term_value_up=rot_term_value_up,
-                                        rot_term_value_lo=rot_term_value_lo,
-                                    )
-                                )
+                    # Removing this for now so bad quantum numbers are obvious in the table.
+                    # if n_qn_up < 0 or n_qn_lo < 0:
+                    #     continue
+
+                    is_satellite: bool = branch_idx_up != branch_idx_lo
+
+                    lines.append(
+                        Line(
+                            sim=self.sim,
+                            band=self,
+                            j_qn_up=j_qn_up,
+                            j_qn_lo=j_qn_lo,
+                            n_qn_up=n_qn_up,
+                            n_qn_lo=n_qn_lo,
+                            branch_idx_up=branch_idx_up,
+                            branch_idx_lo=branch_idx_lo,
+                            branch_name=branch_name,
+                            is_satellite=is_satellite,
+                            honl_london_factor=hlf,
+                            rot_term_value_up=eigenval_up,
+                            rot_term_value_lo=eigenval_lo,
+                        )
+                    )
 
         return lines

@@ -16,42 +16,78 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from functools import cached_property
+
 import polars as pl
 
 import utils
+from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
+from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
 from molecule import Molecule
 
 
 class State:
     """Represents an electronic state of a particular molecule."""
 
-    def __init__(self, name: str, spin_multiplicity: int, molecule: Molecule) -> None:
+    def __init__(
+        self,
+        molecule: Molecule,
+        letter: str,
+        spin_multiplicity: int,
+        term_symbol: TermSymbol,
+        inversion_symmetry: InversionSymmetry = InversionSymmetry.NONE,
+        reflection_symmetry: ReflectionSymmetry = ReflectionSymmetry.NONE,
+    ) -> None:
         """Initialize class variables.
 
         Args:
-            name (str): Name of the electronic state.
-            spin_multiplicity (int): Spin multiplicity.
             molecule (Molecule): Parent molecule.
+            letter (str): Letter corresponding to the electronic state, e.g., A, B, X, etc.
+            spin_multiplicity (int): Spin multiplicity.
+            term_symbol (TermSymbol): Term symbol associated with the electronic state.
+            inversion_symmetry (InversionSymmetry, optional): Symmetry w.r.t. inversion (g/u).
+                Defaults to None.
+            reflection_symmetry (ReflectionSymmetry, optional): Symmetry w.r.t. reflection (+/-).
+                Defaults to None.
         """
-        self.name: str = name
-        self.spin_multiplicity: int = spin_multiplicity
         self.molecule: Molecule = molecule
-        self.constants: dict[str, list[float]] = self.get_constants(molecule.name, name)
+        self.letter: str = letter
+        self.spin_multiplicity: int = spin_multiplicity
+        self.term_symbol: TermSymbol = term_symbol
+        self.inversion_symmetry: InversionSymmetry = inversion_symmetry
+        self.reflection_symmetry: ReflectionSymmetry = reflection_symmetry
 
-    @staticmethod
-    def get_constants(molecule: str, state: str) -> dict[str, list[float]]:
+    @cached_property
+    def name(self) -> str:
+        """Maps the properties of an electronic state to a short string representation.
+
+        Example: X 3 SIGMA GERADE MINUS -> X3Sg-.
+
+        Returns:
+            str: A string representation of the full molecular term symbol, e.g., X3Sg-.
+        """
+        return (
+            self.letter
+            + str(self.spin_multiplicity)
+            + TERM_SYMBOL_MAP[self.term_symbol]
+            + INVERSION_SYMMETRY_MAP[self.inversion_symmetry]
+            + REFLECTION_SYMMETRY_MAP[self.reflection_symmetry]
+        )
+
+    @cached_property
+    def constants(self) -> dict[str, list[float]]:
         """Return the molecular constants for the specified electronic state in [1/cm].
 
         Args:
             molecule (str): Parent molecule.
-            state (str): Name of the electronic state.
+            term_symbol (TermSymbol): Name of the electronic state.
 
         Returns:
             dict[str, list[float]]: A `dict` of molecular constants for the electronic state.
         """
-        return pl.read_csv(utils.get_data_path("data", molecule, "states", f"{state}.csv")).to_dict(
-            as_series=False
-        )
+        return pl.read_csv(
+            utils.get_data_path("data", self.molecule.name, "states", f"{self.name}.csv")
+        ).to_dict(as_series=False)
 
     def is_allowed(self, n_qn: int) -> bool:
         """Return whether or not the selected rotational level is allowed.
@@ -65,11 +101,14 @@ class State:
         Returns:
             bool: True if the selected rotational level is allowed.
         """
-        if self.name == "X3Sg-":
-            # For X3Σg-, only the rotational levels with odd N can be populated.
-            return bool(n_qn % 2 == 1)
-        if self.name == "B3Su-":
-            # For B3Σu-, only the rotational levels with even N can be populated.
-            return bool(n_qn % 2 == 0)
+        if (
+            self.molecule.atom_1.name == self.molecule.atom_2.name
+        ) and self.term_symbol == TermSymbol.SIGMA:
+            if self.name == "X3Sg-":
+                # For X3Σg-, only the rotational levels with odd N can be populated.
+                return bool(n_qn % 2 == 1)
+            if self.name == "B3Su-":
+                # For B3Σu-, only the rotational levels with even N can be populated.
+                return bool(n_qn % 2 == 0)
 
-        raise ValueError(f"State {self.name} not supported.")
+        raise ValueError(f"State {self.term_symbol} not supported.")

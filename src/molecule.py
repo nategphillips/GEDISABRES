@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from functools import cached_property
+
 from atom import Atom
 
 
@@ -34,10 +36,9 @@ class Molecule:
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
-        self.symmetry_param: int = self.get_symmetry_param(atom_1, atom_2)
 
-    @staticmethod
-    def get_symmetry_param(atom_1: Atom, atom_2: Atom) -> int:
+    @cached_property
+    def symmetry_param(self) -> int:
         """Return the symmetry parameter of the molecule.
 
         Args:
@@ -48,7 +49,7 @@ class Molecule:
             int: The symmetry parameter of the molecule: 2 for homonuclear, 1 for heteronuclear.
         """
         # For homonuclear diatomic molecules like O2, the symmetry parameter is 2.
-        if atom_1.name == atom_2.name:
+        if self.atom_1.name == self.atom_2.name:
             return 2
 
         # For heteronuclear diatomics, it's 1.

@@ -27,10 +27,10 @@ from numpy.typing import NDArray
 import constants
 import utils
 from atom import Atom
+from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from line import Line
 from molecule import Molecule
 from sim import Sim
-from simtype import SimType
 from state import State
 
 MIN_TIME: float = 0.0
@@ -503,9 +503,23 @@ def plot_n2_vs_time_and_fluence(
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule("O2", Atom("O"), Atom("O"))
-    state_up: State = State("B3Su-", 3, molecule)
-    state_lo: State = State("X3Sg-", 3, molecule)
+    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
+    state_up: State = State(
+        molecule=molecule,
+        letter="B",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.UNGERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
+    state_lo: State = State(
+        molecule=molecule,
+        letter="X",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.GERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
 
     # NOTE: 24/10/29 - For now, laser fluence should be specified in [J/cm^2].
 

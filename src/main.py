@@ -61,9 +61,9 @@ import plot
 import utils
 from atom import Atom
 from colors import get_colors
+from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
-from simtype import SimType
 from state import State
 
 if TYPE_CHECKING:
@@ -726,8 +726,22 @@ class GUI(QMainWindow):
         rot_lvls: NDArray[np.int64] = np.arange(0, self.num_lines_spinbox.value())
 
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-        state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)
-        state_lo: State = State(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
+        state_up: State = State(
+            molecule=molecule,
+            letter="B",
+            spin_multiplicity=3,
+            term_symbol=TermSymbol.SIGMA,
+            inversion_symmetry=InversionSymmetry.UNGERADE,
+            reflection_symmetry=ReflectionSymmetry.MINUS,
+        )
+        state_lo: State = State(
+            molecule=molecule,
+            letter="X",
+            spin_multiplicity=3,
+            term_symbol=TermSymbol.SIGMA,
+            inversion_symmetry=InversionSymmetry.GERADE,
+            reflection_symmetry=ReflectionSymmetry.MINUS,
+        )
 
         sim: Sim = Sim(
             sim_type=sim_type,
@@ -981,9 +995,7 @@ class SplashScreen(QWidget):
         painter.setPen(QColor(255, 255, 255))
         title_font: QFont = QFont("Arial", 24, QFont.Weight.Bold)
         painter.setFont(title_font)
-        painter.drawText(
-            0, 60, self.width(), 40, Qt.AlignmentFlag.AlignCenter, "pyGEONOSIS"
-        )
+        painter.drawText(0, 60, self.width(), 40, Qt.AlignmentFlag.AlignCenter, "pyGEONOSIS")
 
         # Subtitle.
         subtitle_font: QFont = QFont("Arial", 12)

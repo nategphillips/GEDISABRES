@@ -31,8 +31,8 @@ import constants
 import convolve
 import terms
 import utils
+from enums import SimType
 from line import Line
-from simtype import SimType
 
 if TYPE_CHECKING:
     from fractions import Fraction

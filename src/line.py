@@ -25,7 +25,7 @@ import numpy as np
 
 import constants
 import utils
-from simtype import SimType
+from enums import SimType
 
 if TYPE_CHECKING:
     from band import Band

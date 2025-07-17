@@ -1,5 +1,5 @@
-# module simtype.py
-"""Contains the implementation of the SimType class."""
+# module enums.py
+"""Contains enums for defining simulation properties."""
 
 # Copyright (C) 2023-2025 Nathan G. Phillips
 
@@ -24,3 +24,27 @@ class SimType(Enum):
 
     ABSORPTION = 1
     EMISSION = 2
+
+class InversionSymmetry(Enum):
+    """Inversion parity through a centre of symmetry (g/u)."""
+
+    NONE = 1
+    GERADE = 2
+    UNGERADE = 3
+
+
+class ReflectionSymmetry(Enum):
+    """Reflection symmetry along an arbitrary plane containing the internuclear axis (+/-)."""
+
+    NONE = 1
+    PLUS = 2
+    MINUS = 3
+
+
+class TermSymbol(Enum):
+    """The term symbol of a given electronic state."""
+
+    SIGMA = 1
+    PI = 2
+    DELTA = 3
+

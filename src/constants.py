@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from fractions import Fraction
+
 from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
 
 # Avodagro constant [1/mol]
@@ -29,6 +31,12 @@ PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
+
+# TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
+#       should also contain the atomic mass number.
+
+# Nuclear spin
+NUCLEAR_SPIN: dict[str, Fraction] = {"O": Fraction(0)}
 
 # Mappings from enums to strings for use with the dictionaries below.
 TERM_SYMBOL_MAP: dict[TermSymbol, str] = {

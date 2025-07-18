@@ -16,7 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from typing import TYPE_CHECKING
+
 import constants
+from enums import NuclearStatistics
+
+if TYPE_CHECKING:
+    from fractions import Fraction
 
 
 class Atom:
@@ -29,11 +35,11 @@ class Atom:
             name (str): Molecule name.
         """
         self.name: str = name
-        self.mass: float = self.get_mass(name) / constants.AVOGD / 1e3
+        self.nuclear_spin: Fraction = constants.NUCLEAR_SPIN[self.name]
 
-    @staticmethod
-    def get_mass(name: str) -> float:
-        """Return the atomic mass in [g/mol].
+    @property
+    def mass(self) -> float:
+        """Return the atomic mass in [kg].
 
         Args:
             name (str): Name of the atom.
@@ -42,9 +48,31 @@ class Atom:
             ValueError: If the selected atom is not supported.
 
         Returns:
-            float: The atomic mass in [g/mol].
+            float: The atomic mass in [kg].
         """
-        if name not in constants.ATOMIC_MASSES:
-            raise ValueError(f"Atom `{name}` not supported.")
+        if self.name not in constants.ATOMIC_MASSES:
+            raise ValueError(f"Atom `{self.name}` not supported.")
 
-        return constants.ATOMIC_MASSES[name]
+        # Convert from [g/mol] to [kg].
+        return constants.ATOMIC_MASSES[self.name] / constants.AVOGD / 1e3
+
+    @property
+    def nuclear_statistics(self) -> NuclearStatistics:
+        """Determine the nuclear spin statistics of the nuclei.
+
+        Raises:
+            ValueError: If the spin is not an integer or half-integer.
+
+        Returns:
+            NuclearStatistics: The nuclear spin statistics, Bose or Fermi.
+        """
+        # Bosons have integer values of spin.
+        if self.nuclear_spin.is_integer():
+            return NuclearStatistics.BOSE
+        # Fermions have half-integer values of spin.
+        if self.nuclear_spin.denominator == 2:
+            return NuclearStatistics.FERMI
+
+        raise ValueError(
+            f"Bad nuclear statistics: {self.nuclear_spin} is not integer or half-integer."
+        )

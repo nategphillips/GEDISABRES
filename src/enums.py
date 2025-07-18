@@ -19,6 +19,13 @@
 from enum import Enum
 
 
+class NuclearStatistics(Enum):
+    """Fermi-Dirac or Bose-Einstein nuclear statistics."""
+
+    FERMI = 1
+    BOSE = 2
+
+
 class SimType(Enum):
     """Defines the type of simulation to be performed."""
 

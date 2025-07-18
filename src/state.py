@@ -16,14 +16,41 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from enum import Enum
+from fractions import Fraction
 from functools import cached_property
 
 import polars as pl
 
 import utils
 from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
-from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
+from enums import InversionSymmetry, NuclearStatistics, ReflectionSymmetry, TermSymbol
 from molecule import Molecule
+
+
+class Sign(Enum):
+    """Denotes a plus or minus sign in the expression for homonuclear degeneracy."""
+
+    PLUS = 1
+    MINUS = 2
+
+
+def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
+    """Computes the homonuclear degeneracy 0.5[(2I + 1)^2 ± (2I + 1)].
+
+    Equation (5.16) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
+
+    Args:
+        nuclear_spin (Fraction): Nuclear spin of either atom.
+        sign (Sign): Which sign to use in the computation.
+
+    Returns:
+        Fraction: Homonuclear degeneracy.
+    """
+    if sign == Sign.PLUS:
+        return Fraction(1, 2) * ((2 * nuclear_spin + 1) ** 2 + (2 * nuclear_spin + 1))
+
+    return Fraction(1, 2) * ((2 * nuclear_spin + 1) ** 2 - (2 * nuclear_spin + 1))
 
 
 class State:
@@ -89,26 +116,92 @@ class State:
             utils.get_data_path("data", self.molecule.name, "states", f"{self.name}.csv")
         ).to_dict(as_series=False)
 
-    def is_allowed(self, n_qn: int) -> bool:
-        """Return whether or not the selected rotational level is allowed.
+    def nuclear_partition_fn(self) -> Fraction:
+        """Computes the nuclear partition function.
 
-        Args:
-            n_qn (int): Rotational quantum number N.
-
-        Raises:
-            ValueError: If the electronic state does not exist.
+        Equation (5.9) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
         Returns:
-            bool: True if the selected rotational level is allowed.
+            Fraction: Nuclear partition function.
         """
-        if (
-            self.molecule.atom_1.name == self.molecule.atom_2.name
-        ) and self.term_symbol == TermSymbol.SIGMA:
-            if self.name == "X3Sg-":
-                # For X3Σg-, only the rotational levels with odd N can be populated.
-                return bool(n_qn % 2 == 1)
-            if self.name == "B3Su-":
-                # For B3Σu-, only the rotational levels with even N can be populated.
-                return bool(n_qn % 2 == 0)
+        return (2 * self.molecule.atom_1.nuclear_spin + 1) * (
+            2 * self.molecule.atom_2.nuclear_spin + 1
+        )
 
-        raise ValueError(f"State {self.term_symbol} not supported.")
+    @cached_property
+    def nuclear_degeneracy(self) -> tuple[Fraction, Fraction]:
+        """Nuclear degeneracy of the electronic state.
+
+        Based on Table 5.2 in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
+
+        Returns:
+            tuple[int, int]: Degeneracy scaling factors corresponding to even N and odd N.
+        """
+        atom_1 = self.molecule.atom_1
+        atom_2 = self.molecule.atom_2
+
+        # Only homonuclear molecules have different degeneracies for states with different
+        # wavefunction symmetries. Additionally, states other than Σ usually have negligible nuclear
+        # spin effects.
+        if self.molecule.is_homonuclear and self.term_symbol == TermSymbol.SIGMA:
+            # If both constituent nuclei are fermions, Fermi statistics apply.
+            if (atom_1.nuclear_statistics == NuclearStatistics.FERMI) and (
+                atom_2.nuclear_statistics == NuclearStatistics.FERMI
+            ):
+                # Σg+ or Σu-
+                if (
+                    self.inversion_symmetry == InversionSymmetry.GERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.PLUS
+                ) or (
+                    self.inversion_symmetry == InversionSymmetry.UNGERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.MINUS
+                ):
+                    # Even N (-), odd N (+)
+                    return homonuclear_degeneracy(
+                        atom_1.nuclear_spin, Sign.MINUS
+                    ), homonuclear_degeneracy(atom_1.nuclear_spin, Sign.PLUS)
+                # Σu+ or Σg-
+                if (
+                    self.inversion_symmetry == InversionSymmetry.UNGERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.PLUS
+                ) or (
+                    self.inversion_symmetry == InversionSymmetry.GERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.MINUS
+                ):
+                    # Even N (+), odd N (-)
+                    return homonuclear_degeneracy(
+                        atom_1.nuclear_spin, Sign.PLUS
+                    ), homonuclear_degeneracy(atom_1.nuclear_spin, Sign.MINUS)
+            # If there are no fermions, or if there is only one fermion, Bose statistics apply.
+            else:
+                # Σg+ or Σu-
+                if (
+                    self.inversion_symmetry == InversionSymmetry.GERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.PLUS
+                ) or (
+                    self.inversion_symmetry == InversionSymmetry.UNGERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.MINUS
+                ):
+                    # Even N (+), odd N (-)
+                    return homonuclear_degeneracy(
+                        atom_1.nuclear_spin, Sign.PLUS
+                    ), homonuclear_degeneracy(atom_1.nuclear_spin, Sign.MINUS)
+                # Σu+ or Σg-
+                if (
+                    self.inversion_symmetry == InversionSymmetry.UNGERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.PLUS
+                ) or (
+                    self.inversion_symmetry == InversionSymmetry.GERADE
+                    and self.reflection_symmetry == ReflectionSymmetry.MINUS
+                ):
+                    # Even N (-), odd N (+)
+                    return homonuclear_degeneracy(
+                        atom_1.nuclear_spin, Sign.MINUS
+                    ), homonuclear_degeneracy(atom_1.nuclear_spin, Sign.PLUS)
+
+        heteronuclear_degeneracy: Fraction = (2 * atom_1.nuclear_spin + 1) * (
+            2 * atom_2.nuclear_spin + 1
+        )
+
+        # Nuclear degeneracies for heteronuclear diatomics are not dependent on even or odd N.
+        return heteronuclear_degeneracy, heteronuclear_degeneracy

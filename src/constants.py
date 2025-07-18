@@ -30,6 +30,7 @@ LIGHT: float = 2.99792458e10
 PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
+# Data from IUPAC - Atomic Weights of The Elements 2023 <https://iupac.qmul.ac.uk/AtWt/>
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
 
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
@@ -47,7 +48,8 @@ BRANCH_NAME_MAP: dict[Fraction, str] = {
 # TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
 #       should also contain the atomic mass number.
 
-# Nuclear spin
+# Nuclear spin [-]
+# Data from the NUBASE 2012 database contained in JANIS
 NUCLEAR_SPIN: dict[str, Fraction] = {"O": Fraction(0)}
 
 # Mappings from enums to strings for use with the dictionaries below.
@@ -88,7 +90,7 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
 }
 
 # Electronic degeneracies [-]
-# Data from Park, 1990
+# Data from Table 1.4 of "Nonequilibrium Hypersonic Aerodynamics" by Park
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
     "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3}
 }

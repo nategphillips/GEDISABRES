@@ -222,7 +222,7 @@ def get_sim(
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        rot_lvls=np.arange(0, 40),
+        j_qn_up_max=40,
         temp_trn=temp,
         temp_elc=temp,
         temp_vib=temp,

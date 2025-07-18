@@ -40,7 +40,7 @@ class Sim:
         molecule: Molecule,
         state_up: State,
         state_lo: State,
-        rot_lvls: NDArray[np.int64],
+        j_qn_up_max: int,
         temp_trn: float,
         temp_elc: float,
         temp_vib: float,
@@ -55,7 +55,7 @@ class Sim:
             molecule (Molecule): Which molecule to simulate.
             state_up (State): Upper electronic state.
             state_lo (State): Lower electronic state.
-            rot_lvls (NDArray[np.int64]): Which rotational levels to simulate.
+            j_qn_up_max (int): Maximum J' quantum number.
             temp_trn (float): Translational temperature.
             temp_elc (float): Electronic temperature.
             temp_vib (float): Vibrational temperature.
@@ -67,7 +67,7 @@ class Sim:
         self.molecule: Molecule = molecule
         self.state_up: State = state_up
         self.state_lo: State = state_lo
-        self.rot_lvls: NDArray[np.int64] = rot_lvls
+        self.j_qn_up_max: int = j_qn_up_max
         self.temp_trn: float = temp_trn
         self.temp_elc: float = temp_elc
         self.temp_vib: float = temp_vib

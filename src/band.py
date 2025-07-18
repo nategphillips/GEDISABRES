@@ -430,19 +430,12 @@ class Band:
         omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
         omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
 
-        # FIXME: 25/07/10 - Make a simulation take in J' max instead of "rotational levels".
-        j_qn_up_max: int = self.sim.rot_lvls.max()
+        j_qn_up_max: int = self.sim.j_qn_up_max
         j_qn_up_min: int = 0
 
-        # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat (~14 ms)
-        #       faster than computing them inside the main loop. This is somewhat surprising to me
-        #       considering this method actually requires somewhat more memory overhead. Some very
-        #       rough benchmarks are listed below:
-        #
-        #                    20x specific bands   | 5x band ranges
-        #                    ---------------------|-------------------
-        #       inside loop: 0.7735961437225342 s | 0.7343460819937966 s
-        #       precomputed: 0.7578609466552735 s | 0.7206905841827392 s
+        # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
+        #       computing them inside the main loop, but this is mainly done to mirror the
+        #       calculations performed for the lower state.
         eigenvals_up_cache: dict[int, NDArray[np.float64]] = {}
         unitary_up_cache: dict[int, NDArray[np.float64]] = {}
 
@@ -492,7 +485,7 @@ class Band:
         lines: list[Line] = []
 
         # TODO: 25/07/17 - In general, J can be half-integer, meaning iterating over a range like
-        #       isn't valid. Can create lists of J' and J'' beforehand and iterate over those
+        #       this isn't valid. Can create lists of J' and J'' beforehand and iterate over those
         #       instead.
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
             # Get all possible N' values for each J'.

@@ -419,13 +419,13 @@ class GUI(QMainWindow):
         layout.addWidget(group_granularity)
 
         # Rotational line input.
-        group_lines: QGroupBox = QGroupBox("Rotational Lines")
-        lines_layout: QHBoxLayout = QHBoxLayout(group_lines)
-        self.num_lines_spinbox: QSpinBox = QSpinBox()
-        self.num_lines_spinbox.setMaximum(10000)
-        self.num_lines_spinbox.setValue(DEFAULT_LINES)
-        lines_layout.addWidget(self.num_lines_spinbox)
-        layout.addWidget(group_lines)
+        group_maxj: QGroupBox = QGroupBox("Max J'")
+        maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
+        self.maxj_spinbox: QSpinBox = QSpinBox()
+        self.maxj_spinbox.setMaximum(10000)
+        self.maxj_spinbox.setValue(DEFAULT_LINES)
+        maxj_layout.addWidget(self.maxj_spinbox)
+        layout.addWidget(group_maxj)
 
         # Run controls.
         group_run: QGroupBox = QGroupBox("Actions")
@@ -723,8 +723,6 @@ class GUI(QMainWindow):
                     for v_lo in range(v_lo_min, v_lo_max + 1)
                 ]
 
-        rot_lvls: NDArray[np.int64] = np.arange(0, self.num_lines_spinbox.value())
-
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
         state_up: State = State(
             molecule=molecule,
@@ -748,7 +746,7 @@ class GUI(QMainWindow):
             molecule=molecule,
             state_up=state_up,
             state_lo=state_lo,
-            rot_lvls=rot_lvls,
+            j_qn_up_max=self.maxj_spinbox.value(),
             temp_trn=temp_trn,
             temp_elc=temp_elc,
             temp_vib=temp_vib,

@@ -295,24 +295,38 @@ class Band:
         upper_state: dict[str, list[float]] = self.sim.state_up.constants
         lower_state: dict[str, list[float]] = self.sim.state_lo.constants
 
-        # NOTE: 24/11/05 - In the Cheung paper, the electronic energy is defined differently than in
-        #       Herzberg's book. The conversion specified by Cheung on p. 5 is
-        #       nu_0 = T + 2 / 3 * lamda - gamma.
-        energy_offset: float = (
-            2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
+        # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
+        # state of the Schumann-Runge bands" by Cheung, et al.
+
+        # References to Yu refer to "High resolution spectral analysis of oxygen. IV. Energy levels,
+        # partition sums, band constants, RKR potentials, Franck-Condon factors involving the X3Σg-,
+        # a1Δg, and b1Σg+ states" by Yu et al.
+
+        # NOTE: 24/11/05 - This program uses Herzberg's definition of the band origin, i.e.
+        #       nu_0 = nu_e + nu_v, which is given on p. 186 of "Spectra of Diatomic Molecules". In
+        #       the Cheung paper, the electronic energy is defined differently than in Herzberg.
+        #       The conversion specified by Cheung on p. 5 is nu_0 = T + 2 / 3 * lamda - gamma.
+
+        band_origin_upper: float = (
+            upper_state["T"][self.v_qn_up]
+            + 2 / 3 * upper_state["lamda"][self.v_qn_up]
+            - upper_state["gamma"][self.v_qn_up]
         )
 
-        # NOTE: 24/11/05 - The band origin as defined by Herzberg is nu_0 = nu_e + nu_v, and is
-        #       different for each vibrational transition. The T values in Cheung include the
-        #       vibrational term for each level, i.e. T = T_e + G. The ground state has no
-        #       electronic energy, so it is not subtracted. In Cheung's data, the term values
-        #       provided are measured above the zeroth vibrational level of the ground state. This
-        #       means that the lower state zero-point vibrational energy must be used.
-        return (
-            upper_state["T"][self.v_qn_up]
-            + energy_offset
-            - (lower_state["G"][self.v_qn_lo] - lower_state["G"][0])
-        )
+        # NOTE: 24/11/05 - From NIST, the "minimum electronic energy" for the B3Σu- state is
+        #       T_e = 49793.28 (see https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447&Mask=1000#Diatomic).
+        #       On p. 5, Cheung lists T_0 = 49004.75 (the electronic energy alone), meaning the term
+        #       values they provide are referenced above the zero-point vibrational energy of the
+        #       ground state. The zero-point vibrational energy of the ground state given by Yu is
+        #       ~787.076, which when added to Cheung, gives 49792.98. This reproduces the figure
+        #       seen in NIST (to within differences between measurement accuracy, etc.). To properly
+        #       account for this offset, the zero-point vibrational energy must be subtracted from
+        #       the ground state vibrational energy.
+
+        band_origin_lower: float = lower_state["G"][self.v_qn_lo] - lower_state["G"][0]
+
+        # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
+        return band_origin_upper - band_origin_lower
 
     @cached_property
     def rot_partition_fn(self) -> float:
@@ -381,10 +395,23 @@ class Band:
         ld_lo: float = table_lo["lamda_D"][self.v_qn_lo]
         gd_lo: float = table_lo["gamma_D"][self.v_qn_lo]
 
+        # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
+        # state of the Schumann-Runge bands" by Cheung, et al.
+
+        # References to Yu refer to "High resolution spectral analysis of oxygen. IV. Energy levels,
+        # partition sums, band constants, RKR potentials, Franck-Condon factors involving the X3Σg-,
+        # a1Δg, and b1Σg+ states" by Yu et al.
+
+        # The Cheung Hamiltonian is listed on p. 2 of their paper. Yu's Hamiltonian is listed on
+        # p. 3 of "High resolution spectral analysis of oxygen. I. Isotopically invariant Dunham fit
+        # for the X3Σg-, a1Δg, and b1Σg+ states".
+
         # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
         #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
         #       elements are used to solve for the energy eigenvalues, the constants from Yu are
-        #       changed to fit the convention used by Cheung. See the table below for details.
+        #       changed  to fit the convention used by Cheung. The Cheung convention also matches
+        #       that of PGOPHER, which is my preferred convention (see https://pgopher.chm.bris.ac.uk/Help/linham.htm).
+        #       The table below details the changes made to Yu's constants:
         #
         #       Cheung  | Yu
         #       --------|------------

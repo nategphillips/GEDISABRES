@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import overload
 
 import matplotlib.pyplot as plt
@@ -286,7 +287,7 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     v_qn_up: int = sim.bands[0].v_qn_up
     v_qn_lo: int = sim.bands[0].v_qn_lo
 
-    j_qn: int = line.j_qn_lo
+    j_qn: Fraction = line.j_qn_lo
     s_j: float = line.honl_london_factor
     nu_d: float = line.fwhm_predissociation(True)  # [1/cm]
     w_d: float = 2 * np.pi * constants.LIGHT * nu_d  # [1/s]

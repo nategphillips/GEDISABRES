@@ -21,7 +21,6 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 import polars as pl
 import pyqtgraph as pg
 from PySide6.QtCore import (
@@ -69,6 +68,7 @@ from state import State
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import numpy as np
     from numpy.typing import NDArray
 
 DEFAULT_LINES: int = 40
@@ -818,10 +818,10 @@ class GUI(QMainWindow):
                         "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                         "Wavenumber": line.wavenumber,
                         "Intensity": line.intensity,
-                        "J'": line.j_qn_up,
-                        "J''": line.j_qn_lo,
-                        "N'": line.n_qn_up,
-                        "N''": line.n_qn_lo,
+                        "J'": f"{line.j_qn_up:.1f}",
+                        "J''": f"{line.j_qn_lo:.1f}",
+                        "N'": f"{line.n_qn_up:.1f}",
+                        "N''": f"{line.n_qn_lo:.1f}",
                         "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
                         "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
                     }

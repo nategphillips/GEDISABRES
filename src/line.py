@@ -41,10 +41,10 @@ class Line:
         self,
         sim: Sim,
         band: Band,
-        j_qn_up: int,
-        j_qn_lo: int,
-        n_qn_up: int,
-        n_qn_lo: int,
+        j_qn_up: Fraction,
+        j_qn_lo: Fraction,
+        n_qn_up: Fraction,
+        n_qn_lo: Fraction,
         branch_idx_up: int,
         branch_idx_lo: int,
         branch_name_j: str,
@@ -59,10 +59,10 @@ class Line:
         Args:
             sim (Sim): Parent simulation.
             band (Band): Vibrational band.
-            j_qn_up (int): Upper state rotational quantum number J'.
-            j_qn_lo (int): Lower state rotational quantum number J''.
-            n_qn_up (int): Upper state rotational quantum number N'.
-            n_qn_lo (int): Lower state rotational quantum number N''.
+            j_qn_up (Fraction): Upper state rotational quantum number J'.
+            j_qn_lo (Fraction): Lower state rotational quantum number J''.
+            n_qn_up (Fraction): Upper state rotational quantum number N'.
+            n_qn_lo (Fraction): Lower state rotational quantum number N''.
             branch_idx_up (int): Upper branch index.
             branch_idx_lo (int): Lower branch index.
             branch_name_j (str): Branch name with respect to ΔJ.
@@ -74,10 +74,12 @@ class Line:
         """
         self.sim: Sim = sim
         self.band: Band = band
-        self.j_qn_up: int = j_qn_up
-        self.j_qn_lo: int = j_qn_lo
-        self.n_qn_up: int = n_qn_up
-        self.n_qn_lo: int = n_qn_lo
+        # NOTE: 25/07/18 - J (and therefore N) can both be half-integer valued, see "The Spectra and
+        # Dynamics of Diatomics Molecules" by Brion, p. 3.
+        self.j_qn_up: Fraction = j_qn_up
+        self.j_qn_lo: Fraction = j_qn_lo
+        self.n_qn_up: Fraction = n_qn_up
+        self.n_qn_lo: Fraction = n_qn_lo
         self.branch_idx_up: int = branch_idx_up
         self.branch_idx_lo: int = branch_idx_lo
         self.branch_name_j: str = branch_name_j
@@ -114,7 +116,7 @@ class Line:
             a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
             a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
             a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
-            x: int = self.j_qn_up * (self.j_qn_up + 1)
+            x: Fraction = self.j_qn_up * (self.j_qn_up + 1)
 
             # Predissociation broadening in [1/cm].
             return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4

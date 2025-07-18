@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -30,16 +31,37 @@ from py3nj import clebsch_gordan
 import constants
 import convolve
 import terms
-import utils
 from enums import SimType
 from line import Line
 
 if TYPE_CHECKING:
-    from fractions import Fraction
-
     from numpy.typing import NDArray
 
     from sim import Sim
+
+
+def n_values_for_j(j_qn: Fraction, s_qn: Fraction) -> list[Fraction]:
+    """Computes the possible values of N for a given J, from J - S to J + S.
+
+    Args:
+        j_qn (Fraction): Quantum number J.
+        s_qn (Fraction): Quantum number S.
+
+    Returns:
+        list[Fraction]: Valid N for the given J.
+    """
+    lo: Fraction = j_qn - s_qn
+    hi: Fraction = j_qn + s_qn
+
+    step_size: Fraction = Fraction(1)
+
+    n_values: list[Fraction] = []
+    current: Fraction = lo
+    while current <= hi:
+        n_values.append(current)
+        current += step_size
+
+    return n_values
 
 
 def nuclear_parity_mask(
@@ -480,23 +502,12 @@ class Band:
 
         lines: list[Line] = []
 
+        # TODO: 25/07/17 - In general, J can be half-integer, meaning iterating over a range like
+        #       isn't valid. Can create lists of J' and J'' beforehand and iterate over those
+        #       instead.
         for j_qn_up in range(j_qn_up_min, j_qn_up_max + 1):
-            # TODO: 25/07/15 - N values should eventually be calculated in a more general manner
-            #       that supports any type of spin multiplicity. The possible values of N range from
-            #       J - S to J + S for each state, upper and lower. For an example 3Σ state with
-            #       J' = 1 and J'' = 2:
-            #
-            #       J'  = 1: N'  = 0, 1, 2
-            #       J'' = 2: N'' = 1, 2, 3
-            #
-            #       Every combination of N' and N'' within a given (J', J'') pair then uniquely
-            #       describes a rotational line, with the Hönl-London factors enforcing the
-            #       selection rules.
-
             # Get all possible N' values for each J'.
-            n_qn_up_vals: list[int] = [
-                utils.j_to_n(j_qn_up, branch_idx_up) for branch_idx_up in branch_up_range
-            ]
+            n_qn_up_vals: list[Fraction] = n_values_for_j(Fraction(j_qn_up), s_qn_up)
 
             # Check if the generated N' values have any zero-valued degeneracies and mask them off
             # if so.
@@ -523,8 +534,8 @@ class Band:
             #
             #            J' | J'' | N' | N'' | Branch |
             #            ---|-----|----|-----|--------|
-            #       old: 1  | 1   | 0  | 1   | P_12   | - w.r.t J
-            #       new: 1  | 1   | 0  | 1   | Q_12   | - w.r.t N
+            #       old: 1  | 1   | 0  | 1   | P_12   | - w.r.t N
+            #       new: 1  | 1   | 0  | 1   | Q_12   | - w.r.t J
             #
             #       Consider adding two branch labels: one with respect to J and the other with
             #       respect to N. PGOPHER does this as well.
@@ -532,7 +543,7 @@ class Band:
             for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
                 # If J'' has not yet been encountered, compute its allowed N'' values.
                 if j_qn_lo not in n_qn_lo_cache:
-                    n_qn_lo_cache[j_qn_lo] = [utils.j_to_n(j_qn_lo, b) for b in branch_lo_range]
+                    n_qn_lo_cache[j_qn_lo] = n_values_for_j(Fraction(j_qn_lo), s_qn_lo)
                     allowed_n_nq_lo_cache[j_qn_lo] = nuclear_parity_mask(
                         n_qn_lo_cache[j_qn_lo], degeneracy_lo_even, degeneracy_lo_odd
                     )

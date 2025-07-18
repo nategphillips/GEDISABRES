@@ -24,36 +24,6 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-def j_to_n(j_qn: int, branch_idx: int) -> int:
-    """Convert the rotational quantum number from J to N.
-
-    Args:
-        j_qn (int): Rotational quantum number J.
-        branch_idx (int): Branch index. The total number of branches (and therefore the conversion
-            from J to N) is dependent on the spin multiplicity of the molecule.
-
-    Raises:
-        ValueError: If the branch index cannot be found.
-
-    Returns:
-        int: The rotational quantum number N.
-    """
-    # For Hund's case (b), spin multiplicity 3.
-    # FIXME: 25/07/15 - Swapped cases 1 and 3, which now produces the correct (J', J'')-(N', N'')
-    #        pairs, but the branch naming seems to be reversed from PGOPHER. (P13 instead of P31.)
-    #        This behavior should get fixed once values of N are computed from J - S to J + S
-    #        instead of being hard coded like this.
-    match branch_idx:
-        case 1:
-            return j_qn + 1
-        case 2:
-            return j_qn
-        case 3:
-            return j_qn - 1
-        case _:
-            raise ValueError(f"Unknown branch index: {branch_idx}.")
-
-
 @overload
 def wavenum_to_wavelen(wavenumber: float) -> float: ...
 

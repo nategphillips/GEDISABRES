@@ -1,6 +1,6 @@
 # pyGEONOSIS
 
-Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a tool for simulating the Schumann–Runge (B-X) bands of molecular oxygen, and eventually γ (A-X) bands of nitric oxide. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
+Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a tool for simulating the Schumann–Runge (B-X) bands of molecular oxygen, and eventually the $\gamma$ (A-X) bands of nitric oxide. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 
@@ -64,7 +64,7 @@ Four plot types are currently implemented:
 
 ## Validation with Experimental Data
 
-Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. Data for the Schumann–Runge bands is available [here](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) at 300 K. The (2, 0) and (6, 0) experimental band data were chosen since they contain lines belonging to multiple vibrational bands. Simulated vibrational bands were convolved separately to make the distinction between bands more clear; improved agreement can be obtained by convolving all bands together.
+Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. Data for the Schumann–Runge bands is available [here](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) at 300 K. The (2, 0) and (6, 0) experimental band data were chosen since they contain lines belonging to multiple vibrational bands. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
 
 ### (2, 0) Band Validation
 

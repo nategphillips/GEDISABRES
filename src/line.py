@@ -25,9 +25,11 @@ import numpy as np
 
 import constants
 import utils
-from simtype import SimType
+from enums import SimType
 
 if TYPE_CHECKING:
+    from fractions import Fraction
+
     from band import Band
     from sim import Sim
 
@@ -299,14 +301,31 @@ class Line:
         """
         match self.sim.sim_type:
             case SimType.EMISSION:
+                state = self.sim.state_up
                 j_qn = self.j_qn_up
+                n_qn = self.n_qn_up
                 rot_term_value = self.rot_term_value_up
             case SimType.ABSORPTION:
+                state = self.sim.state_lo
                 j_qn = self.j_qn_lo
+                n_qn = self.n_qn_lo
                 rot_term_value = self.rot_term_value_lo
 
+        # Degeneracies for homonuclear diatomics can be different depending on the evenness of N.
+        even_degeneracy, odd_degeneracy = state.nuclear_degeneracy
+        is_n_even: bool = n_qn % 2 == 0
+
+        match is_n_even:
+            case True:
+                nuclear_degen = even_degeneracy
+            case False:
+                nuclear_degen = odd_degeneracy
+
+        # Effective rotational degeneracy, including nuclear effects.
+        degeneracy: Fraction = (2 * j_qn + 1) * nuclear_degen
+
         return (
-            (2 * j_qn + 1)
+            degeneracy
             * np.exp(
                 -rot_term_value
                 * constants.PLANC

@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from fractions import Fraction
+
+from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
+
 # Avodagro constant [1/mol]
 AVOGD: float = 6.02214076e23
 # Boltzmann constant [J/K]
@@ -27,6 +31,29 @@ PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
+
+# TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
+#       should also contain the atomic mass number.
+
+# Nuclear spin
+NUCLEAR_SPIN: dict[str, Fraction] = {"O": Fraction(0)}
+
+# Mappings from enums to strings for use with the dictionaries below.
+TERM_SYMBOL_MAP: dict[TermSymbol, str] = {
+    TermSymbol.SIGMA: "S",
+    TermSymbol.PI: "P",
+    TermSymbol.DELTA: "D",
+}
+INVERSION_SYMMETRY_MAP: dict[InversionSymmetry, str] = {
+    InversionSymmetry.NONE: "",
+    InversionSymmetry.GERADE: "g",
+    InversionSymmetry.UNGERADE: "u",
+}
+REFLECTION_SYMMETRY_MAP: dict[ReflectionSymmetry, str] = {
+    ReflectionSymmetry.NONE: "",
+    ReflectionSymmetry.PLUS: "+",
+    ReflectionSymmetry.MINUS: "-",
+}
 
 # Internuclear distance [m]
 # Data from NIST Chemistry WebBook

@@ -31,8 +31,8 @@ import constants
 import convolve
 import terms
 import utils
+from enums import SimType
 from line import Line
-from simtype import SimType
 
 if TYPE_CHECKING:
     from fractions import Fraction
@@ -40,6 +40,37 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from sim import Sim
+
+
+def nuclear_parity_mask(
+    n_qn_vals: list[int], degeneracy_even: Fraction, degeneracy_odd: Fraction
+) -> NDArray[np.bool]:
+    """Create a mask of allowed rotational quantum numbers using nuclear degeneracies.
+
+    Args:
+        n_qn_vals (list[int]): Quantum numbers N.
+        degeneracy_even (float): Nuclear degeneracy for even values of N.
+        degeneracy_odd (float): Nuclear degeneracy for odd values of N.
+
+    Raises:
+        ValueError: If both even and odd nuclear degeneracies are zero.
+
+    Returns:
+        NDArray[np.bool]: Allowed rotational quantum numbers N.
+    """
+    n_qn_arr: NDArray[np.int64] = np.array(n_qn_vals)
+
+    # If even N values are forbidden, return true only for odd values.
+    if (degeneracy_even == 0) and (degeneracy_odd != 0):
+        return n_qn_arr % 2 == 1
+    # If odd N values are forbidden, return true only for even values.
+    if (degeneracy_odd == 0) and (degeneracy_even != 0):
+        return n_qn_arr % 2 == 0
+    # Both nuclear degeneracies being zero within a given electronic state should never happen.
+    if (degeneracy_even == 0) and (degeneracy_odd == 0):
+        raise ValueError("Nuclear degeneracy is zero for even and odd values of N!")
+
+    return np.ones_like(n_qn_arr, dtype=np.bool)
 
 
 def honl_london_matrix(
@@ -289,15 +320,19 @@ class Band:
         #       computing the sum. Now that rotational term values are directly associated with
         #       rotational lines instead of being computed separately, computing the sum would
         #       require a bit more logic, and I'm not sure it's worth it.
-        q_r = (
-            constants.BOLTZ
-            * self.sim.temp_rot
-            / (constants.PLANC * constants.LIGHT * state.constants["B"][v_qn])
+
+        # This is the effective rotational partition function, i.e., it includes the nuclear
+        # partition function.
+        theta_r: float = (
+            constants.PLANC * constants.LIGHT * state.constants["B"][v_qn] / constants.BOLTZ
+        )
+        q_r: float = (
+            self.sim.temp_rot
+            * state.nuclear_partition_fn()
+            / (theta_r * self.sim.molecule.symmetry_param)
         )
 
-        # The state sum must be divided by the symmetry parameter to account for identical
-        # rotational orientations in space.
-        return q_r / self.sim.molecule.symmetry_param
+        return q_r
 
     @cached_property
     def lines(self) -> list[Line]:
@@ -432,13 +467,16 @@ class Band:
         hlf_matrix_cache: dict[tuple[int, int], NDArray[np.float64]] = {}
         # The allowed values of N'' are cached since each J'' value can be encountered multiple
         # times. For example, J' = 1, J' = 2, and J' = 3 all share J'' = 1.
-        n_lo_cache: dict[int, list[int]] = {}
-        allow_lo_cache: dict[int, NDArray[np.bool]] = {}
+        n_qn_lo_cache: dict[int, list[int]] = {}
+        allowed_n_nq_lo_cache: dict[int, NDArray[np.bool]] = {}
 
         # R Branch: ΔJ = J' - J'' = +1
         # Q Branch: ΔJ = J' - J'' = 0
         # P Branch: ΔJ = J' - J'' = -1
         branch_names: list[str] = ["R", "Q", "P"]
+
+        degeneracy_up_even, degeneracy_up_odd = self.sim.state_up.nuclear_degeneracy
+        degeneracy_lo_even, degeneracy_lo_odd = self.sim.state_lo.nuclear_degeneracy
 
         lines: list[Line] = []
 
@@ -456,18 +494,14 @@ class Band:
             #       selection rules.
 
             # Get all possible N' values for each J'.
-            n_up_vals: list[int] = [
+            n_qn_up_vals: list[int] = [
                 utils.j_to_n(j_qn_up, branch_idx_up) for branch_idx_up in branch_up_range
             ]
-            # TODO: 25/07/10 - Implement parity calculations and see if this rule is enforced
-            #       automatically.
 
-            # Check if the generated N' values are valid according to the selection rules of the
-            # given electronic state. For example, molecular oxygen nucleus has zero nuclear spin
-            # angular momentum, which places certain restrictions on the allowed rotational quantum
-            # numbers.
-            allow_up: NDArray[np.bool] = np.array(
-                [self.sim.state_up.is_allowed(n_qn_up) for n_qn_up in n_up_vals]
+            # Check if the generated N' values have any zero-valued degeneracies and mask them off
+            # if so.
+            allowed_n_qn_up: NDArray[np.bool] = nuclear_parity_mask(
+                n_qn_up_vals, degeneracy_up_even, degeneracy_up_odd
             )
 
             # Upper state eigenvalues, dimension (1, num_branches_up).
@@ -497,15 +531,15 @@ class Band:
 
             for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
                 # If J'' has not yet been encountered, compute its allowed N'' values.
-                if j_qn_lo not in n_lo_cache:
-                    n_lo_cache[j_qn_lo] = [utils.j_to_n(j_qn_lo, b) for b in branch_lo_range]
-                    allow_lo_cache[j_qn_lo] = np.array(
-                        [self.sim.state_lo.is_allowed(n) for n in n_lo_cache[j_qn_lo]]
+                if j_qn_lo not in n_qn_lo_cache:
+                    n_qn_lo_cache[j_qn_lo] = [utils.j_to_n(j_qn_lo, b) for b in branch_lo_range]
+                    allowed_n_nq_lo_cache[j_qn_lo] = nuclear_parity_mask(
+                        n_qn_lo_cache[j_qn_lo], degeneracy_lo_even, degeneracy_lo_odd
                     )
 
                 # Get all allowed N'' values for each J''.
-                n_lo_vals: list[int] = n_lo_cache[j_qn_lo]
-                allow_lo: NDArray[np.bool] = allow_lo_cache[j_qn_lo]
+                n_qn_lo_vals: list[int] = n_qn_lo_cache[j_qn_lo]
+                allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
                 key: tuple[int, int] = (j_qn_up, j_qn_lo)
                 # Check if the HLFs for the given (J', J'') pair have already been computed.
@@ -532,7 +566,9 @@ class Band:
                 # for each branch index pair (i, j), has dimensions
                 # (num_branches_up, branch_branches_lo).
                 mask: NDArray[np.bool] = (
-                    (hlf_mat > constants.HONL_LONDON_CUTOFF) & allow_up[:, None] & allow_lo[None, :]
+                    (hlf_mat > constants.HONL_LONDON_CUTOFF)
+                    & allowed_n_qn_up[:, None]
+                    & allowed_n_qn_lo[None, :]
                 )
                 # Get the row and column (i, j) indices where the mask is true.
                 i_range, j_range = np.nonzero(mask)
@@ -543,8 +579,8 @@ class Band:
                 for i, j in zip(i_range.tolist(), j_range.tolist()):
                     branch_idx_up: int = branch_up_range[i]
                     branch_idx_lo: int = branch_lo_range[j]
-                    n_qn_up: int = n_up_vals[i]
-                    n_qn_lo: int = n_lo_vals[j]
+                    n_qn_up: int = n_qn_up_vals[i]
+                    n_qn_lo: int = n_qn_lo_vals[j]
                     hlf: float = float(hlf_mat[i, j])
                     eigenval_up: float = float(eigenvals_up[i])
                     eigenval_lo: float = float(eigenvals_lo[j])

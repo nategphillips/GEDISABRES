@@ -23,9 +23,9 @@ import numpy as np
 
 import utils
 from atom import Atom
+from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
-from simtype import SimType
 from state import State
 
 if TYPE_CHECKING:
@@ -35,9 +35,22 @@ if TYPE_CHECKING:
 def main() -> None:
     """Entry point."""
     molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-
-    state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)
-    state_lo: State = State(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
+    state_up: State = State(
+        molecule=molecule,
+        letter="B",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.UNGERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
+    state_lo: State = State(
+        molecule=molecule,
+        letter="X",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.GERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
@@ -68,7 +81,7 @@ def main() -> None:
 
     plt.plot(wns_samp, ins_samp, label="sample")
 
-    inst_broadening_wl: float = 0.0
+    inst_broadening_wl: float = 0.004
     granularity: int = int(1e4)
     fwhm_selections: dict[str, bool] = {
         "instrument": True,

@@ -1,5 +1,5 @@
-# module simtype.py
-"""Contains the implementation of the SimType class."""
+# module enums.py
+"""Contains enums for defining simulation properties."""
 
 # Copyright (C) 2023-2025 Nathan G. Phillips
 
@@ -19,8 +19,39 @@
 from enum import Enum
 
 
+class NuclearStatistics(Enum):
+    """Fermi-Dirac or Bose-Einstein nuclear statistics."""
+
+    FERMI = 1
+    BOSE = 2
+
+
 class SimType(Enum):
     """Defines the type of simulation to be performed."""
 
     ABSORPTION = 1
     EMISSION = 2
+
+class InversionSymmetry(Enum):
+    """Inversion parity through a centre of symmetry (g/u)."""
+
+    NONE = 1
+    GERADE = 2
+    UNGERADE = 3
+
+
+class ReflectionSymmetry(Enum):
+    """Reflection symmetry along an arbitrary plane containing the internuclear axis (+/-)."""
+
+    NONE = 1
+    PLUS = 2
+    MINUS = 3
+
+
+class TermSymbol(Enum):
+    """The term symbol of a given electronic state."""
+
+    SIGMA = 1
+    PI = 2
+    DELTA = 3
+

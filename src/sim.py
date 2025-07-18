@@ -26,8 +26,8 @@ import constants
 import terms
 import utils
 from band import Band
+from enums import SimType
 from molecule import Molecule
-from simtype import SimType
 from state import State
 
 

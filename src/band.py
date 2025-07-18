@@ -363,12 +363,6 @@ class Band:
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
-        # FIXME: 25/07/11 - The lines being generated are not correct when comparing the rotational
-        #        quantum numbers with previous versions of the code. Not sure if this is because
-        #        we're now iterating over J instead of N. Try implementing previous hard-coded
-        #        selection rules verbatim to recreate the correct lines, then check Honl-London
-        #        factors to narrow down the problem
-
         # FIXME: 25/07/10 - Use the State class to automatically pull the correct term symbols for
         #        the molecule in question.
         term_symbol_up: str = "3Sigma"
@@ -492,11 +486,6 @@ class Band:
         n_qn_lo_cache: dict[int, list[int]] = {}
         allowed_n_nq_lo_cache: dict[int, NDArray[np.bool]] = {}
 
-        # R Branch: ΔJ = J' - J'' = +1
-        # Q Branch: ΔJ = J' - J'' = 0
-        # P Branch: ΔJ = J' - J'' = -1
-        branch_names: list[str] = ["R", "Q", "P"]
-
         degeneracy_up_even, degeneracy_up_odd = self.sim.state_up.nuclear_degeneracy
         degeneracy_lo_even, degeneracy_lo_odd = self.sim.state_lo.nuclear_degeneracy
 
@@ -528,19 +517,7 @@ class Band:
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
             j_qn_lo_list: list[int] = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
 
-            # TODO: 25/07/15 - The branches are labeled with respect to J' and J'', while the old
-            #       version of the code labeled the branches with respect to N' and N''. The
-            #       differences can be seen on the J' = 1, J'' = 1, N' = 0, N'' = 1 line:
-            #
-            #            J' | J'' | N' | N'' | Branch |
-            #            ---|-----|----|-----|--------|
-            #       old: 1  | 1   | 0  | 1   | P_12   | - w.r.t N
-            #       new: 1  | 1   | 0  | 1   | Q_12   | - w.r.t J
-            #
-            #       Consider adding two branch labels: one with respect to J and the other with
-            #       respect to N. PGOPHER does this as well.
-
-            for j_qn_lo, branch_name in zip(j_qn_lo_list, branch_names):
+            for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
                 if j_qn_lo not in n_qn_lo_cache:
                     n_qn_lo_cache[j_qn_lo] = n_values_for_j(Fraction(j_qn_lo), s_qn_lo)
@@ -617,7 +594,8 @@ class Band:
                             n_qn_lo=n_qn_lo,
                             branch_idx_up=branch_idx_up,
                             branch_idx_lo=branch_idx_lo,
-                            branch_name=branch_name,
+                            branch_name_j=constants.BRANCH_NAME_MAP[j_qn_up - j_qn_lo],
+                            branch_name_n=constants.BRANCH_NAME_MAP[n_qn_up - n_qn_lo],
                             is_satellite=is_satellite,
                             honl_london_factor=hlf,
                             rot_term_value_up=eigenval_up,

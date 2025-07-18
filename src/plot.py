@@ -109,7 +109,7 @@ def plot_line_info(plot_widget: pg.PlotWidget, sim: Sim, colors: list[str]) -> N
             wavelength: float = utils.wavenum_to_wavelen(line.wavenumber)
             intensity: float = line.intensity / max_intensity
             text: pg.TextItem = pg.TextItem(
-                f"{line.branch_name}_{line.branch_idx_up}{line.branch_idx_lo}",
+                f"ΔJ: {line.branch_name_j}_{line.branch_idx_up}{line.branch_idx_lo}",
                 color="w",
                 anchor=(0.5, 1.2),
             )

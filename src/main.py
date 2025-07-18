@@ -824,7 +824,8 @@ class GUI(QMainWindow):
                         "J''": line.j_qn_lo,
                         "N'": line.n_qn_up,
                         "N''": line.n_qn_lo,
-                        "Branch": f"{line.branch_name}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
                     }
                     for line in sim.bands[i].lines
                 ]

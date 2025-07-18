@@ -32,6 +32,18 @@ PLANC: float = 6.62607015e-34
 # Atomic masses [g/mol]
 ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
 
+# Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
+# standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
+BRANCH_NAME_MAP: dict[int, str] = {
+    -3: "N",
+    -2: "O",
+    -1: "P",
+    0: "Q",
+    +1: "R",
+    +2: "S",
+    +3: "T",
+}
+
 # TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
 #       should also contain the atomic mass number.
 

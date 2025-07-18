@@ -47,7 +47,8 @@ class Line:
         n_qn_lo: int,
         branch_idx_up: int,
         branch_idx_lo: int,
-        branch_name: str,
+        branch_name_j: str,
+        branch_name_n: str,
         is_satellite: bool,
         honl_london_factor: float,
         rot_term_value_up: float,
@@ -64,7 +65,8 @@ class Line:
             n_qn_lo (int): Lower state rotational quantum number N''.
             branch_idx_up (int): Upper branch index.
             branch_idx_lo (int): Lower branch index.
-            branch_name (str): Branch name.
+            branch_name_j (str): Branch name with respect to ΔJ.
+            branch_name_n (str): Branch name with respect to ΔN.
             is_satellite (bool): Whether or not the line is a satellite line.
             honl_london_factor (float): Hönl-London rotational line strength.
             rot_term_value_up (float): Upper state rotational term value.
@@ -78,7 +80,8 @@ class Line:
         self.n_qn_lo: int = n_qn_lo
         self.branch_idx_up: int = branch_idx_up
         self.branch_idx_lo: int = branch_idx_lo
-        self.branch_name: str = branch_name
+        self.branch_name_j: str = branch_name_j
+        self.branch_name_n: str = branch_name_n
         self.is_satellite: bool = is_satellite
         self.honl_london_factor: float = honl_london_factor
         self.rot_term_value_up: float = rot_term_value_up

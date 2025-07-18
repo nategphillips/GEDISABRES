@@ -325,9 +325,6 @@ class Band:
         Returns:
             float: The rotational partition function, Q_r.
         """
-        # TODO: 24/10/25 - Add nuclear effects to make this the effective rotational partition
-        #       function.
-
         match self.sim.sim_type:
             case SimType.EMISSION:
                 state = self.sim.state_up
@@ -427,18 +424,16 @@ class Band:
         omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
         omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
 
-        # TODO: 25/07/18 - Actually compute a minimum J based on the term value.
-        j_qn_up_min: Fraction = Fraction(0)
+        # TODO: 25/07/15 - These rules come from "PGOPHER: A program for simulating rotational,
+        #       vibrational and electronic spectra" by Colin M. Western, in which the low quantum
+        #       number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
+
+        n_qn_up_min: int = abs(lambda_qn_up)
+        j_qn_up_min: Fraction = abs(n_qn_up_min - s_qn_up)
         # NOTE: 25/07/18 - For now, the maximum J' input box in the GUI only accepts integer values,
         #       so in the case of a transition with half-integer values, the minimum value will be
         #       half-integer and we simply add the two to prevent truncation.
         j_qn_up_max: Fraction = j_qn_up_min + self.sim.j_qn_up_max
-
-        # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
-        #       computing them inside the main loop, but this is mainly done to mirror the
-        #       calculations performed for the lower state.
-        eigenvals_up_cache: dict[Fraction, NDArray[np.float64]] = {}
-        unitary_up_cache: dict[Fraction, NDArray[np.float64]] = {}
 
         def create_j_range(j_qn_up_min: Fraction, j_qn_up_max: Fraction) -> list[Fraction]:
             step: Fraction = Fraction(1)
@@ -447,6 +442,12 @@ class Band:
 
         j_qn_up_range: list[Fraction] = create_j_range(j_qn_up_min, j_qn_up_max)
         j_qn_lo_range: list[Fraction] = create_j_range(j_qn_up_min - 1, j_qn_up_max + 1)
+
+        # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
+        #       computing them inside the main loop, but this is mainly done to mirror the
+        #       calculations performed for the lower state.
+        eigenvals_up_cache: dict[Fraction, NDArray[np.float64]] = {}
+        unitary_up_cache: dict[Fraction, NDArray[np.float64]] = {}
 
         for j_qn_up in j_qn_up_range:
             comp_up = numerics.NumericComputation(
@@ -493,10 +494,10 @@ class Band:
 
         lines: list[Line] = []
 
-        # TODO: 25/07/17 - In general, J can be half-integer, meaning iterating over a range like
-        #       this isn't valid. Can create lists of J' and J'' beforehand and iterate over those
-        #       instead.
         for j_qn_up in j_qn_up_range:
+            # TODO: 25/07/18 - Values of N' and N'' should eventually be checked to ensure they're
+            #       non-negative. For now, keep them to make debugging easier.
+
             # Get all possible N' values for each J'.
             n_qn_up_vals: list[Fraction] = n_values_for_j(Fraction(j_qn_up), s_qn_up)
 
@@ -574,15 +575,6 @@ class Band:
                     hlf: float = float(hlf_mat[i, j])
                     eigenval_up: float = float(eigenvals_up[i])
                     eigenval_lo: float = float(eigenvals_lo[j])
-
-                    # TODO: 25/07/15 - This is a placeholder for what should be more strict rules.
-                    #       In "PGOPHER: A program for simulating rotational, vibrational and
-                    #       electronic spectra" by Colin M. Western, the low quantum number rules
-                    #       are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
-
-                    # Removing this for now so bad quantum numbers are obvious in the table.
-                    # if n_qn_up < 0 or n_qn_lo < 0:
-                    #     continue
 
                     is_satellite: bool = branch_idx_up != branch_idx_lo
 

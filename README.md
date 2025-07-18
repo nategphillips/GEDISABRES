@@ -1,6 +1,6 @@
 # pyGEONOSIS
 
-Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a tool for simulating the Schumann–Runge (B-X) bands of molecular oxygen, and eventually the A-X transition of nitric oxide. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
+Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a tool for simulating the Schumann–Runge (B-X) bands of molecular oxygen, and eventually the $\gamma$ (A-X) bands of nitric oxide. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 
@@ -43,7 +43,7 @@ Convolutions include the effects of both Gaussian and Lorentzian broadening mech
 
 ### Rotational Lines
 
-By default, 40 rotational lines are simulated. Currently, predissociation factors are computed for each rotational line using a polynomial fit that is valid up to $v = 21$ and $J = 40$. Therefore, it is recommended not to exceed $J = 40$ by a large margin if accuracy is to be preserved.
+By default, the maximum upper state rotational quantum number is set to $J'_\text{max} = 40$. Currently, predissociation factors are computed for each rotational line using a polynomial fit that is valid up to $v = 21$ and $J = 40$. Therefore, it is recommended not to exceed $J = 40$ by a large margin if accuracy is to be preserved.
 
 ### Equilibrium & Non-equilibrium
 
@@ -62,18 +62,17 @@ Four plot types are currently implemented:
 - Convolve All
   - All vibrational bands are convolved together.
 
-## Example Spectrum
+## Validation with Experimental Data
 
-An equilibrium simulation of $\text{O}_2^{16}$ using the following parameters is shown below.
+Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. Data for the Schumann–Runge bands is available [here](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) at 300 K. The (2, 0) and (6, 0) experimental band data were chosen since they contain lines belonging to multiple vibrational bands. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
 
-- $(v', v'') = (0, 5)$ through $(10, 5)$
-- $N_\text{max} = 40$
-- $T=300$ $\text{K}$
-- $p=101325$ $\text{Pa}$
+### (2, 0) Band Validation
 
-![Example Spectrum](img/example.webp)
+![(2, 0) Band Validation](img/example_20.webp)
 
-All user-accessible options are visible in the GUI, including vibrational band selection, broadening toggles, simulation parameters, and plotting options. Each vibrational band has an associated table containing information about all the simulated rotational lines within that band.
+### (6, 0) Band Validation
+
+![(6, 0) Band Validation](img/example_60.webp)
 
 ## Installation
 
@@ -116,6 +115,7 @@ uv run ./main.py
 - [ ] Add support for more diatomic molecules, starting with $\text{NO}$
 - [ ] Implement electronic spectra for atomic species
 - [ ] Include the ability to view and edit the rotational Hamiltonian on a per-term basis
+- [ ] Include non-Boltzmann temperature distributions
 
 ### Packaging
 

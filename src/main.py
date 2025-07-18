@@ -21,7 +21,6 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import numpy as np
 import polars as pl
 import pyqtgraph as pg
 from PySide6.QtCore import (
@@ -61,14 +60,15 @@ import plot
 import utils
 from atom import Atom
 from colors import get_colors
+from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
-from simtype import SimType
 from state import State
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import numpy as np
     from numpy.typing import NDArray
 
 DEFAULT_LINES: int = 40
@@ -419,13 +419,13 @@ class GUI(QMainWindow):
         layout.addWidget(group_granularity)
 
         # Rotational line input.
-        group_lines: QGroupBox = QGroupBox("Rotational Lines")
-        lines_layout: QHBoxLayout = QHBoxLayout(group_lines)
-        self.num_lines_spinbox: QSpinBox = QSpinBox()
-        self.num_lines_spinbox.setMaximum(10000)
-        self.num_lines_spinbox.setValue(DEFAULT_LINES)
-        lines_layout.addWidget(self.num_lines_spinbox)
-        layout.addWidget(group_lines)
+        group_maxj: QGroupBox = QGroupBox("Max J'")
+        maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
+        self.maxj_spinbox: QSpinBox = QSpinBox()
+        self.maxj_spinbox.setMaximum(10000)
+        self.maxj_spinbox.setValue(DEFAULT_LINES)
+        maxj_layout.addWidget(self.maxj_spinbox)
+        layout.addWidget(group_maxj)
 
         # Run controls.
         group_run: QGroupBox = QGroupBox("Actions")
@@ -723,24 +723,36 @@ class GUI(QMainWindow):
                     for v_lo in range(v_lo_min, v_lo_max + 1)
                 ]
 
-        rot_lvls: NDArray[np.int64] = np.arange(0, self.num_lines_spinbox.value())
-
         molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-        state_up: State = State(name="B3Su-", spin_multiplicity=3, molecule=molecule)
-        state_lo: State = State(name="X3Sg-", spin_multiplicity=3, molecule=molecule)
+        state_up: State = State(
+            molecule=molecule,
+            letter="B",
+            spin_multiplicity=3,
+            term_symbol=TermSymbol.SIGMA,
+            inversion_symmetry=InversionSymmetry.UNGERADE,
+            reflection_symmetry=ReflectionSymmetry.MINUS,
+        )
+        state_lo: State = State(
+            molecule=molecule,
+            letter="X",
+            spin_multiplicity=3,
+            term_symbol=TermSymbol.SIGMA,
+            inversion_symmetry=InversionSymmetry.GERADE,
+            reflection_symmetry=ReflectionSymmetry.MINUS,
+        )
 
         sim: Sim = Sim(
             sim_type=sim_type,
             molecule=molecule,
             state_up=state_up,
             state_lo=state_lo,
-            rot_lvls=rot_lvls,
+            j_qn_up_max=self.maxj_spinbox.value(),
             temp_trn=temp_trn,
             temp_elc=temp_elc,
             temp_vib=temp_vib,
             temp_rot=temp_rot,
             pressure=pres,
-            bands=bands,
+            bands_input=bands,
         )
 
         print(f"Time to create sim: {time.time() - start_time} s")
@@ -806,11 +818,12 @@ class GUI(QMainWindow):
                         "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                         "Wavenumber": line.wavenumber,
                         "Intensity": line.intensity,
-                        "J'": line.j_qn_up,
-                        "J''": line.j_qn_lo,
-                        "N'": line.n_qn_up,
-                        "N''": line.n_qn_lo,
-                        "Branch": f"{line.branch_name}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "J'": f"{line.j_qn_up:.1f}",
+                        "J''": f"{line.j_qn_lo:.1f}",
+                        "N'": f"{line.n_qn_up:.1f}",
+                        "N''": f"{line.n_qn_lo:.1f}",
+                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
                     }
                     for line in sim.bands[i].lines
                 ]
@@ -981,9 +994,7 @@ class SplashScreen(QWidget):
         painter.setPen(QColor(255, 255, 255))
         title_font: QFont = QFont("Arial", 24, QFont.Weight.Bold)
         painter.setFont(title_font)
-        painter.drawText(
-            0, 60, self.width(), 40, Qt.AlignmentFlag.AlignCenter, "pyGEONOSIS"
-        )
+        painter.drawText(0, 60, self.width(), 40, Qt.AlignmentFlag.AlignCenter, "pyGEONOSIS")
 
         # Subtitle.
         subtitle_font: QFont = QFont("Arial", 12)

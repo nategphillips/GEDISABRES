@@ -18,16 +18,18 @@
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import TYPE_CHECKING
 
 import numpy as np
 
 import constants
-import terms
 import utils
-from simtype import SimType
+from enums import SimType
 
 if TYPE_CHECKING:
+    from fractions import Fraction
+
     from band import Band
     from sim import Sim
 
@@ -39,43 +41,53 @@ class Line:
         self,
         sim: Sim,
         band: Band,
-        n_qn_up: int,
-        n_qn_lo: int,
-        j_qn_up: int,
-        j_qn_lo: int,
+        j_qn_up: Fraction,
+        j_qn_lo: Fraction,
+        n_qn_up: Fraction,
+        n_qn_lo: Fraction,
         branch_idx_up: int,
         branch_idx_lo: int,
-        branch_name: str,
+        branch_name_j: str,
+        branch_name_n: str,
         is_satellite: bool,
+        honl_london_factor: float,
+        rot_term_value_up: float,
+        rot_term_value_lo: float,
     ) -> None:
         """Initialize class variables.
 
         Args:
             sim (Sim): Parent simulation.
             band (Band): Vibrational band.
-            n_qn_up (int): Upper state rotational quantum number N'.
-            n_qn_lo (int): Lower state rotational quantum number N''.
-            j_qn_up (int): Upper state rotational quantum number J'.
-            j_qn_lo (int): Lower state rotational quantum number J''.
+            j_qn_up (Fraction): Upper state rotational quantum number J'.
+            j_qn_lo (Fraction): Lower state rotational quantum number J''.
+            n_qn_up (Fraction): Upper state rotational quantum number N'.
+            n_qn_lo (Fraction): Lower state rotational quantum number N''.
             branch_idx_up (int): Upper branch index.
             branch_idx_lo (int): Lower branch index.
-            branch_name (str): Branch name.
+            branch_name_j (str): Branch name with respect to ΔJ.
+            branch_name_n (str): Branch name with respect to ΔN.
             is_satellite (bool): Whether or not the line is a satellite line.
+            honl_london_factor (float): Hönl-London rotational line strength.
+            rot_term_value_up (float): Upper state rotational term value.
+            rot_term_value_lo (float): Lower state rotational term value.
         """
         self.sim: Sim = sim
         self.band: Band = band
-        self.n_qn_up: int = n_qn_up
-        self.n_qn_lo: int = n_qn_lo
-        self.j_qn_up: int = j_qn_up
-        self.j_qn_lo: int = j_qn_lo
+        # NOTE: 25/07/18 - J (and therefore N) can both be half-integer valued, see "The Spectra and
+        # Dynamics of Diatomics Molecules" by Brion, p. 3.
+        self.j_qn_up: Fraction = j_qn_up
+        self.j_qn_lo: Fraction = j_qn_lo
+        self.n_qn_up: Fraction = n_qn_up
+        self.n_qn_lo: Fraction = n_qn_lo
         self.branch_idx_up: int = branch_idx_up
         self.branch_idx_lo: int = branch_idx_lo
-        self.branch_name: str = branch_name
+        self.branch_name_j: str = branch_name_j
+        self.branch_name_n: str = branch_name_n
         self.is_satellite: bool = is_satellite
-        self.wavenumber: float = self.get_wavenumber()
-        self.honl_london_factor: float = self.get_honl_london_factor()
-        self.rot_boltz_frac: float = self.get_rot_boltz_frac()
-        self.intensity: float = self.get_intensity()
+        self.honl_london_factor: float = honl_london_factor
+        self.rot_term_value_up: float = rot_term_value_up
+        self.rot_term_value_lo: float = rot_term_value_lo
 
     def fwhm_predissociation(self, is_selected: bool) -> float:
         """Return the predissociation broadening FWHM in [1/cm].
@@ -104,7 +116,7 @@ class Line:
             a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
             a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
             a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
-            x: int = self.j_qn_up * (self.j_qn_up + 1)
+            x: Fraction = self.j_qn_up * (self.j_qn_up + 1)
 
             # Predissociation broadening in [1/cm].
             return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
@@ -244,7 +256,8 @@ class Line:
 
         return 0.0
 
-    def get_wavenumber(self) -> float:
+    @cached_property
+    def wavenumber(self) -> float:
         """Return the wavenumber in [1/cm].
 
         Returns:
@@ -254,17 +267,10 @@ class Line:
         #       pp. 168-169.
 
         # Herzberg p. 168, eq. (IV, 24)
-        return (
-            self.band.band_origin
-            + terms.rotational_term(
-                self.sim.state_up, self.band.v_qn_up, self.j_qn_up, self.branch_idx_up
-            )
-            - terms.rotational_term(
-                self.sim.state_lo, self.band.v_qn_lo, self.j_qn_lo, self.branch_idx_lo
-            )
-        )
+        return self.band.band_origin + (self.rot_term_value_up - self.rot_term_value_lo)
 
-    def get_intensity(self) -> float:
+    @cached_property
+    def intensity(self) -> float:
         """Return the intensity.
 
         Returns:
@@ -291,7 +297,8 @@ class Line:
             * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
         )
 
-    def get_rot_boltz_frac(self) -> float:
+    @cached_property
+    def rot_boltz_frac(self) -> float:
         """Return the rotational Boltzmann fraction, N_J / N.
 
         Returns:
@@ -300,77 +307,35 @@ class Line:
         match self.sim.sim_type:
             case SimType.EMISSION:
                 state = self.sim.state_up
-                v_qn = self.band.v_qn_up
                 j_qn = self.j_qn_up
-                branch_idx = self.branch_idx_up
+                n_qn = self.n_qn_up
+                rot_term_value = self.rot_term_value_up
             case SimType.ABSORPTION:
                 state = self.sim.state_lo
-                v_qn = self.band.v_qn_lo
                 j_qn = self.j_qn_lo
-                branch_idx = self.branch_idx_lo
+                n_qn = self.n_qn_lo
+                rot_term_value = self.rot_term_value_lo
+
+        # Degeneracies for homonuclear diatomics can be different depending on the evenness of N.
+        even_degeneracy, odd_degeneracy = state.nuclear_degeneracy
+        is_n_even: bool = n_qn % 2 == 0
+
+        match is_n_even:
+            case True:
+                nuclear_degen = even_degeneracy
+            case False:
+                nuclear_degen = odd_degeneracy
+
+        # Effective rotational degeneracy, including nuclear effects.
+        degeneracy: Fraction = (2 * j_qn + 1) * nuclear_degen
 
         return (
-            (2 * j_qn + 1)
+            degeneracy
             * np.exp(
-                -terms.rotational_term(state, v_qn, j_qn, branch_idx)
+                -rot_term_value
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_rot)
             )
-            / self.band.rot_part
+            / self.band.rot_partition_fn
         )
-
-    def get_honl_london_factor(self) -> float:
-        """Return the Hönl-London (line strength) factor.
-
-        Returns:
-            float: The Hönl-London (line strength) factor.
-        """
-        # For emission, the relevant rotational quantum number is N'; for absorption, it's N''.
-        match self.sim.sim_type:
-            case SimType.EMISSION:
-                n_qn = self.n_qn_up
-            case SimType.ABSORPTION:
-                n_qn = self.n_qn_lo
-
-        # Convert the properties of the current rotational line into a useful key.
-        if self.is_satellite:
-            key = f"{self.branch_name}Q{self.branch_idx_up}{self.branch_idx_lo}"
-        else:
-            # For main branches, the upper and lower branches indicies are the same, so it doesn't
-            # matter which one is used here.
-            key = f"{self.branch_name}{self.branch_idx_up}"
-
-        # These factors are from Tatum - 1966: Hönl-London Factors for 3Σ±-3Σ± Transitions.
-        factors: dict[SimType, dict[str, float]] = {
-            SimType.EMISSION: {
-                "P1": ((n_qn + 1) * (2 * n_qn + 5)) / (2 * n_qn + 3),
-                "R1": (n_qn * (2 * n_qn + 3)) / (2 * n_qn + 1),
-                "P2": (n_qn * (n_qn + 2)) / (n_qn + 1),
-                "R2": ((n_qn - 1) * (n_qn + 1)) / n_qn,
-                "P3": ((n_qn + 1) * (2 * n_qn - 1)) / (2 * n_qn + 1),
-                "R3": (n_qn * (2 * n_qn - 3)) / (2 * n_qn - 1),
-                "PQ12": 1 / (n_qn + 1),
-                "RQ21": 1 / n_qn,
-                "PQ13": 1 / ((n_qn + 1) * (2 * n_qn + 1) * (2 * n_qn + 3)),
-                "RQ31": 1 / (n_qn * (2 * n_qn - 1) * (2 * n_qn + 1)),
-                "PQ23": 1 / (n_qn + 1),
-                "RQ32": 1 / n_qn,
-            },
-            SimType.ABSORPTION: {
-                "P1": (n_qn * (2 * n_qn + 3)) / (2 * n_qn + 1),
-                "R1": ((n_qn + 1) * (2 * n_qn + 5)) / (2 * n_qn + 3),
-                "P2": ((n_qn - 1) * (n_qn + 1)) / n_qn,
-                "R2": (n_qn * (n_qn + 2)) / (n_qn + 1),
-                "P3": (n_qn * (2 * n_qn - 3)) / (2 * n_qn - 1),
-                "R3": ((n_qn + 1) * (2 * n_qn - 1)) / (2 * n_qn + 1),
-                "PQ12": 1 / n_qn,
-                "RQ21": 1 / (n_qn + 1),
-                "PQ13": 1 / (n_qn * (2 * n_qn - 1) * (2 * n_qn + 1)),
-                "RQ31": 1 / ((n_qn + 1) * (2 * n_qn + 1) * (2 * n_qn + 3)),
-                "PQ23": 1 / n_qn,
-                "RQ32": 1 / (n_qn + 1),
-            },
-        }
-
-        return factors[self.sim.sim_type][key]

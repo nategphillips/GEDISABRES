@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
+from fractions import Fraction
 from typing import overload
 
 import matplotlib.pyplot as plt
@@ -27,10 +28,10 @@ from numpy.typing import NDArray
 import constants
 import utils
 from atom import Atom
+from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from line import Line
 from molecule import Molecule
 from sim import Sim
-from simtype import SimType
 from state import State
 
 MIN_TIME: float = 0.0
@@ -222,22 +223,22 @@ def get_sim(
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        rot_lvls=np.arange(0, 40),
+        j_qn_up_max=40,
         temp_trn=temp,
         temp_elc=temp,
         temp_vib=temp,
         temp_rot=temp,
         pressure=pres,
-        bands=bands,
+        bands_input=bands,
     )
 
 
-def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
+def get_line(sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
     """Return a rotational line with the desired parameters.
 
     Args:
         sim (Sim): The parent simulation.
-        branch_name (str): Branch name, e.g. R, Q, or P.
+        branch_name_j (str): Branch name with respect to ΔJ.
         branch_idx_lo (int): Lower state branch index.
         n_qn_lo (int): Lower state rotational quantum number N''.
 
@@ -249,7 +250,7 @@ def get_line(sim: Sim, branch_name: str, branch_idx_lo: int, n_qn_lo: int) -> Li
     """
     for line in sim.bands[0].lines:
         if (
-            line.branch_name == branch_name
+            line.branch_name_j == branch_name_j
             and line.branch_idx_lo == branch_idx_lo
             and line.n_qn_lo == n_qn_lo
             and not line.is_satellite
@@ -286,7 +287,7 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     v_qn_up: int = sim.bands[0].v_qn_up
     v_qn_lo: int = sim.bands[0].v_qn_lo
 
-    j_qn: int = line.j_qn_lo
+    j_qn: Fraction = line.j_qn_lo
     s_j: float = line.honl_london_factor
     nu_d: float = line.fwhm_predissociation(True)  # [1/cm]
     w_d: float = 2 * np.pi * constants.LIGHT * nu_d  # [1/s]
@@ -314,7 +315,7 @@ def run_simulation(
     pres: float,
     v_qn_up: int,
     v_qn_lo: int,
-    branch_name: str,
+    branch_name_j: str,
     branch_idx_lo: int,
     n_qn_lo: int,
     pulse_center: float,
@@ -331,7 +332,7 @@ def run_simulation(
         pres (float): Pressure.
         v_qn_up (int): Upper state vibrational quantum number v'.
         v_qn_lo (int): Lower state vibrational quantum number v''.
-        branch_name (str): Branch name.
+        branch_name_j (str): Branch name with respect to ΔJ.
         branch_idx_lo (int): Lower state branch index.
         n_qn_lo (int): Lower state rotational quantum number N''.
         pulse_center (float): Center of the laser pulse in [s].
@@ -339,7 +340,7 @@ def run_simulation(
         fluence (float): Laser energy per unit area in [J/cm^2].
     """
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    line: Line = get_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
     t: NDArray[np.float64] = np.linspace(MIN_TIME, MAX_TIME, N_TIME, dtype=np.float64)
@@ -379,7 +380,7 @@ def scan_fluences(
     pres: float,
     v_qn_up: int,
     v_qn_lo: int,
-    branch_name: str,
+    branch_name_j: str,
     branch_idx_lo: int,
     n_qn_lo: int,
     pulse_center: float,
@@ -396,7 +397,7 @@ def scan_fluences(
         pres (float): Pressure.
         v_qn_up (int): Upper state vibrational quantum number v'.
         v_qn_lo (int): Lower state vibrational quantum number v''.
-        branch_name (str): Branch name.
+        branch_name_j (str): Branch name with respect to ΔJ.
         branch_idx_lo (int): Lower state branch index.
         n_qn_lo (int): Lower state rotational quantum number N''.
         pulse_center (float): Center of the laser pulse in [s].
@@ -408,7 +409,7 @@ def scan_fluences(
             corresponding normalized signals.
     """
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    line: Line = get_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     t: NDArray[np.float64] = np.linspace(MIN_TIME, MAX_TIME, N_TIME, dtype=np.float64)
 
@@ -434,7 +435,7 @@ def n2_vs_time_and_fluence(
     pres: float,
     v_qn_up: int,
     v_qn_lo: int,
-    branch_name: str,
+    branch_name_j: str,
     branch_idx_lo: int,
     n_qn_lo: int,
     pulse_center: float,
@@ -451,7 +452,7 @@ def n2_vs_time_and_fluence(
         pres (float): Pressure.
         v_qn_up (int): Upper state vibrational quantum number v'.
         v_qn_lo (int): Lower state vibrational quantum number v''.
-        branch_name (str): Branch name.
+        branch_name_j (str): Branch name with respect to ΔJ.
         branch_idx_lo (int): Lower state branch index.
         n_qn_lo (int): Lower state rotational quantum number N''.
         pulse_center (float): Center of the laser pulse in [s].
@@ -463,7 +464,7 @@ def n2_vs_time_and_fluence(
             corresponding time, and normalized N2 population density.
     """
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
-    line: Line = get_line(sim, branch_name, branch_idx_lo, n_qn_lo)
+    line: Line = get_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
     t: NDArray[np.float64] = np.linspace(MIN_TIME, MAX_TIME, N_TIME, dtype=np.float64)
 
@@ -503,9 +504,23 @@ def plot_n2_vs_time_and_fluence(
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule("O2", Atom("O"), Atom("O"))
-    state_up: State = State("B3Su-", 3, molecule)
-    state_lo: State = State("X3Sg-", 3, molecule)
+    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
+    state_up: State = State(
+        molecule=molecule,
+        letter="B",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.UNGERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
+    state_lo: State = State(
+        molecule=molecule,
+        letter="X",
+        spin_multiplicity=3,
+        term_symbol=TermSymbol.SIGMA,
+        inversion_symmetry=InversionSymmetry.GERADE,
+        reflection_symmetry=ReflectionSymmetry.MINUS,
+    )
 
     # NOTE: 24/10/29 - For now, laser fluence should be specified in [J/cm^2].
 

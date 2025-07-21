@@ -60,7 +60,7 @@ import plot
 import utils
 from atom import Atom
 from colors import get_colors
-from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
+from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from state import State
@@ -753,6 +753,7 @@ class GUI(QMainWindow):
             temp_rot=temp_rot,
             pressure=pres,
             bands_input=bands,
+            constants_type=ConstantsType.PERLEVEL,
         )
 
         print(f"Time to create sim: {time.time() - start_time} s")

@@ -23,7 +23,7 @@ import numpy as np
 
 import utils
 from atom import Atom
-from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
+from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from state import State
@@ -68,6 +68,7 @@ def main() -> None:
         temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(

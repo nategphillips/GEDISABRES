@@ -19,6 +19,13 @@
 from enum import Enum
 
 
+class ConstantsType(Enum):
+    """Specify whether to use a Dunham expansion or per-level vibrational constants."""
+
+    DUNHAM = 1
+    PERLEVEL = 2
+
+
 class NuclearStatistics(Enum):
     """Fermi-Dirac or Bose-Einstein nuclear statistics."""
 
@@ -31,6 +38,7 @@ class SimType(Enum):
 
     ABSORPTION = 1
     EMISSION = 2
+
 
 class InversionSymmetry(Enum):
     """Inversion parity through a centre of symmetry (g/u)."""
@@ -54,4 +62,3 @@ class TermSymbol(Enum):
     SIGMA = 1
     PI = 2
     DELTA = 3
-

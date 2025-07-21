@@ -275,7 +275,10 @@ class Band:
         #       zero-point vibrational energy to match the vibrational partition function.
         return (
             np.exp(
-                -(terms.vibrational_term(state, v_qn) - terms.vibrational_term(state, 0))
+                -(
+                    terms.get_g(state, v_qn, self.sim.constants_type)
+                    - terms.get_g(state, 0, self.sim.constants_type)
+                )
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_vib)
@@ -355,7 +358,10 @@ class Band:
         # This is the effective rotational partition function, i.e., it includes the nuclear
         # partition function.
         theta_r: float = (
-            constants.PLANC * constants.LIGHT * state.constants["B"][v_qn] / constants.BOLTZ
+            constants.PLANC
+            * constants.LIGHT
+            * terms.get_b(state, v_qn, self.sim.constants_type)
+            / constants.BOLTZ
         )
         q_r: float = (
             self.sim.temp_rot

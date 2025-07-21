@@ -17,8 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
-from fractions import Fraction
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,11 +27,14 @@ from numpy.typing import NDArray
 import constants
 import utils
 from atom import Atom
-from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
+from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from line import Line
 from molecule import Molecule
 from sim import Sim
 from state import State
+
+if TYPE_CHECKING:
+    from fractions import Fraction
 
 MIN_TIME: float = 0.0
 MAX_TIME: float = 60e-9
@@ -230,6 +232,7 @@ def get_sim(
         temp_rot=temp,
         pressure=pres,
         bands_input=bands,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
 

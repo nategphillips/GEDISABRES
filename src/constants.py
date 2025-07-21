@@ -33,6 +33,10 @@ PLANC: float = 6.62607015e-34
 # Data from IUPAC - Atomic Weights of The Elements 2023 <https://iupac.qmul.ac.uk/AtWt/>
 ATOMIC_MASSES: dict[str, float] = {"N": 14.007, "O": 15.999}
 
+# Mapping Dunham coefficients to their respective columns when stored in a Dunham array. The
+# coefficients for G are stored in the first column, those for B in the second, etc.
+DUNHAM_MAP: dict[str, int] = {"G": 0, "B": 1, "D": 2}
+
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
 # standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
 BRANCH_NAME_MAP: dict[Fraction, str] = {
@@ -109,3 +113,6 @@ ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
 # A somewhat arbitrary cutoff value for the Hönl-London factors. If the HLF of a line is lower than
 # this value, the transition is considered "forbidden" and the line is not simulated.
 HONL_LONDON_CUTOFF: float = 1e-6
+# The maximum v' and v'' levels to be used when evaluating the vibrational partition function for
+# a simulation using Dunham coefficients.
+V_QN_MAX_DUNHAM: int = 20

@@ -731,6 +731,7 @@ class GUI(QMainWindow):
             term_symbol=TermSymbol.SIGMA,
             inversion_symmetry=InversionSymmetry.UNGERADE,
             reflection_symmetry=ReflectionSymmetry.MINUS,
+            constants_type=ConstantsType.PERLEVEL,
         )
         state_lo: State = State(
             molecule=molecule,
@@ -739,6 +740,7 @@ class GUI(QMainWindow):
             term_symbol=TermSymbol.SIGMA,
             inversion_symmetry=InversionSymmetry.GERADE,
             reflection_symmetry=ReflectionSymmetry.MINUS,
+            constants_type=ConstantsType.PERLEVEL,
         )
 
         sim: Sim = Sim(
@@ -753,7 +755,6 @@ class GUI(QMainWindow):
             temp_rot=temp_rot,
             pressure=pres,
             bands_input=bands,
-            constants_type=ConstantsType.PERLEVEL,
         )
 
         print(f"Time to create sim: {time.time() - start_time} s")

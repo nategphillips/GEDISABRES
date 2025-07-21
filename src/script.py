@@ -42,6 +42,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.UNGERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
     state_lo: State = State(
         molecule=molecule,
@@ -50,6 +51,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.GERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
@@ -68,7 +70,6 @@ def main() -> None:
         temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
-        constants_type=ConstantsType.PERLEVEL,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(

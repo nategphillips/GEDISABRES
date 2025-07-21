@@ -23,7 +23,6 @@ import polars as pl
 from numpy.typing import NDArray
 
 import constants
-import terms
 import utils
 from band import Band
 from enums import ConstantsType, SimType
@@ -47,7 +46,6 @@ class Sim:
         temp_rot: float,
         pressure: float,
         bands_input: list[tuple[int, int]],
-        constants_type: ConstantsType,
     ) -> None:
         """Initialize class variables.
 
@@ -63,8 +61,6 @@ class Sim:
             temp_rot (float): Rotational temperature.
             pressure (float): Pressure.
             bands_input (list[tuple[int, int]]): Which vibrational bands to simulate.
-            constants_type (ConstantsType): Whether to use the Dunham expansion for molecular
-                parameters or to specify them per vibrational level.
         """
         self.sim_type: SimType = sim_type
         self.molecule: Molecule = molecule
@@ -77,7 +73,6 @@ class Sim:
         self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.bands_input: list[tuple[int, int]] = bands_input
-        self.constants_type: ConstantsType = constants_type
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -185,14 +180,14 @@ class Sim:
         match self.sim_type:
             case SimType.EMISSION:
                 state = self.state_up
-                if self.constants_type == ConstantsType.PERLEVEL:
-                    v_qn_max = len(self.state_up.constants["G"])
+                if state.constants_type == ConstantsType.PERLEVEL:
+                    v_qn_max = self.state_up.all_constants.height
                 else:
                     v_qn_max = constants.V_QN_MAX_DUNHAM
             case SimType.ABSORPTION:
                 state = self.state_lo
-                if self.constants_type == ConstantsType.PERLEVEL:
-                    v_qn_max = len(self.state_lo.constants["G"])
+                if state.constants_type == ConstantsType.PERLEVEL:
+                    v_qn_max = self.state_lo.all_constants.height
                 else:
                     v_qn_max = constants.V_QN_MAX_DUNHAM
 
@@ -207,10 +202,7 @@ class Sim:
             #       other vibrational energies are measured. This ensures the state sum begins at a
             #       value of 1 when v = 0.
             q_v += np.exp(
-                -(
-                    terms.get_g(state, v_qn, self.constants_type)
-                    - terms.get_g(state, 0, self.constants_type)
-                )
+                -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.temp_vib)

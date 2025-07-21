@@ -19,6 +19,13 @@
 from enum import Enum
 
 
+class Sign(Enum):
+    """Denotes a plus or minus sign in the expression for homonuclear degeneracy."""
+
+    PLUS = 1
+    MINUS = 2
+
+
 class ConstantsType(Enum):
     """Specify whether to use a Dunham expansion or per-level vibrational constants."""
 

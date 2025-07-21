@@ -232,7 +232,6 @@ def get_sim(
         temp_rot=temp,
         pressure=pres,
         bands_input=bands,
-        constants_type=ConstantsType.PERLEVEL,
     )
 
 
@@ -515,6 +514,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.UNGERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
     state_lo: State = State(
         molecule=molecule,
@@ -523,6 +523,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.GERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
     # NOTE: 24/10/29 - For now, laser fluence should be specified in [J/cm^2].

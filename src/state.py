@@ -16,23 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from enum import Enum
 from fractions import Fraction
 from functools import cached_property
 
+import numpy as np
 import polars as pl
+from numpy.typing import NDArray
 
 import utils
 from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
-from enums import InversionSymmetry, NuclearStatistics, ReflectionSymmetry, TermSymbol
+from enums import (
+    ConstantsType,
+    InversionSymmetry,
+    NuclearStatistics,
+    ReflectionSymmetry,
+    Sign,
+    TermSymbol,
+)
 from molecule import Molecule
-
-
-class Sign(Enum):
-    """Denotes a plus or minus sign in the expression for homonuclear degeneracy."""
-
-    PLUS = 1
-    MINUS = 2
 
 
 def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
@@ -64,6 +65,7 @@ class State:
         term_symbol: TermSymbol,
         inversion_symmetry: InversionSymmetry = InversionSymmetry.NONE,
         reflection_symmetry: ReflectionSymmetry = ReflectionSymmetry.NONE,
+        constants_type: ConstantsType = ConstantsType.DUNHAM,
     ) -> None:
         """Initialize class variables.
 
@@ -76,6 +78,8 @@ class State:
                 Defaults to None.
             reflection_symmetry (ReflectionSymmetry, optional): Symmetry w.r.t. reflection (+/-).
                 Defaults to None.
+            constants_type (ConstantsType, optional): Whether to use the Dunham expansion for
+                molecular parameters or to specify them per vibrational level. Defaults to Dunham.
         """
         self.molecule: Molecule = molecule
         self.letter: str = letter
@@ -83,6 +87,7 @@ class State:
         self.term_symbol: TermSymbol = term_symbol
         self.inversion_symmetry: InversionSymmetry = inversion_symmetry
         self.reflection_symmetry: ReflectionSymmetry = reflection_symmetry
+        self.constants_type: ConstantsType = constants_type
 
     @cached_property
     def name(self) -> str:
@@ -102,19 +107,65 @@ class State:
         )
 
     @cached_property
-    def constants(self) -> dict[str, list[float]]:
-        """Return the molecular constants for the specified electronic state in [1/cm].
-
-        Args:
-            molecule (str): Parent molecule.
-            term_symbol (TermSymbol): Name of the electronic state.
+    def all_constants(self) -> pl.DataFrame:
+        """Return all constants (either Dunham or per-level) for the given state.
 
         Returns:
-            dict[str, list[float]]: A `dict` of molecular constants for the electronic state.
+            pl.DataFrame: DataFrame of all constants.
         """
+        match self.constants_type:
+            case ConstantsType.PERLEVEL:
+                pathname = "states"
+            case ConstantsType.DUNHAM:
+                pathname = "dunham"
+
         return pl.read_csv(
-            utils.get_data_path("data", self.molecule.name, "states", f"{self.name}.csv")
-        ).to_dict(as_series=False)
+            utils.get_data_path("data", self.molecule.name, pathname, f"{self.name}.csv")
+        )
+
+    def constants_vqn(self, v_qn: int) -> dict[str, float]:
+        """Return all available constants for the selected rotational level.
+
+        Designed to work the same if per-level constants or Dunham parameters are used. If per-level
+        constants are used, just return the row of constants corresponding to the desired v. If
+        Dunham parameters are used, use the equilibrium parameters to solve for the parameters as
+        functions of v, then return the row of constants.
+
+        Args:
+            v_qn (int): Vibrational quantum number v.
+
+        Returns:
+            dict[str, float]: All available constants for the desired vibrational level.
+        """
+        if self.constants_type == ConstantsType.PERLEVEL:
+            return self.all_constants.row(v_qn, named=True)
+
+        # NOTE: 25/07/21 - Calculations for the vibrational term value G start with the power of
+        #       (v + 0.5) equal to one, while all other constants start with zero:
+        #
+        #       G = ω_e(v + 0.5) − ω_ex_e(v + 0.5)^2 + ω_ey_e(v + 0.5)^3 + ...
+        #       B = B_e - α_e(v + 0.5) + γ_e(v + 0.5)^2 + ...
+        #       D = D_e − β_e(v + 0.5) + ...
+        #
+        #       The signs of all the constants are set through the data files themselves such that
+        #       they can all be summed here without worry.
+
+        base: float = v_qn + 0.5
+        coeffs: NDArray[np.float64] = self.all_constants.to_numpy()
+
+        # The maximum number of rows for the entire bundle of constants. Some rows will have more or
+        # less constants than others, which means that terms like (0.0)(v + 0.5)^3 will get computed
+        # for columns with 0s in place of actual constants. This is fine other than being slightly
+        # inefficient.
+        n_terms: int = coeffs.shape[0]
+        row_vals: dict[str, float] = {}
+
+        for j, column_name in enumerate(self.all_constants.columns):
+            start_power = 1 if column_name == "G" else 0
+            powers = base ** np.arange(start_power, start_power + n_terms)
+            row_vals[column_name] = np.dot(coeffs[:, j], powers)
+
+        return row_vals
 
     def nuclear_partition_fn(self) -> Fraction:
         """Computes the nuclear partition function.

@@ -30,7 +30,6 @@ from py3nj import clebsch_gordan
 
 import constants
 import convolve
-import terms
 from enums import SimType
 from line import Line
 
@@ -275,10 +274,7 @@ class Band:
         #       zero-point vibrational energy to match the vibrational partition function.
         return (
             np.exp(
-                -(
-                    terms.get_g(state, v_qn, self.sim.constants_type)
-                    - terms.get_g(state, 0, self.sim.constants_type)
-                )
+                -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_vib)
@@ -295,8 +291,8 @@ class Band:
         """
         # Herzberg p. 168, eq. (IV, 24)
 
-        upper_state: dict[str, list[float]] = self.sim.state_up.constants
-        lower_state: dict[str, list[float]] = self.sim.state_lo.constants
+        lower_state: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
+        upper_state: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
 
         # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
         # state of the Schumann-Runge bands" by Cheung, et al.
@@ -311,9 +307,7 @@ class Band:
         #       The conversion specified by Cheung on p. 5 is nu_0 = T + 2 / 3 * lamda - gamma.
 
         band_origin_upper: float = (
-            upper_state["T"][self.v_qn_up]
-            + 2 / 3 * upper_state["lamda"][self.v_qn_up]
-            - upper_state["gamma"][self.v_qn_up]
+            upper_state["T"] + 2 / 3 * upper_state["lamda"] - upper_state["gamma"]
         )
 
         # NOTE: 24/11/05 - From NIST, the "minimum electronic energy" for the B3Σu- state is
@@ -326,7 +320,7 @@ class Band:
         #       account for this offset, the zero-point vibrational energy must be subtracted from
         #       the ground state vibrational energy.
 
-        band_origin_lower: float = lower_state["G"][self.v_qn_lo] - lower_state["G"][0]
+        band_origin_lower: float = lower_state["G"] - self.sim.state_lo.constants_vqn(0)["G"]
 
         # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
         return band_origin_upper - band_origin_lower
@@ -358,10 +352,7 @@ class Band:
         # This is the effective rotational partition function, i.e., it includes the nuclear
         # partition function.
         theta_r: float = (
-            constants.PLANC
-            * constants.LIGHT
-            * terms.get_b(state, v_qn, self.sim.constants_type)
-            / constants.BOLTZ
+            constants.PLANC * constants.LIGHT * state.constants_vqn(v_qn)["B"] / constants.BOLTZ
         )
         q_r: float = (
             self.sim.temp_rot
@@ -387,22 +378,22 @@ class Band:
             + constants.TERM_SYMBOL_MAP[self.sim.state_lo.term_symbol]
         )
 
-        table_up: dict[str, list[float]] = self.sim.state_up.constants
-        table_lo: dict[str, list[float]] = self.sim.state_lo.constants
+        table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
+        table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        b_up: float = table_up["B"][self.v_qn_up]
-        d_up: float = table_up["D"][self.v_qn_up]
-        l_up: float = table_up["lamda"][self.v_qn_up]
-        g_up: float = table_up["gamma"][self.v_qn_up]
-        ld_up: float = table_up["lamda_D"][self.v_qn_up]
-        gd_up: float = table_up["gamma_D"][self.v_qn_up]
+        b_up: float = table_up["B"]
+        d_up: float = table_up["D"]
+        l_up: float = table_up["lamda"]
+        g_up: float = table_up["gamma"]
+        ld_up: float = table_up["lamda_D"]
+        gd_up: float = table_up["gamma_D"]
 
-        b_lo: float = table_lo["B"][self.v_qn_lo]
-        d_lo: float = table_lo["D"][self.v_qn_lo]
-        l_lo: float = table_lo["lamda"][self.v_qn_lo]
-        g_lo: float = table_lo["gamma"][self.v_qn_lo]
-        ld_lo: float = table_lo["lamda_D"][self.v_qn_lo]
-        gd_lo: float = table_lo["gamma_D"][self.v_qn_lo]
+        b_lo: float = table_lo["B"]
+        d_lo: float = table_lo["D"]
+        l_lo: float = table_lo["lamda"]
+        g_lo: float = table_lo["gamma"]
+        ld_lo: float = table_lo["lamda_D"]
+        gd_lo: float = table_lo["gamma_D"]
 
         # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
         # state of the Schumann-Runge bands" by Cheung, et al.

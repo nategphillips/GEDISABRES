@@ -378,11 +378,14 @@ class Band:
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
-        # FIXME: 25/07/18 - Both pyGEONOSIS and hamilterm should probably share classes for handling
-        #        term symbols and constants, otherwise there will be needless conversion from one to
-        #        the other.
-        term_symbol_up: str = "3Sigma"
-        term_symbol_lo: str = "3Sigma"
+        term_symbol_up: str = (
+            str(self.sim.state_up.spin_multiplicity)
+            + constants.TERM_SYMBOL_MAP[self.sim.state_up.term_symbol]
+        )
+        term_symbol_lo: str = (
+            str(self.sim.state_lo.spin_multiplicity)
+            + constants.TERM_SYMBOL_MAP[self.sim.state_lo.term_symbol]
+        )
 
         table_up: dict[str, list[float]] = self.sim.state_up.constants
         table_lo: dict[str, list[float]] = self.sim.state_lo.constants

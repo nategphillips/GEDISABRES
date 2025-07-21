@@ -62,7 +62,7 @@ wheels = [
 [[package]]
 name = "hamilterm"
 version = "0.1.0"
-source = { git = "https://github.com/nategphillips/hamilterm?branch=vectorize#ca6a632c808354b9118e0c8741b156ee31c645bc" }
+source = { git = "https://github.com/nategphillips/hamilterm?branch=vectorize#86860688b318cf70dbcfcf09220d78e553cb3134" }
 dependencies = [
     { name = "numpy" },
     { name = "sympy" },

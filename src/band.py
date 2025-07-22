@@ -30,7 +30,7 @@ from py3nj import clebsch_gordan
 
 import constants
 import convolve
-from enums import SimType
+from enums import ConstantsType, SimType
 from line import Line
 
 if TYPE_CHECKING:
@@ -291,39 +291,32 @@ class Band:
         """
         # Herzberg p. 168, eq. (IV, 24)
 
-        lower_state: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
-        upper_state: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
+        state_up = self.sim.state_up
+        state_lo = self.sim.state_lo
 
-        # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
-        # state of the Schumann-Runge bands" by Cheung, et al.
+        consts_up = state_up.constants_vqn(self.v_qn_up)
+        consts_lo = state_lo.constants_vqn(self.v_qn_lo)
 
-        # References to Yu refer to "High resolution spectral analysis of oxygen. IV. Energy levels,
-        # partition sums, band constants, RKR potentials, Franck-Condon factors involving the X3Σg-,
-        # a1Δg, and b1Σg+ states" by Yu et al.
+        if state_up.constants_type == ConstantsType.PERLEVEL:
+            # Since T' = T_v' - T_0'', it represents the energy of the upper state with respect to
+            # the v'' = 0 vibrational level of lower state. Therefore, any transitions like 2-1 will
+            # require the calculation of an offset G''(v) - G''(0) for the lower state. The band
+            # origin is then nu_0 = T'(v) - [T''(0) + G''(v) - G''(0)].
+            return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
 
-        # NOTE: 24/11/05 - This program uses Herzberg's definition of the band origin, i.e.
-        #       nu_0 = nu_e + nu_v, which is given on p. 186 of "Spectra of Diatomic Molecules". In
-        #       the Cheung paper, the electronic energy is defined differently than in Herzberg.
-        #       The conversion specified by Cheung on p. 5 is nu_0 = T + 2 / 3 * lamda - gamma.
+        if state_up.constants_type == ConstantsType.DUNHAM:
+            band_origin_upper = (
+                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_up.name]
+                + consts_up["G"]
+            )
+            band_origin_lower = (
+                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_lo.name]
+                + consts_lo["G"]
+            )
+            # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
+            return band_origin_upper - band_origin_lower
 
-        band_origin_upper: float = (
-            upper_state["T"] + 2 / 3 * upper_state["lamda"] - upper_state["gamma"]
-        )
-
-        # NOTE: 24/11/05 - From NIST, the "minimum electronic energy" for the B3Σu- state is
-        #       T_e = 49793.28 (see https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782447&Mask=1000#Diatomic).
-        #       On p. 5, Cheung lists T_0 = 49004.75 (the electronic energy alone), meaning the term
-        #       values they provide are referenced above the zero-point vibrational energy of the
-        #       ground state. The zero-point vibrational energy of the ground state given by Yu is
-        #       ~787.076, which when added to Cheung, gives 49792.98. This reproduces the figure
-        #       seen in NIST (to within differences between measurement accuracy, etc.). To properly
-        #       account for this offset, the zero-point vibrational energy must be subtracted from
-        #       the ground state vibrational energy.
-
-        band_origin_lower: float = lower_state["G"] - self.sim.state_lo.constants_vqn(0)["G"]
-
-        # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
-        return band_origin_upper - band_origin_lower
+        raise ValueError("Band origin calculation failed.")
 
     @cached_property
     def rot_partition_fn(self) -> float:

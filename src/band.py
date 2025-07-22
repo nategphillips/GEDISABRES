@@ -388,39 +388,6 @@ class Band:
         ld_lo: float = table_lo["lamda_D"]
         gd_lo: float = table_lo["gamma_D"]
 
-        # References to Cheung refer to "Molecular spectroscopic constants of O2(B3Σu−): The upper
-        # state of the Schumann-Runge bands" by Cheung, et al.
-
-        # References to Yu refer to "High resolution spectral analysis of oxygen. IV. Energy levels,
-        # partition sums, band constants, RKR potentials, Franck-Condon factors involving the X3Σg-,
-        # a1Δg, and b1Σg+ states" by Yu et al.
-
-        # The Cheung Hamiltonian is listed on p. 2 of their paper. Yu's Hamiltonian is listed on
-        # p. 3 of "High resolution spectral analysis of oxygen. I. Isotopically invariant Dunham fit
-        # for the X3Σg-, a1Δg, and b1Σg+ states".
-
-        # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
-        #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
-        #       elements are used to solve for the energy eigenvalues, the constants from Yu are
-        #       changed  to fit the convention used by Cheung. The Cheung convention also matches
-        #       that of PGOPHER, which is my preferred convention (see https://pgopher.chm.bris.ac.uk/Help/linham.htm).
-        #       The table below details the changes made to Yu's constants:
-        #
-        #       Cheung  | Yu
-        #       --------|------------
-        #       D       | -D
-        #       lamda_D | 2 * lamda_D
-        #       gamma_D | 2 * gamma_D
-
-        # TODO: 25/07/10 - At some point, notation used by pyGEONOSIS should be standardized (it
-        #       already mostly is) such that the constants supplied must follow the correct form.
-        #       This case in particular makes the issues obvious (i.e. hardcoding a workaround).
-
-        if self.sim.state_lo.name == "X3Sg-":
-            d_lo *= -1
-            ld_lo *= 2
-            gd_lo *= 2
-
         consts_up: hconsts.NumericConstants = hconsts.NumericConstants(
             rotational=hconsts.RotationalConsts.numeric(B=b_up, D=d_up),
             spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_up, lambda_D=ld_up),

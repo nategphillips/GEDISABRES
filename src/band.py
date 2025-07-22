@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from fractions import Fraction
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -37,6 +38,31 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from sim import Sim
+
+
+def fill_from_dict(table: dict[str, float]) -> hconsts.NumericConstants:
+    """Create filled constant classes for use with hamilterm.
+
+    Args:
+        table (dict[str, float]): Dictionary containing all supplied constants for the molecule.
+
+    Returns:
+        hconsts.NumericConstants: Constants object for use with hamilterm.
+    """
+    numeric_consts: hconsts.NumericConstants = hconsts.NumericConstants()
+
+    for field in dataclasses.fields(numeric_consts):
+        # Load all constant classes contained in NumericConstants (rotational, spin-orbit,
+        # spin-spin, spin-rotation, and lambda doubling) with zero-valued attributes.
+        sub_consts = getattr(numeric_consts, field.name)
+        for sub_field in dataclasses.fields(sub_consts):
+            attr_name: str = sub_field.name
+            if attr_name in table:
+                # If a constant is found in the supplied dictionary, fill that respective field in
+                # the correct constants class.
+                setattr(sub_consts, attr_name, table[attr_name])
+
+    return numeric_consts
 
 
 def n_values_for_j(j_qn: Fraction, s_qn: Fraction) -> list[Fraction]:
@@ -374,30 +400,8 @@ class Band:
         table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
         table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        b_up: float = table_up["B"]
-        d_up: float = table_up["D"]
-        l_up: float = table_up["lamda"]
-        g_up: float = table_up["gamma"]
-        ld_up: float = table_up["lamda_D"]
-        gd_up: float = table_up["gamma_D"]
-
-        b_lo: float = table_lo["B"]
-        d_lo: float = table_lo["D"]
-        l_lo: float = table_lo["lamda"]
-        g_lo: float = table_lo["gamma"]
-        ld_lo: float = table_lo["lamda_D"]
-        gd_lo: float = table_lo["gamma_D"]
-
-        consts_up: hconsts.NumericConstants = hconsts.NumericConstants(
-            rotational=hconsts.RotationalConsts.numeric(B=b_up, D=d_up),
-            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_up, lambda_D=ld_up),
-            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_up, gamma_D=gd_up),
-        )
-        consts_lo: hconsts.NumericConstants = hconsts.NumericConstants(
-            rotational=hconsts.RotationalConsts.numeric(B=b_lo, D=d_lo),
-            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_lo, lambda_D=ld_lo),
-            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_lo, gamma_D=gd_lo),
-        )
+        consts_up: hconsts.NumericConstants = fill_from_dict(table_up)
+        consts_lo: hconsts.NumericConstants = fill_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
         basis_fns_up: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(

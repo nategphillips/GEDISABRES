@@ -144,7 +144,7 @@ class Sim:
                 "data",
                 self.molecule.name,
                 "einstein",
-                f"{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
+                f"{self.state_up.name}_to_{self.state_lo.name}.csv",
             ),
             delimiter=",",
         )
@@ -161,7 +161,7 @@ class Sim:
                 "data",
                 self.molecule.name,
                 "franck-condon",
-                f"{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
+                f"{self.state_up.name}_to_{self.state_lo.name}.csv",
             ),
             delimiter=",",
         )

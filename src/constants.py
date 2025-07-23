@@ -31,11 +31,7 @@ PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
 # Data from IUPAC - Atomic Weights of The Elements 2023 <https://iupac.qmul.ac.uk/AtWt/>
-ATOMIC_MASSES: dict[str, float] = {"N": 14.007, "O": 15.999}
-
-# Mapping Dunham coefficients to their respective columns when stored in a Dunham array. The
-# coefficients for G are stored in the first column, those for B in the second, etc.
-DUNHAM_MAP: dict[str, int] = {"G": 0, "B": 1, "D": 2}
+ATOMIC_MASSES: dict[str, float] = {"H": 1.008, "N": 14.007, "O": 15.999}
 
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
 # standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
@@ -54,7 +50,7 @@ BRANCH_NAME_MAP: dict[Fraction, str] = {
 
 # Nuclear spin [-]
 # Data from the NUBASE 2012 database contained in JANIS
-NUCLEAR_SPIN: dict[str, Fraction] = {"N": Fraction(1), "O": Fraction(0)}
+NUCLEAR_SPIN: dict[str, Fraction] = {"H": Fraction(1, 2), "N": Fraction(1), "O": Fraction(0)}
 
 # Mappings from enums to strings for use with the dictionaries below.
 TERM_SYMBOL_MAP: dict[TermSymbol, str] = {
@@ -78,6 +74,7 @@ REFLECTION_SYMMETRY_MAP: dict[ReflectionSymmetry, str] = {
 INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
     "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10},
     "NO": {"X2P": 1.15077e-10, "A2S+": 1.06434e-10},
+    "OH": {"X2P": 0.96966e-10, "A2S+": 1.0121e-10},
 }
 
 # Electronic energies [1/cm]
@@ -101,6 +98,13 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
         "C2P": 52126.0,
         "D2S+": 53084.7,
     },
+    "OH": {
+        "X2P": 0.0,
+        "A2S+": 32684.1,
+        "B2S+": 69774.0,
+        "D2S-": 82130.0,
+        "C2S+": 89459.1,
+    },
 }
 
 # Electronic degeneracies [-]
@@ -108,6 +112,7 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
     "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3},
     "NO": {"X2P": 4, "a4P": 8, "A2S+": 2, "B2P": 4, "b4S-": 4, "C2P": 4, "D2S+": 2},
+    "OH": {"X2P": 4, "A2S+": 2, "B2S+": 2, "D2S-": 2, "C2S+": 2},
 }
 
 # A somewhat arbitrary cutoff value for the Hönl-London factors. If the HLF of a line is lower than

@@ -115,7 +115,7 @@ class State:
         """
         match self.constants_type:
             case ConstantsType.PERLEVEL:
-                pathname = "states"
+                pathname = "per-level"
             case ConstantsType.DUNHAM:
                 pathname = "dunham"
 

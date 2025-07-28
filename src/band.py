@@ -434,6 +434,9 @@ class Band:
         j_qn_up_range: list[Fraction] = create_j_range(j_qn_up_min, j_qn_up_max)
         j_qn_lo_range: list[Fraction] = create_j_range(j_qn_up_min - 1, j_qn_up_max + 1)
 
+        # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
+        j_qn_lo_range = [item for item in j_qn_lo_range if item >= 0]
+
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
         #       computing them inside the main loop, but this is mainly done to mirror the
         #       calculations performed for the lower state.
@@ -511,6 +514,9 @@ class Band:
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
             j_qn_lo_list: list[Fraction] = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
 
+            # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
+            j_qn_lo_list = [item for item in j_qn_lo_list if item >= 0]
+
             for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
                 if j_qn_lo not in n_qn_lo_cache:
@@ -521,6 +527,10 @@ class Band:
 
                 # Get all allowed N'' values for each J''.
                 n_qn_lo_vals: list[Fraction] = n_qn_lo_cache[j_qn_lo]
+                # NOTE: 25/07/28 - This mask really doesn't need to be made since the nuclear
+                #       degeneracy partition function already enforces these rules. Speed
+                #       improvements are likely marginal since this just prevents the Hönl-London
+                #       factors for the unallowed lines from being computed in the first place.
                 allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
                 key: tuple[Fraction, Fraction] = (j_qn_up, j_qn_lo)
@@ -548,9 +558,11 @@ class Band:
                 # for each branch index pair (i, j), has dimensions
                 # (num_branches_up, branch_branches_lo).
                 mask: NDArray[np.bool] = (
-                    (hlf_mat > constants.HONL_LONDON_CUTOFF)
-                    & allowed_n_qn_up[:, None]
-                    & allowed_n_qn_lo[None, :]
+                    hlf_mat > constants.HONL_LONDON_CUTOFF
+                    # Removing these for now since they break for non-symmetric transitions like
+                    # 2Σ-2Π and they're technically redundant. See the note above.
+                    # & allowed_n_qn_up[:, None]
+                    # & allowed_n_qn_lo[None, :]
                 )
                 # Get the row and column (i, j) indices where the mask is true.
                 i_range, j_range = np.nonzero(mask)
@@ -561,8 +573,19 @@ class Band:
                 for i, j in zip(i_range.tolist(), j_range.tolist()):
                     branch_idx_up: int = branch_up_range[i]
                     branch_idx_lo: int = branch_lo_range[j]
-                    n_qn_up: Fraction = n_qn_up_vals[i]
-                    n_qn_lo: Fraction = n_qn_lo_vals[j]
+                    # NOTE: 25/07/28 - If one of the matrices is larger than the other, like in the
+                    #       case of a 2Σ-2Π transition, then the dimension of the larger matrix
+                    #       will be double that of the smaller one. This *should* be dealt with by
+                    #       simulating the electronic sub-states separately (Π_3/2 and Π_1/2 for
+                    #       example) and then combining their contributions.
+                    dim_up = i_range.max()
+                    dim_lo = j_range.max()
+                    if dim_up != dim_lo:
+                        smaller_dim = min(dim_up, dim_lo)
+                    else:
+                        smaller_dim = dim_up
+                    n_qn_up: Fraction = n_qn_up_vals[i % smaller_dim]
+                    n_qn_lo: Fraction = n_qn_lo_vals[j % smaller_dim]
                     hlf: float = float(hlf_mat[i, j])
                     eigenval_up: float = float(eigenvals_up[i])
                     eigenval_lo: float = float(eigenvals_lo[j])

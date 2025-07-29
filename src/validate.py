@@ -197,7 +197,7 @@ def plot(sim: Sim, sample_name: str):
     wns_smp = sample[:, 0]
     ins_smp = sample[:, 1] / sample[:, 1].max()
 
-    plt.stem(wns_smp, ins_smp, "b", label="PGOPHER", markerfmt="")
+    plt.stem(wns_smp, -ins_smp, "b", label="PGOPHER", markerfmt="")
     plt.title(
         f"{sim.molecule.name}: {sim.state_up.name} v' = {sim.bands_input[0][0]} to {sim.state_lo.name} v'' = {sim.bands_input[0][1]} Transition"
     )

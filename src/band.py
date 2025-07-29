@@ -31,7 +31,7 @@ from py3nj import clebsch_gordan
 
 import constants
 import convolve
-from enums import ConstantsType, SimType
+from enums import ConstantsType, SimType, TermSymbol
 from line import Line
 
 if TYPE_CHECKING:
@@ -580,10 +580,14 @@ class Band:
                     #       example) and then combining their contributions.
                     dim_up = i_range.max()
                     dim_lo = j_range.max()
-                    if dim_up != dim_lo:
-                        smaller_dim = min(dim_up, dim_lo)
+                    if (
+                        self.sim.state_up.term_symbol != TermSymbol.SIGMA
+                        or self.sim.state_lo.term_symbol != TermSymbol.SIGMA
+                    ):
+                        # If neither state is a Σ, then they're both lambda doubled.
+                        smaller_dim = dim_up // 2
                     else:
-                        smaller_dim = dim_up
+                        smaller_dim = min(dim_up, dim_lo)
                     n_qn_up: Fraction = n_qn_up_vals[i % smaller_dim]
                     n_qn_lo: Fraction = n_qn_lo_vals[j % smaller_dim]
                     hlf: float = float(hlf_mat[i, j])

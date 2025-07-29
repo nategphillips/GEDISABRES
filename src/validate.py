@@ -65,7 +65,7 @@ def o2(sample_name: str):
     plot(sim, sample_name)
 
 
-def no(sample_name: str):
+def no_ax(sample_name: str):
     molecule: Molecule = Molecule(name="NO", atom_1=Atom("N"), atom_2=Atom("O"))
     state_up: State = State(
         molecule=molecule,
@@ -74,6 +74,46 @@ def no(sample_name: str):
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.NONE,
         reflection_symmetry=ReflectionSymmetry.PLUS,
+        constants_type=ConstantsType.DUNHAM,
+    )
+    state_lo: State = State(
+        molecule=molecule,
+        letter="X",
+        spin_multiplicity=2,
+        term_symbol=TermSymbol.PI,
+        inversion_symmetry=InversionSymmetry.NONE,
+        reflection_symmetry=ReflectionSymmetry.NONE,
+        constants_type=ConstantsType.DUNHAM,
+    )
+
+    temp: float = 300.0
+
+    sim: Sim = Sim(
+        sim_type=SimType.ABSORPTION,
+        molecule=molecule,
+        state_up=state_up,
+        state_lo=state_lo,
+        j_qn_up_max=48,
+        temp_trn=temp,
+        temp_elc=temp,
+        temp_vib=temp,
+        temp_rot=temp,
+        pressure=101325,
+        bands_input=[(0, 0)],
+    )
+
+    plot(sim, sample_name)
+
+
+def no_bx(sample_name: str):
+    molecule: Molecule = Molecule(name="NO", atom_1=Atom("N"), atom_2=Atom("O"))
+    state_up: State = State(
+        molecule=molecule,
+        letter="B",
+        spin_multiplicity=2,
+        term_symbol=TermSymbol.PI,
+        inversion_symmetry=InversionSymmetry.NONE,
+        reflection_symmetry=ReflectionSymmetry.NONE,
         constants_type=ConstantsType.DUNHAM,
     )
     state_lo: State = State(
@@ -158,6 +198,9 @@ def plot(sim: Sim, sample_name: str):
     ins_smp = sample[:, 1] / sample[:, 1].max()
 
     plt.stem(wns_smp, ins_smp, "b", label="PGOPHER", markerfmt="")
+    plt.title(
+        f"{sim.molecule.name}: {sim.state_up.name} v' = {sim.bands_input[0][0]} to {sim.state_lo.name} v'' = {sim.bands_input[0][1]} Transition"
+    )
     plt.legend()
     plt.show()
 
@@ -165,7 +208,8 @@ def plot(sim: Sim, sample_name: str):
 def main() -> None:
     """Entry point."""
     o2("pgopher-o2-bx-20")
-    no("pgopher-no-ax-00")
+    no_ax("pgopher-no-ax-00")
+    no_bx("pgopher-no-bx-00")
     oh("pgopher-oh-ax-00")
 
 

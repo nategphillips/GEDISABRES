@@ -23,7 +23,7 @@ import numpy as np
 
 import utils
 from atom import Atom
-from enums import InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
+from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from state import State
@@ -42,6 +42,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.UNGERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
     state_lo: State = State(
         molecule=molecule,
@@ -50,6 +51,7 @@ def main() -> None:
         term_symbol=TermSymbol.SIGMA,
         inversion_symmetry=InversionSymmetry.GERADE,
         reflection_symmetry=ReflectionSymmetry.MINUS,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]

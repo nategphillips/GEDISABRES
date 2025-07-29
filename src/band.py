@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from fractions import Fraction
 from functools import cached_property
 from typing import TYPE_CHECKING
@@ -30,14 +31,38 @@ from py3nj import clebsch_gordan
 
 import constants
 import convolve
-import terms
-from enums import SimType
+from enums import ConstantsType, SimType, TermSymbol
 from line import Line
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from sim import Sim
+
+
+def fill_from_dict(table: dict[str, float]) -> hconsts.NumericConstants:
+    """Create filled constant classes for use with hamilterm.
+
+    Args:
+        table (dict[str, float]): Dictionary containing all supplied constants for the molecule.
+
+    Returns:
+        hconsts.NumericConstants: Constants object for use with hamilterm.
+    """
+    numeric_consts: hconsts.NumericConstants = hconsts.NumericConstants()
+
+    for field in dataclasses.fields(numeric_consts):
+        # Load all constant classes contained in NumericConstants (rotational, spin-orbit,
+        # spin-spin, spin-rotation, and lambda doubling) with zero-valued attributes.
+        sub_consts = getattr(numeric_consts, field.name)
+        for sub_field in dataclasses.fields(sub_consts):
+            attr_name: str = sub_field.name
+            if attr_name in table:
+                # If a constant is found in the supplied dictionary, fill that respective field in
+                # the correct constants class.
+                setattr(sub_consts, attr_name, table[attr_name])
+
+    return numeric_consts
 
 
 def n_values_for_j(j_qn: Fraction, s_qn: Fraction) -> list[Fraction]:
@@ -102,6 +127,8 @@ def honl_london_matrix(
     unitary_lo: NDArray[np.float64],
     omega_basis_up: NDArray[np.float64],
     omega_basis_lo: NDArray[np.float64],
+    lambda_basis_up: NDArray[np.float64],
+    lambda_basis_lo: NDArray[np.float64],
     transition_order: int = 1,
 ) -> NDArray[np.float64]:
     """Computes the Hönl-London factor of a rotational line.
@@ -115,6 +142,8 @@ def honl_london_matrix(
         unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
         omega_basis_up (NDArray[np.float64]): Upper state Ω' quantum numbers.
         omega_basis_lo (NDArray[np.float64]): Lower state Ω'' quantum numbers.
+        lambda_basis_up (NDArray[np.float64]): Upper state Λ' quantum numbers.
+        lambda_basis_lo (NDArray[np.float64]): Lower state Λ'' quantum numbers.
         transition_order (int, optional): Transition order. Defaults to 1.
 
     Returns:
@@ -131,16 +160,18 @@ def honl_london_matrix(
     #       that GFortran and Ninja are installed via the appropriate package manager and you're
     #       good to go.
 
-    two_j1: int = int(2 * j_qn_lo)
+    two_j1: int = int(2 * j_qn_up)
     two_j2: int = int(2 * transition_order)
-    two_j3: int = int(2 * j_qn_up)
+    two_j3: int = int(2 * j_qn_lo)
 
     # (m, 1) matrix containing all lower state Ω'' values
-    two_m1: NDArray[np.int64] = (2 * omega_basis_lo).astype(int)[:, None]
+    two_m1: NDArray[np.int64] = (2 * omega_basis_up).astype(int)[None, :]
     # (1, n) matrix containing all upper state Ω' values
-    two_m3: NDArray[np.int64] = (2 * omega_basis_up).astype(int)[None, :]
-    # (m, n) matrix containing all (Ω'', Ω') pairs
-    two_m2: NDArray[np.int64] = two_m1 - two_m3
+    two_m3: NDArray[np.int64] = (2 * omega_basis_lo).astype(int)[:, None]
+    # (m, n) matrix containing all (Λ'', Λ') pairs
+    two_m2: NDArray[np.int64] = (2 * lambda_basis_lo).astype(int)[:, None] - (
+        2 * lambda_basis_up
+    ).astype(int)[None, :]
 
     # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ can be
     #       half-integers, Ω = Λ + Σ is generally a half-integer. The arguments passed to the CG
@@ -158,24 +189,14 @@ def honl_london_matrix(
         ignore_invalid=True,
     )
 
-    # FIXME: 25/07/15 - Hornkohl, et al. list the Clebsch-Gordan coefficient as
-    #        ⟨J'', Ω''; q, Ω' - Ω''|J', Ω'⟩, but using this formula does not align with either
-    #        experimental data or previous versions of the code. Using either
-    #        ⟨J'', Ω''; q, Ω'' - Ω'|J', Ω'⟩ or ⟨J', Ω'; q, Ω' - Ω''|J'', Ω''⟩ (they output exactly
-    #        the same values) aligns nearly perfectly with the old code and compares to the
-    #        experimental spectra much better, at least in absorption. Not sure if this is a typo in
-    #        the paper, or a case of different definitions appearing in different sources.
+    # NOTE: 25/07/29 - The above Clebsch-Gordan coefficient is adapted from "Spectroscopy of Low
+    #       Temperature Plasma" by Ochkin (Appendix E).
 
     # Compute the matrix of all possible transitions for a given (J', J'') pair. This results in an
     # (m, n) dimensional matrix, with one HLF for each (i, j) branch index pair.
     transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg.T @ unitary_lo
 
-    # FIXME: 25/07/15 - In "Spectroscopy of Low Temperature Plasma" by Ochkin (Appendix E), the
-    #        Wigner 3j coefficients in the HLFs are defined slightly differently and are multiplied
-    #        by (2J' + 1) * (2J'' + 1) for Hund's case (a) transitions. The paper "A comment on
-    #        Hönl-London factors" by Hansson has yet another form of the Wigner 3j coefficients that
-    #        are used. I need to sort this out eventually.
-    return (2 * j_qn_lo + 1) * np.abs(transition_amplitude) ** 2
+    return (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
 
 
 class Band:
@@ -275,7 +296,7 @@ class Band:
         #       zero-point vibrational energy to match the vibrational partition function.
         return (
             np.exp(
-                -(terms.vibrational_term(state, v_qn) - terms.vibrational_term(state, 0))
+                -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.sim.temp_vib)
@@ -292,27 +313,32 @@ class Band:
         """
         # Herzberg p. 168, eq. (IV, 24)
 
-        upper_state: dict[str, list[float]] = self.sim.state_up.constants
-        lower_state: dict[str, list[float]] = self.sim.state_lo.constants
+        state_up = self.sim.state_up
+        state_lo = self.sim.state_lo
 
-        # NOTE: 24/11/05 - In the Cheung paper, the electronic energy is defined differently than in
-        #       Herzberg's book. The conversion specified by Cheung on p. 5 is
-        #       nu_0 = T + 2 / 3 * lamda - gamma.
-        energy_offset: float = (
-            2 / 3 * upper_state["lamda"][self.v_qn_up] - upper_state["gamma"][self.v_qn_up]
-        )
+        consts_up = state_up.constants_vqn(self.v_qn_up)
+        consts_lo = state_lo.constants_vqn(self.v_qn_lo)
 
-        # NOTE: 24/11/05 - The band origin as defined by Herzberg is nu_0 = nu_e + nu_v, and is
-        #       different for each vibrational transition. The T values in Cheung include the
-        #       vibrational term for each level, i.e. T = T_e + G. The ground state has no
-        #       electronic energy, so it is not subtracted. In Cheung's data, the term values
-        #       provided are measured above the zeroth vibrational level of the ground state. This
-        #       means that the lower state zero-point vibrational energy must be used.
-        return (
-            upper_state["T"][self.v_qn_up]
-            + energy_offset
-            - (lower_state["G"][self.v_qn_lo] - lower_state["G"][0])
-        )
+        if state_up.constants_type == ConstantsType.PERLEVEL:
+            # Since T' = T_v' - T_0'', it represents the energy of the upper state with respect to
+            # the v'' = 0 vibrational level of lower state. Therefore, any transitions like 2-1 will
+            # require the calculation of an offset G''(v) - G''(0) for the lower state. The band
+            # origin is then nu_0 = T'(v) - [T''(0) + G''(v) - G''(0)].
+            return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
+
+        if state_up.constants_type == ConstantsType.DUNHAM:
+            band_origin_upper = (
+                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_up.name]
+                + consts_up["G"]
+            )
+            band_origin_lower = (
+                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_lo.name]
+                + consts_lo["G"]
+            )
+            # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
+            return band_origin_upper - band_origin_lower
+
+        raise ValueError("Band origin calculation failed.")
 
     @cached_property
     def rot_partition_fn(self) -> float:
@@ -341,7 +367,7 @@ class Band:
         # This is the effective rotational partition function, i.e., it includes the nuclear
         # partition function.
         theta_r: float = (
-            constants.PLANC * constants.LIGHT * state.constants["B"][v_qn] / constants.BOLTZ
+            constants.PLANC * constants.LIGHT * state.constants_vqn(v_qn)["B"] / constants.BOLTZ
         )
         q_r: float = (
             self.sim.temp_rot
@@ -358,59 +384,20 @@ class Band:
         Returns:
             list[Line]: A list of all allowed `Line` objects for the given selection rules.
         """
-        # FIXME: 25/07/18 - Both pyGEONOSIS and hamilterm should probably share classes for handling
-        #        term symbols and constants, otherwise there will be needless conversion from one to
-        #        the other.
-        term_symbol_up: str = "3Sigma"
-        term_symbol_lo: str = "3Sigma"
-
-        table_up: dict[str, list[float]] = self.sim.state_up.constants
-        table_lo: dict[str, list[float]] = self.sim.state_lo.constants
-
-        b_up: float = table_up["B"][self.v_qn_up]
-        d_up: float = table_up["D"][self.v_qn_up]
-        l_up: float = table_up["lamda"][self.v_qn_up]
-        g_up: float = table_up["gamma"][self.v_qn_up]
-        ld_up: float = table_up["lamda_D"][self.v_qn_up]
-        gd_up: float = table_up["gamma_D"][self.v_qn_up]
-
-        b_lo: float = table_lo["B"][self.v_qn_lo]
-        d_lo: float = table_lo["D"][self.v_qn_lo]
-        l_lo: float = table_lo["lamda"][self.v_qn_lo]
-        g_lo: float = table_lo["gamma"][self.v_qn_lo]
-        ld_lo: float = table_lo["lamda_D"][self.v_qn_lo]
-        gd_lo: float = table_lo["gamma_D"][self.v_qn_lo]
-
-        # NOTE: 24/11/05 - The Hamiltonians in Cheung and Yu are defined slightly differently, which
-        #       leads to some constants having different values. Since the Cheung Hamiltonian matrix
-        #       elements are used to solve for the energy eigenvalues, the constants from Yu are
-        #       changed to fit the convention used by Cheung. See the table below for details.
-        #
-        #       Cheung  | Yu
-        #       --------|------------
-        #       D       | -D
-        #       lamda_D | 2 * lamda_D
-        #       gamma_D | 2 * gamma_D
-
-        # TODO: 25/07/10 - At some point, notation used by pyGEONOSIS should be standardized (it
-        #       already mostly is) such that the constants supplied must follow the correct form.
-        #       This case in particular makes the issues obvious (i.e. hardcoding a workaround).
-
-        if self.sim.state_lo.name == "X3Sg-":
-            d_lo *= -1
-            ld_lo *= 2
-            gd_lo *= 2
-
-        consts_up: hconsts.NumericConstants = hconsts.NumericConstants(
-            rotational=hconsts.RotationalConsts.numeric(B=b_up, D=d_up),
-            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_up, lambda_D=ld_up),
-            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_up, gamma_D=gd_up),
+        term_symbol_up: str = (
+            str(self.sim.state_up.spin_multiplicity)
+            + constants.TERM_SYMBOL_MAP[self.sim.state_up.term_symbol]
         )
-        consts_lo: hconsts.NumericConstants = hconsts.NumericConstants(
-            rotational=hconsts.RotationalConsts.numeric(B=b_lo, D=d_lo),
-            spin_spin=hconsts.SpinSpinConsts.numeric(lamda=l_lo, lambda_D=ld_lo),
-            spin_rotation=hconsts.SpinRotationConsts.numeric(gamma=g_lo, gamma_D=gd_lo),
+        term_symbol_lo: str = (
+            str(self.sim.state_lo.spin_multiplicity)
+            + constants.TERM_SYMBOL_MAP[self.sim.state_lo.term_symbol]
         )
+
+        table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
+        table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
+
+        consts_up: hconsts.NumericConstants = fill_from_dict(table_up)
+        consts_lo: hconsts.NumericConstants = fill_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
         basis_fns_up: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(
@@ -423,6 +410,9 @@ class Band:
 
         omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
         omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
+
+        lambda_basis_up = np.array([lamda for (lamda, _, _) in basis_fns_up])
+        lambda_basis_lo = np.array([lamda for (lamda, _, _) in basis_fns_lo])
 
         # TODO: 25/07/15 - These rules come from "PGOPHER: A program for simulating rotational,
         #       vibrational and electronic spectra" by Colin M. Western, in which the low quantum
@@ -442,6 +432,9 @@ class Band:
 
         j_qn_up_range: list[Fraction] = create_j_range(j_qn_up_min, j_qn_up_max)
         j_qn_lo_range: list[Fraction] = create_j_range(j_qn_up_min - 1, j_qn_up_max + 1)
+
+        # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
+        j_qn_lo_range = [item for item in j_qn_lo_range if item >= 0]
 
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
         #       computing them inside the main loop, but this is mainly done to mirror the
@@ -520,6 +513,9 @@ class Band:
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
             j_qn_lo_list: list[Fraction] = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
 
+            # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
+            j_qn_lo_list = [item for item in j_qn_lo_list if item >= 0]
+
             for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
                 if j_qn_lo not in n_qn_lo_cache:
@@ -530,6 +526,10 @@ class Band:
 
                 # Get all allowed N'' values for each J''.
                 n_qn_lo_vals: list[Fraction] = n_qn_lo_cache[j_qn_lo]
+                # NOTE: 25/07/28 - This mask really doesn't need to be made since the nuclear
+                #       degeneracy partition function already enforces these rules. Speed
+                #       improvements are likely marginal since this just prevents the Hönl-London
+                #       factors for the unallowed lines from being computed in the first place.
                 allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
                 key: tuple[Fraction, Fraction] = (j_qn_up, j_qn_lo)
@@ -549,6 +549,8 @@ class Band:
                         unitary_lo=unitary_lo,
                         omega_basis_up=omega_basis_up,
                         omega_basis_lo=omega_basis_lo,
+                        lambda_basis_up=lambda_basis_up,
+                        lambda_basis_lo=lambda_basis_lo,
                         transition_order=1,
                     )
                     hlf_matrix_cache[key] = hlf_mat
@@ -557,9 +559,11 @@ class Band:
                 # for each branch index pair (i, j), has dimensions
                 # (num_branches_up, branch_branches_lo).
                 mask: NDArray[np.bool] = (
-                    (hlf_mat > constants.HONL_LONDON_CUTOFF)
-                    & allowed_n_qn_up[:, None]
-                    & allowed_n_qn_lo[None, :]
+                    hlf_mat > constants.HONL_LONDON_CUTOFF
+                    # Removing these for now since they break for non-symmetric transitions like
+                    # 2Σ-2Π and they're technically redundant. See the note above.
+                    # & allowed_n_qn_up[:, None]
+                    # & allowed_n_qn_lo[None, :]
                 )
                 # Get the row and column (i, j) indices where the mask is true.
                 i_range, j_range = np.nonzero(mask)
@@ -570,8 +574,23 @@ class Band:
                 for i, j in zip(i_range.tolist(), j_range.tolist()):
                     branch_idx_up: int = branch_up_range[i]
                     branch_idx_lo: int = branch_lo_range[j]
-                    n_qn_up: Fraction = n_qn_up_vals[i]
-                    n_qn_lo: Fraction = n_qn_lo_vals[j]
+                    # NOTE: 25/07/28 - If one of the matrices is larger than the other, like in the
+                    #       case of a 2Σ-2Π transition, then the dimension of the larger matrix
+                    #       will be double that of the smaller one. This *should* be dealt with by
+                    #       simulating the electronic sub-states separately (Π_3/2 and Π_1/2 for
+                    #       example) and then combining their contributions.
+                    dim_up = i_range.max()
+                    dim_lo = j_range.max()
+                    if (
+                        self.sim.state_up.term_symbol != TermSymbol.SIGMA
+                        or self.sim.state_lo.term_symbol != TermSymbol.SIGMA
+                    ):
+                        # If neither state is a Σ, then they're both lambda doubled.
+                        smaller_dim = dim_up // 2
+                    else:
+                        smaller_dim = min(dim_up, dim_lo)
+                    n_qn_up: Fraction = n_qn_up_vals[i % smaller_dim]
+                    n_qn_lo: Fraction = n_qn_lo_vals[j % smaller_dim]
                     hlf: float = float(hlf_mat[i, j])
                     eigenval_up: float = float(eigenvals_up[i])
                     eigenval_lo: float = float(eigenvals_lo[j])

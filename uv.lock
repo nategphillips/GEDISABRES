@@ -62,7 +62,7 @@ wheels = [
 [[package]]
 name = "hamilterm"
 version = "0.1.0"
-source = { git = "https://github.com/nategphillips/hamilterm?branch=vectorize#ca6a632c808354b9118e0c8741b156ee31c645bc" }
+source = { git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d#fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" }
 dependencies = [
     { name = "numpy" },
     { name = "sympy" },
@@ -255,7 +255,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?branch=vectorize" },
+    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" },
     { name = "matplotlib", specifier = "==3.10.3" },
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },

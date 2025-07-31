@@ -36,8 +36,11 @@ from PySide6.QtWidgets import (
     QApplication,
     QCheckBox,
     QComboBox,
+    QDialog,
+    QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFormLayout,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -254,6 +257,113 @@ def create_dataframe_tab(df: pl.DataFrame, _: str) -> QWidget:
     layout.addWidget(table_view)
 
     return widget
+
+
+class ParametersDialog(QDialog):
+    def __init__(self, parent=None, context_name=""):
+        super().__init__(parent)
+        self.setWindowTitle(f"{context_name} Parameters")
+        self.setModal(True)
+        self.resize(400, 200)
+
+        layout = QFormLayout(self)
+
+        self.param1 = QLineEdit()
+        self.param2 = QComboBox()
+        self.param2.addItems(["Option A", "Option B", "Option C"])
+        self.param3 = QCheckBox("Enable Something")
+
+        layout.addRow("Parameter 1:", self.param1)
+        layout.addRow("Option:", self.param2)
+        layout.addRow("", self.param3)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def get_values(self):
+        return {
+            "param1": self.param1.text(),
+            "param2": self.param2.currentText(),
+            "param3": self.param3.isChecked(),
+        }
+
+
+class NewGUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("pyGEONOSIS")
+        self.resize(1600, 800)
+        self.init_ui()
+
+    def init_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        self.context_tabs = QTabWidget(movable=True, tabsClosable=True)
+
+        for name in ["O2", "NO", "OH"]:
+            self.context_tabs.addTab(QWidget(), name)
+
+        self.context_tabs.currentChanged.connect(self.on_tab_changed)
+        main_layout.addWidget(self.context_tabs)
+
+        param_panel = QWidget()
+        h = QHBoxLayout(param_panel)
+        self.btn_params = QPushButton("Parameters")
+        self.btn_params.clicked.connect(self.show_parameters_dialog)
+        self.input_bands = QLineEdit()
+        self.input_bands.setPlaceholderText("Bands")
+        self.input_broad = QLineEdit()
+        self.input_broad.setPlaceholderText("Broadening")
+        self.input_j = QLineEdit()
+        self.input_j.setPlaceholderText("J")
+
+        for w in (self.btn_params, self.input_bands, self.input_broad, self.input_j):
+            h.addWidget(w)
+
+        main_layout.addWidget(param_panel)
+
+        bottom = QWidget()
+        bottom_h = QHBoxLayout(bottom)
+
+        self.tab_widget = QTabWidget()
+        empty_df = pl.DataFrame()
+        page = create_dataframe_tab(empty_df, "v'-v''")
+        self.tab_widget.addTab(page, "v'-v''")
+
+        bottom_h.addWidget(self.tab_widget)
+
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.addLegend(offset=(0, 1))
+        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
+        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setXRange(100, 200)
+        bottom_h.addWidget(self.plot_widget)
+
+        main_layout.addWidget(bottom)
+
+        self.on_tab_changed(0)
+
+    def on_tab_changed(self, idx: int):
+        name = self.context_tabs.tabText(idx)
+        self.input_bands.setPlaceholderText(f"{name}: Bands")
+        self.input_broad.setPlaceholderText(f"{name}: Broadening")
+        self.input_j.setPlaceholderText(f"{name}: J")
+
+    def show_parameters_dialog(self):
+        current_tab = self.context_tabs.tabText(self.context_tabs.currentIndex())
+        dialog = ParametersDialog(self, context_name=current_tab)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            values = dialog.get_values()
+            print("testing values:", values)
 
 
 class GUI(QMainWindow):
@@ -913,7 +1023,7 @@ def main() -> None:
     app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
     app.setWindowIcon(app_icon)
 
-    gui: GUI = GUI()
+    gui: NewGUI = NewGUI()
     gui.show()
 
     sys.exit(app.exec())

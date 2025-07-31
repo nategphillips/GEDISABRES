@@ -270,7 +270,7 @@ requires-dist = [
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },
     { name = "py3nj", git = "https://github.com/fujiisoup/py3nj?rev=098e40e433d6c1f32b1b488519bbae40f40b812b" },
-    { name = "pyqtdarktheme", specifier = ">=2.1.0" },
+    { name = "pyqtdarktheme", specifier = "==2.1.0" },
     { name = "pyqtgraph", specifier = "==0.13.7" },
     { name = "pyside6-essentials", specifier = "==6.9.0" },
     { name = "scipy", specifier = "==1.16.0" },

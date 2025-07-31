@@ -17,7 +17,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import sys
-import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,8 +26,6 @@ import qdarktheme
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
-    QPoint,
-    QRect,
     Qt,
 )
 from PySide6.QtGui import QIcon, QValidator
@@ -115,6 +112,81 @@ DEFAULT_SIM: Sim = Sim(
     101325,
     [(0, 0)],
 )
+
+MOLECULAR_PRESETS = [
+    {
+        "name": "O2 B-X",
+        "molecule": Molecule("O2", Atom("O"), Atom("O")),
+        "state_up": State(
+            Molecule("O2", Atom("O"), Atom("O")),
+            "B",
+            3,
+            TermSymbol.SIGMA,
+            InversionSymmetry.UNGERADE,
+            ReflectionSymmetry.MINUS,
+            ConstantsType.PERLEVEL,
+        ),
+        "state_lo": State(
+            Molecule("O2", Atom("O"), Atom("O")),
+            "X",
+            3,
+            TermSymbol.SIGMA,
+            InversionSymmetry.GERADE,
+            ReflectionSymmetry.MINUS,
+            ConstantsType.PERLEVEL,
+        ),
+    },
+    {
+        "name": "NO A-X",
+        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "state_up": State(
+            Molecule("NO", Atom("N"), Atom("O")),
+            "A",
+            2,
+            TermSymbol.SIGMA,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.PLUS,
+            ConstantsType.DUNHAM,
+        ),
+        "state_lo": State(
+            Molecule("NO", Atom("N"), Atom("O")),
+            "X",
+            2,
+            TermSymbol.PI,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.NONE,
+            ConstantsType.DUNHAM,
+        ),
+    },
+    {
+        "name": "OH A-X",
+        "molecule": Molecule("OH", Atom("O"), Atom("H")),
+        "state_up": State(
+            Molecule("OH", Atom("O"), Atom("H")),
+            "A",
+            2,
+            TermSymbol.SIGMA,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.PLUS,
+            ConstantsType.DUNHAM,
+        ),
+        "state_lo": State(
+            Molecule("OH", Atom("O"), Atom("H")),
+            "X",
+            2,
+            TermSymbol.PI,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.NONE,
+            ConstantsType.DUNHAM,
+        ),
+    },
+    {
+        "name": "Custom",
+        "molecule": DEFAULT_MOLECULE,
+        "state_up": DEFAULT_STATE_UP,
+        "state_lo": DEFAULT_STATE_LO,
+    },
+]
 
 
 class MyDoubleSpinBox(QDoubleSpinBox):
@@ -290,6 +362,36 @@ def create_dataframe_tab(df: pl.DataFrame, _: str) -> QWidget:
     layout.addWidget(table_view)
 
     return widget
+
+
+class PresetSelectionDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Simulation")
+        self.setModal(True)
+
+        self.selected_preset = None
+
+        layout = QVBoxLayout(self)
+
+        layout.addWidget(QLabel("Choose a preset, or build your own."))
+
+        self.preset_combo = QComboBox()
+        for preset in MOLECULAR_PRESETS:
+            self.preset_combo.addItem(preset["name"])
+        layout.addWidget(self.preset_combo)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def accept(self):
+        selected_index = self.preset_combo.currentIndex()
+        self.selected_preset = MOLECULAR_PRESETS[selected_index]
+        super().accept()
 
 
 class ParametersDialog(QDialog):
@@ -473,9 +575,10 @@ class CustomTab(QWidget):
 
         self.btn_params = QPushButton("Parameters")
         self.btn_params.clicked.connect(self.open_parameters_dialog)
-        controls_layout.addWidget(self.btn_params)
+        main_layout.addWidget(self.btn_params)
 
         group_bands: QGroupBox = QGroupBox("Bands")
+        group_bands.setFixedWidth(300)
         bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
         band_selection_layout: QHBoxLayout = QHBoxLayout()
@@ -491,6 +594,7 @@ class CustomTab(QWidget):
         self.radio_band_ranges.toggled.connect(self.update_sim_objects)
 
         self.specific_bands_container: QWidget = QWidget()
+        self.specific_bands_container.setFixedHeight(60)
         specific_bands_layout: QVBoxLayout = QVBoxLayout(self.specific_bands_container)
         specific_bands_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -503,6 +607,7 @@ class CustomTab(QWidget):
         specific_bands_layout.addLayout(band_layout)
 
         self.band_ranges_container: QWidget = QWidget()
+        self.band_ranges_container.setFixedHeight(60)
         band_ranges_layout: QGridLayout = QGridLayout(self.band_ranges_container)
         band_ranges_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -515,7 +620,7 @@ class CustomTab(QWidget):
         v_up_max_label: QLabel = QLabel("v' max:")
         self.v_up_max_spinbox: QSpinBox = QSpinBox()
         self.v_up_max_spinbox.setRange(0, 99)
-        self.v_up_max_spinbox.setValue(10)
+        self.v_up_max_spinbox.setValue(5)
         self.v_up_max_spinbox.valueChanged.connect(self.update_sim_objects)
 
         v_lo_min_label: QLabel = QLabel("v'' min:")
@@ -601,14 +706,21 @@ class CustomTab(QWidget):
         broadening_layout.addLayout(checkbox_layout)
         controls_layout.addWidget(group_broadening)
 
+        actions_group = QGroupBox("Actions")
+        actions_layout = QVBoxLayout(actions_group)
         self.run_button: QPushButton = QPushButton("Run Simulation")
         self.run_button.clicked.connect(self.run_simulation)
-        main_layout.addWidget(self.run_button)
+        actions_layout.addWidget(self.run_button)
 
         self.export_button: QPushButton = QPushButton("Export Table")
         self.export_button.clicked.connect(self.export_current_table)
-        controls_layout.addWidget(self.export_button)
+        actions_layout.addWidget(self.export_button)
 
+        self.open_sample_button: QPushButton = QPushButton("Open Sample")
+        self.open_sample_button.clicked.connect(self.open_sample)
+        actions_layout.addWidget(self.open_sample_button)
+
+        controls_layout.addWidget(actions_group)
         main_layout.addWidget(controls_widget)
 
         plot_table_widget = QWidget()
@@ -708,11 +820,6 @@ class CustomTab(QWidget):
 
     def run_simulation(self) -> None:
         """Run a simulation instance for this specific tab."""
-        start_time: float = time.time()
-
-        print(f"Time to create sim: {time.time() - start_time} s")
-        start_plot_time: float = time.time()
-
         bands = self.get_current_bands()
         colors: list[str] = get_colors(bands)
 
@@ -735,20 +842,18 @@ class CustomTab(QWidget):
             "predissociation": self.checkbox_predissociation.isChecked(),
         }
 
-        sim = self.sim
-
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
                 plot_function(
                     self.plot_widget,
-                    sim,
+                    self.sim,
                     colors,
                     fwhm_selections,
                     self.inst_broadening_spinbox.value(),
                     self.resolution_spinbox.value(),
                 )
             else:
-                plot_function(self.plot_widget, sim, colors)
+                plot_function(self.plot_widget, self.sim, colors)
         else:
             QMessageBox.information(
                 self,
@@ -758,9 +863,6 @@ class CustomTab(QWidget):
             )
 
         self.plot_widget.autoRange()
-
-        print(f"Time to create plot: {time.time() - start_plot_time} s")
-        start_table_time: float = time.time()
 
         while self.table_tab_widget.count() > 0:
             self.table_tab_widget.removeTab(0)
@@ -779,16 +881,13 @@ class CustomTab(QWidget):
                         "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
                         "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
                     }
-                    for line in sim.bands[i].lines
+                    for line in self.sim.bands[i].lines
                 ]
             )
 
             tab_name: str = f"{band[0]}-{band[1]}"
             new_tab: QWidget = create_dataframe_tab(df, tab_name)
             self.table_tab_widget.addTab(new_tab, tab_name)
-
-        print(f"Time to create table: {time.time() - start_table_time} s")
-        print(f"Total time: {time.time() - start_time} s\n")
 
     def export_current_table(self) -> None:
         """Export the currently displayed table to a CSV file."""
@@ -827,6 +926,33 @@ class CustomTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Export Error", f"An error occurred: {e}")
 
+    def open_sample(self) -> None:
+        filename, _ = QFileDialog.getOpenFileName(
+            parent=self,
+            caption="Open Sample File",
+            dir=str(utils.get_data_path("data", "samples")),
+            filter="CSV Files (*.csv);;All Files (*)",
+        )
+        if filename:
+            try:
+                df: pl.DataFrame = pl.read_csv(filename)
+            except ValueError:
+                QMessageBox.critical(self, "Error", "Data is improperly formatted.")
+                return
+        else:
+            return
+
+        display_name: str = Path(filename).name
+
+        new_table_tab: QWidget = create_dataframe_tab(df, display_name)
+        self.table_tab_widget.addTab(new_table_tab, display_name)
+
+        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
+        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
+
+        plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
+        self.plot_widget.autoRange()
+
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -839,44 +965,41 @@ class GUI(QMainWindow):
         super().__init__()
 
         self.setWindowTitle("pyGEONOSIS")
+        self.showMaximized()
         self.resize(1600, 800)
-        self.center()
         self.init_ui()
-
-    def center(self) -> None:
-        qr: QRect = self.frameGeometry()
-        qp: QPoint = self.screen().availableGeometry().center()
-        qr.moveCenter(qp)
-        self.move(qr.topLeft())
 
     def init_ui(self):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
 
+        toolbar_widget = QWidget()
+        toolbar_layout = QHBoxLayout(toolbar_widget)
+        toolbar_layout.setContentsMargins(5, 5, 5, 5)
+
+        self.new_tab_button = QPushButton("Add Simulation")
+        self.new_tab_button.clicked.connect(self.add_tab)
+        toolbar_layout.addWidget(self.new_tab_button)
+
+        main_layout.addWidget(toolbar_widget)
+
         tab_panel: QWidget = self.create_tab_panel()
         main_layout.addWidget(tab_panel)
-
-        self.create_menu_bar()
 
     def create_tab_panel(self):
         self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
 
-        molecules_config = [
-            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
-            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
-            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
-        ]
-
-        for name, molecule, state_up, state_lo in molecules_config:
+        for preset in MOLECULAR_PRESETS[:3]:
             tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
-            tab.molecule = molecule
-            tab.state_up = state_up
-            tab.state_lo = state_lo
+            tab.molecule = preset["molecule"]
+            tab.state_up = preset["state_up"]
+            tab.state_lo = preset["state_lo"]
             tab.update_sim_objects()
 
-            self.molecule_tab_widget.addTab(tab, name)
+            self.molecule_tab_widget.addTab(tab, preset["name"])
             tab.update_tab_name()
+            tab.run_simulation()
 
         self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
 
@@ -893,68 +1016,23 @@ class GUI(QMainWindow):
                 QMessageBox.StandardButton.Ok,
             )
 
-    def create_menu_bar(self):
-        """Create a menu bar with global actions."""
-        menubar = self.menuBar()
+    def add_tab(self):
+        dialog = PresetSelectionDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selected_preset:
+            preset = dialog.selected_preset
+            tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
 
-        file_menu = menubar.addMenu("File")
+            tab.molecule = preset["molecule"]
+            tab.state_up = preset["state_up"]
+            tab.state_lo = preset["state_lo"]
+            tab.update_sim_objects()
 
-        new_tab_action = file_menu.addAction("New Tab")
-        new_tab_action.triggered.connect(self.add_new_tab)
+            tab_count = self.molecule_tab_widget.count()
+            self.molecule_tab_widget.addTab(tab, preset["name"])
+            tab.update_tab_name()
 
-        open_action = file_menu.addAction("Open Sample")
-        open_action.triggered.connect(self.add_sample_to_current_tab)
-
-        file_menu.addSeparator()
-
-        exit_action = file_menu.addAction("Exit")
-        exit_action.triggered.connect(self.close)
-
-    def add_new_tab(self):
-        """Add a new tab with default settings."""
-        tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
-
-        tab.molecule = DEFAULT_MOLECULE
-        tab.state_up = DEFAULT_STATE_UP
-        tab.state_lo = DEFAULT_STATE_LO
-        tab.update_sim_objects()
-
-        tab_count = self.molecule_tab_widget.count()
-        self.molecule_tab_widget.addTab(tab, "New Tab")
-        tab.update_tab_name()
-
-        self.molecule_tab_widget.setCurrentIndex(tab_count)
-
-    def add_sample_to_current_tab(self) -> None:
-        current_tab = self.molecule_tab_widget.currentWidget()
-        if not isinstance(current_tab, CustomTab):
-            return
-
-        filename, _ = QFileDialog.getOpenFileName(
-            parent=self,
-            caption="Open File",
-            dir=str(utils.get_data_path("data", "samples")),
-            filter="CSV Files (*.csv);;All Files (*)",
-        )
-        if filename:
-            try:
-                df: pl.DataFrame = pl.read_csv(filename)
-            except ValueError:
-                QMessageBox.critical(self, "Error", "Data is improperly formatted.")
-                return
-        else:
-            return
-
-        display_name: str = Path(filename).name
-
-        new_table_tab: QWidget = create_dataframe_tab(df, display_name)
-        current_tab.table_tab_widget.addTab(new_table_tab, display_name)
-
-        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
-        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
-
-        plot.plot_sample(current_tab.plot_widget, wavenumbers, intensities, display_name)
-        current_tab.plot_widget.autoRange()
+            self.molecule_tab_widget.setCurrentIndex(tab_count)
+            tab.run_simulation()
 
 
 class WavenumberAxis(pg.AxisItem):

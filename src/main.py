@@ -456,21 +456,25 @@ class ParametersDialog(QDialog):
 
 
 class CustomTab(QWidget):
-    def __init__(self):
+    def __init__(self, parent_tab_widget=None):
         super().__init__()
+
+        self.parent_tab_widget = parent_tab_widget
 
         self.molecule = DEFAULT_MOLECULE
         self.state_up = DEFAULT_STATE_UP
         self.state_lo = DEFAULT_STATE_LO
         self.sim = DEFAULT_SIM
 
-        layout = QHBoxLayout(self)
+        main_layout = QVBoxLayout(self)
+
+        controls_widget = QWidget()
+        controls_layout = QHBoxLayout(controls_widget)
 
         self.btn_params = QPushButton("Parameters")
         self.btn_params.clicked.connect(self.open_parameters_dialog)
-        layout.addWidget(self.btn_params)
+        controls_layout.addWidget(self.btn_params)
 
-        # Specific bands or band range inputs.
         group_bands: QGroupBox = QGroupBox("Bands")
         bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
@@ -486,7 +490,6 @@ class CustomTab(QWidget):
         self.radio_specific_bands.toggled.connect(self.update_sim_objects)
         self.radio_band_ranges.toggled.connect(self.update_sim_objects)
 
-        # Specific band input.
         self.specific_bands_container: QWidget = QWidget()
         specific_bands_layout: QVBoxLayout = QVBoxLayout(self.specific_bands_container)
         specific_bands_layout.setContentsMargins(0, 0, 0, 0)
@@ -499,7 +502,6 @@ class CustomTab(QWidget):
         band_layout.addWidget(self.band_line_edit)
         specific_bands_layout.addLayout(band_layout)
 
-        # Band range input.
         self.band_ranges_container: QWidget = QWidget()
         band_ranges_layout: QGridLayout = QGridLayout(self.band_ranges_container)
         band_ranges_layout.setContentsMargins(0, 0, 0, 0)
@@ -542,10 +544,8 @@ class CustomTab(QWidget):
 
         bands_layout.addWidget(self.specific_bands_container)
         bands_layout.addWidget(self.band_ranges_container)
+        controls_layout.addWidget(group_bands)
 
-        layout.addWidget(group_bands)
-
-        # Rotational line input.
         group_maxj: QGroupBox = QGroupBox("Max J'")
         maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
         self.maxj_spinbox: QSpinBox = QSpinBox()
@@ -553,10 +553,26 @@ class CustomTab(QWidget):
         self.maxj_spinbox.setValue(DEFAULT_LINES)
         self.maxj_spinbox.valueChanged.connect(self.update_sim_objects)
         maxj_layout.addWidget(self.maxj_spinbox)
-        layout.addWidget(group_maxj)
+        controls_layout.addWidget(group_maxj)
+
+        group_resolution: QGroupBox = QGroupBox("Resolution")
+        resolution_layout: QHBoxLayout = QHBoxLayout(group_resolution)
+        self.resolution_spinbox: QSpinBox = QSpinBox()
+        self.resolution_spinbox.setMaximum(10000000)
+        self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
+        resolution_layout.addWidget(self.resolution_spinbox)
+        controls_layout.addWidget(group_resolution)
+
+        group_plot_type: QGroupBox = QGroupBox("Plot Type")
+        plot_type_layout: QHBoxLayout = QHBoxLayout(group_plot_type)
+        self.plot_type_combo: QComboBox = QComboBox()
+        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        plot_type_layout.addWidget(self.plot_type_combo)
+        controls_layout.addWidget(group_plot_type)
 
         group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
-        broadening_layout: QHBoxLayout = QHBoxLayout(group_broadening)
+        broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
+
         self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
         self.inst_broadening_spinbox.valueChanged.connect(self.update_sim_objects)
@@ -569,19 +585,59 @@ class CustomTab(QWidget):
         self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
         self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
 
-        for cb in [
+        checkboxes = [
             self.checkbox_instrument,
             self.checkbox_doppler,
             self.checkbox_natural,
             self.checkbox_collisional,
             self.checkbox_predissociation,
-        ]:
+        ]
+
+        for i, cb in enumerate(checkboxes):
             cb.setChecked(True)
             cb.toggled.connect(self.update_sim_objects)
             checkbox_layout.addWidget(cb)
 
         broadening_layout.addLayout(checkbox_layout)
-        layout.addWidget(group_broadening)
+        controls_layout.addWidget(group_broadening)
+
+        self.run_button: QPushButton = QPushButton("Run Simulation")
+        self.run_button.clicked.connect(self.run_simulation)
+        main_layout.addWidget(self.run_button)
+
+        self.export_button: QPushButton = QPushButton("Export Table")
+        self.export_button.clicked.connect(self.export_current_table)
+        controls_layout.addWidget(self.export_button)
+
+        main_layout.addWidget(controls_widget)
+
+        plot_table_widget = QWidget()
+        plot_table_layout = QHBoxLayout(plot_table_widget)
+
+        self.table_tab_widget = QTabWidget()
+        empty_df = pl.DataFrame()
+        page = create_dataframe_tab(empty_df, "v'-v''")
+        self.table_tab_widget.addTab(page, "v'-v''")
+        plot_table_layout.addWidget(self.table_tab_widget, stretch=1)
+
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.addLegend(offset=(0, 1))
+        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
+        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setXRange(100, 200)
+        plot_table_layout.addWidget(self.plot_widget, stretch=2)
+
+        main_layout.addWidget(plot_table_widget, stretch=1)
+
+    def update_tab_name(self):
+        if self.parent_tab_widget is not None:
+            current_index = self.parent_tab_widget.indexOf(self)
+            if current_index != -1:
+                tab_name = f"{self.molecule.name} ({self.state_up.letter}→{self.state_lo.letter})"
+                self.parent_tab_widget.setTabText(current_index, tab_name)
 
     def toggle_band_input_method(self, checked: bool) -> None:
         if checked:
@@ -650,157 +706,93 @@ class CustomTab(QWidget):
             current_bands,
         )
 
-    def open_parameters_dialog(self):
-        dialog = ParametersDialog(self, context_name=self.molecule.name)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.update_sim_objects()
+    def run_simulation(self) -> None:
+        """Run a simulation instance for this specific tab."""
+        start_time: float = time.time()
 
+        print(f"Time to create sim: {time.time() - start_time} s")
+        start_plot_time: float = time.time()
 
-class GUI(QMainWindow):
-    def __init__(self):
-        super().__init__()
+        bands = self.get_current_bands()
+        colors: list[str] = get_colors(bands)
 
-        # NOTE: 25/03/27 - Enabling antialiasing with a line width greater than 1 leads to severe
-        #       performance issues. Setting `useOpenGL=True` doesn't help since antialiasing does
-        #       not work with OpenGL from what I've seen. Relevant topics:
-        #       - https://github.com/pyqtgraph/pyqtgraph/issues/533
-        #       - https://pyqtgraph.narkive.com/aIpWRh9F/is-antialiasing-for-2d-plots-with-opengl-not-supported
-        #
-        # pg.setConfigOptions(antialias=True, useOpenGL=True)
+        self.plot_widget.clear()
 
-        self.setWindowTitle("pyGEONOSIS")
-        self.resize(1600, 800)
-        self.center()
-        self.init_ui()
+        map_functions: dict[str, Callable] = {
+            "Line": plot.plot_line,
+            "Line Info": plot.plot_line_info,
+            "Convolve Separate": plot.plot_conv_sep,
+            "Convolve All": plot.plot_conv_all,
+        }
+        plot_type: str = self.plot_type_combo.currentText()
+        plot_function: Callable | None = map_functions.get(plot_type)
 
-    def center(self) -> None:
-        qr: QRect = self.frameGeometry()
-        qp: QPoint = self.screen().availableGeometry().center()
-        qr.moveCenter(qp)
-        self.move(qr.topLeft())
+        fwhm_selections: dict[str, bool] = {
+            "instrument": self.checkbox_instrument.isChecked(),
+            "doppler": self.checkbox_doppler.isChecked(),
+            "natural": self.checkbox_natural.isChecked(),
+            "collisional": self.checkbox_collisional.isChecked(),
+            "predissociation": self.checkbox_predissociation.isChecked(),
+        }
 
-    def init_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        sim = self.sim
 
-        central_widget: QWidget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout: QVBoxLayout = QVBoxLayout(central_widget)
-
-        tab_panel: QWidget = self.create_tab_panel()
-        main_layout.addWidget(tab_panel)
-
-        global_panel: QWidget = self.create_global_panel()
-        main_layout.addWidget(global_panel)
-
-        plot_panel: QWidget = self.create_plot_panel()
-        main_layout.addWidget(plot_panel, stretch=1)
-
-    def create_tab_panel(self):
-        self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
-
-        for name in ["O2", "NO", "OH"]:
-            self.molecule_tab_widget.addTab(CustomTab(), name)
-
-        return self.molecule_tab_widget
-
-    def create_global_panel(self):
-        global_widget = QWidget()
-        global_layout = QHBoxLayout(global_widget)
-
-        # Resolution.
-        granularity_group: QGroupBox = QGroupBox("Resolution")
-        granularity_layout: QHBoxLayout = QHBoxLayout(granularity_group)
-        self.resolution_spinbox: QSpinBox = QSpinBox()
-        self.resolution_spinbox.setMaximum(10000000)
-        self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
-        granularity_layout.addWidget(self.resolution_spinbox)
-        global_layout.addWidget(granularity_group)
-
-        # Plot type.
-        plot_group: QGroupBox = QGroupBox("Plot Type:")
-        plot_layout: QHBoxLayout = QHBoxLayout(plot_group)
-        self.plot_type_combo: QComboBox = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
-        plot_layout.addWidget(self.plot_type_combo)
-        global_layout.addWidget(plot_group)
-
-        # Run controls.
-        run_group: QGroupBox = QGroupBox("Actions")
-        run_layout: QHBoxLayout = QHBoxLayout(run_group)
-        self.run_button: QPushButton = QPushButton("Run Simulation")
-        self.run_button.clicked.connect(self.add_simulation)
-        run_layout.addWidget(self.run_button)
-        self.open_button: QPushButton = QPushButton("Open File")
-        self.open_button.clicked.connect(self.add_sample)
-        run_layout.addWidget(self.open_button)
-        self.export_button: QPushButton = QPushButton("Export Table")
-        self.export_button.clicked.connect(self.export_current_table)
-        run_layout.addWidget(self.export_button)
-        global_layout.addWidget(run_group)
-
-        return global_widget
-
-    def create_plot_panel(self):
-        plot_widget = QWidget()
-        plot_layout = QHBoxLayout(plot_widget)
-
-        # Table.
-        self.table_tab_widget = QTabWidget()
-        empty_df = pl.DataFrame()
-        page = create_dataframe_tab(empty_df, "v'-v''")
-        self.table_tab_widget.addTab(page, "v'-v''")
-        plot_layout.addWidget(self.table_tab_widget, stretch=1)
-
-        # Plot.
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
-        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
-        plot_layout.addWidget(self.plot_widget, stretch=2)
-
-        return plot_widget
-
-    def add_sample(self) -> None:
-        """Open a CSV file and add a new tab showing the contents."""
-        filename, _ = QFileDialog.getOpenFileName(
-            parent=self,
-            caption="Open File",
-            dir=str(utils.get_data_path("data", "samples")),
-            filter="CSV Files (*.csv);;All Files (*)",
-        )
-        if filename:
-            try:
-                df: pl.DataFrame = pl.read_csv(filename)
-            except ValueError:
-                QMessageBox.critical(self, "Error", "Data is improperly formatted.")
-                return
+        if plot_function is not None:
+            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                plot_function(
+                    self.plot_widget,
+                    sim,
+                    colors,
+                    fwhm_selections,
+                    self.inst_broadening_spinbox.value(),
+                    self.resolution_spinbox.value(),
+                )
+            else:
+                plot_function(self.plot_widget, sim, colors)
         else:
-            return
-
-        display_name: str = Path(filename).name
-
-        new_tab: QWidget = create_dataframe_tab(df, display_name)
-        self.table_tab_widget.addTab(new_tab, display_name)
-
-        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
-        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
-
-        plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
+            QMessageBox.information(
+                self,
+                "Info",
+                f"Plot type '{plot_type}' is not recognized.",
+                QMessageBox.StandardButton.Ok,
+            )
 
         self.plot_widget.autoRange()
+
+        print(f"Time to create plot: {time.time() - start_plot_time} s")
+        start_table_time: float = time.time()
+
+        while self.table_tab_widget.count() > 0:
+            self.table_tab_widget.removeTab(0)
+
+        for i, band in enumerate(bands):
+            df: pl.DataFrame = pl.DataFrame(
+                [
+                    {
+                        "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
+                        "Wavenumber": line.wavenumber,
+                        "Intensity": line.intensity,
+                        "J'": f"{line.j_qn_up:.1f}",
+                        "J''": f"{line.j_qn_lo:.1f}",
+                        "N'": f"{line.n_qn_up:.1f}",
+                        "N''": f"{line.n_qn_lo:.1f}",
+                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
+                    }
+                    for line in sim.bands[i].lines
+                ]
+            )
+
+            tab_name: str = f"{band[0]}-{band[1]}"
+            new_tab: QWidget = create_dataframe_tab(df, tab_name)
+            self.table_tab_widget.addTab(new_tab, tab_name)
+
+        print(f"Time to create table: {time.time() - start_table_time} s")
+        print(f"Total time: {time.time() - start_time} s\n")
 
     def export_current_table(self) -> None:
         """Export the currently displayed table to a CSV file."""
         current_widget: QWidget = self.table_tab_widget.currentWidget()
-
-        # TODO: 25/03/28 - Currently only the currently selected table is grabbed and exported. In
-        #       the future, there should be an option to export any number of tables.
 
         table_view = current_widget.findChild(QTableView)
 
@@ -835,96 +827,134 @@ class GUI(QMainWindow):
             except Exception as e:
                 QMessageBox.critical(self, "Export Error", f"An error occurred: {e}")
 
-    def add_simulation(self) -> None:
-        """Run a simulation instance, then update the plot and table tabs."""
-        start_time: float = time.time()
+    def open_parameters_dialog(self):
+        dialog = ParametersDialog(self, context_name=self.molecule.name)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self.update_sim_objects()
+            self.update_tab_name()
 
-        idx = self.molecule_tab_widget.currentIndex()
-        current_tab: CustomTab = self.molecule_tab_widget.widget(idx)
 
-        print(f"Time to create sim: {time.time() - start_time} s")
-        start_plot_time: float = time.time()
+class GUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-        bands = current_tab.get_current_bands()
-        colors: list[str] = get_colors(bands)
+        self.setWindowTitle("pyGEONOSIS")
+        self.resize(1600, 800)
+        self.center()
+        self.init_ui()
 
-        self.plot_widget.clear()
+    def center(self) -> None:
+        qr: QRect = self.frameGeometry()
+        qp: QPoint = self.screen().availableGeometry().center()
+        qr.moveCenter(qp)
+        self.move(qr.topLeft())
 
-        # Map plot types to functions.
-        map_functions: dict[str, Callable] = {
-            "Line": plot.plot_line,
-            "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
-        }
-        plot_type: str = self.plot_type_combo.currentText()
-        plot_function: Callable | None = map_functions.get(plot_type)
+    def init_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
 
-        # Check which FWHM parameters the user has selected.
-        fwhm_selections: dict[str, bool] = {
-            "instrument": current_tab.checkbox_instrument.isChecked(),
-            "doppler": current_tab.checkbox_doppler.isChecked(),
-            "natural": current_tab.checkbox_natural.isChecked(),
-            "collisional": current_tab.checkbox_collisional.isChecked(),
-            "predissociation": current_tab.checkbox_predissociation.isChecked(),
-        }
+        tab_panel: QWidget = self.create_tab_panel()
+        main_layout.addWidget(tab_panel)
 
-        sim = current_tab.sim
+        self.create_menu_bar()
 
-        if plot_function is not None:
-            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
-                plot_function(
-                    self.plot_widget,
-                    sim,
-                    colors,
-                    fwhm_selections,
-                    current_tab.inst_broadening_spinbox.value(),
-                    self.resolution_spinbox.value(),
-                )
-            else:
-                plot_function(self.plot_widget, sim, colors)
+    def create_tab_panel(self):
+        self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
+
+        molecules_config = [
+            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
+            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
+            ("O2", DEFAULT_MOLECULE, DEFAULT_STATE_UP, DEFAULT_STATE_LO),
+        ]
+
+        for name, molecule, state_up, state_lo in molecules_config:
+            tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
+            tab.molecule = molecule
+            tab.state_up = state_up
+            tab.state_lo = state_lo
+            tab.update_sim_objects()
+
+            self.molecule_tab_widget.addTab(tab, name)
+            tab.update_tab_name()
+
+        self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
+
+        return self.molecule_tab_widget
+
+    def close_tab(self, index):
+        if self.molecule_tab_widget.count() > 1:
+            self.molecule_tab_widget.removeTab(index)
         else:
             QMessageBox.information(
                 self,
-                "Info",
-                f"Plot type '{plot_type}' is not recognized.",
+                "Cannot Close Tab",
+                "At least one tab must remain open.",
                 QMessageBox.StandardButton.Ok,
             )
 
-        self.plot_widget.autoRange()
+    def create_menu_bar(self):
+        """Create a menu bar with global actions."""
+        menubar = self.menuBar()
 
-        print(f"Time to create plot: {time.time() - start_plot_time} s")
-        start_table_time: float = time.time()
+        file_menu = menubar.addMenu("File")
 
-        # Clear previous tabs.
-        while self.table_tab_widget.count() > 0:
-            self.table_tab_widget.removeTab(0)
+        new_tab_action = file_menu.addAction("New Tab")
+        new_tab_action.triggered.connect(self.add_new_tab)
 
-        # Create a new tab for each vibrational band.
-        for i, band in enumerate(bands):
-            df: pl.DataFrame = pl.DataFrame(
-                [
-                    {
-                        "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
-                        "Wavenumber": line.wavenumber,
-                        "Intensity": line.intensity,
-                        "J'": f"{line.j_qn_up:.1f}",
-                        "J''": f"{line.j_qn_lo:.1f}",
-                        "N'": f"{line.n_qn_up:.1f}",
-                        "N''": f"{line.n_qn_lo:.1f}",
-                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
-                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
-                    }
-                    for line in sim.bands[i].lines
-                ]
-            )
+        open_action = file_menu.addAction("Open Sample")
+        open_action.triggered.connect(self.add_sample_to_current_tab)
 
-            tab_name: str = f"{band[0]}-{band[1]}"
-            new_tab: QWidget = create_dataframe_tab(df, tab_name)
-            self.table_tab_widget.addTab(new_tab, tab_name)
+        file_menu.addSeparator()
 
-        print(f"Time to create table: {time.time() - start_table_time} s")
-        print(f"Total time: {time.time() - start_time} s\n")
+        exit_action = file_menu.addAction("Exit")
+        exit_action.triggered.connect(self.close)
+
+    def add_new_tab(self):
+        """Add a new tab with default settings."""
+        tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
+
+        tab.molecule = DEFAULT_MOLECULE
+        tab.state_up = DEFAULT_STATE_UP
+        tab.state_lo = DEFAULT_STATE_LO
+        tab.update_sim_objects()
+
+        tab_count = self.molecule_tab_widget.count()
+        self.molecule_tab_widget.addTab(tab, "New Tab")
+        tab.update_tab_name()
+
+        self.molecule_tab_widget.setCurrentIndex(tab_count)
+
+    def add_sample_to_current_tab(self) -> None:
+        current_tab = self.molecule_tab_widget.currentWidget()
+        if not isinstance(current_tab, CustomTab):
+            return
+
+        filename, _ = QFileDialog.getOpenFileName(
+            parent=self,
+            caption="Open File",
+            dir=str(utils.get_data_path("data", "samples")),
+            filter="CSV Files (*.csv);;All Files (*)",
+        )
+        if filename:
+            try:
+                df: pl.DataFrame = pl.read_csv(filename)
+            except ValueError:
+                QMessageBox.critical(self, "Error", "Data is improperly formatted.")
+                return
+        else:
+            return
+
+        display_name: str = Path(filename).name
+
+        new_table_tab: QWidget = create_dataframe_tab(df, display_name)
+        current_tab.table_tab_widget.addTab(new_table_tab, display_name)
+
+        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
+        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
+
+        plot.plot_sample(current_tab.plot_widget, wavenumbers, intensities, display_name)
+        current_tab.plot_widget.autoRange()
 
 
 class WavenumberAxis(pg.AxisItem):

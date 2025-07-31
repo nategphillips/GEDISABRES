@@ -83,6 +83,25 @@ DEFAULT_BANDS: str = "0-0"
 DEFAULT_PLOTTYPE: str = "Line"
 DEFAULT_SIMTYPE: str = "Absorption"
 
+DEFAULT_MOLECULE: Molecule = Molecule("NO", Atom("N"), Atom("O"))
+DEFAULT_STATE_UP: State = State(
+    DEFAULT_MOLECULE, "B", 2, TermSymbol.SIGMA, reflection_symmetry=ReflectionSymmetry.PLUS
+)
+DEFAULT_STATE_LO: State = State(DEFAULT_MOLECULE, "X", 2, TermSymbol.PI)
+DEFAULT_SIM: Sim = Sim(
+    SimType.ABSORPTION,
+    DEFAULT_MOLECULE,
+    DEFAULT_STATE_UP,
+    DEFAULT_STATE_LO,
+    40,
+    300,
+    300,
+    300,
+    300,
+    101325,
+    [(0, 0)],
+)
+
 
 class MyDoubleSpinBox(QDoubleSpinBox):
     """A custom double spin box.
@@ -260,22 +279,76 @@ def create_dataframe_tab(df: pl.DataFrame, _: str) -> QWidget:
 
 
 class ParametersDialog(QDialog):
-    def __init__(self, parent=None, context_name=""):
-        super().__init__(parent)
+    def __init__(self, tab, context_name=""):
+        super().__init__(tab)
         self.setWindowTitle(f"{context_name} Parameters")
+        # Modal ensures this window must be closed before the main window can be changed.
         self.setModal(True)
-        self.resize(400, 200)
+        self.resize(400, 300)
+
+        self.tab = tab
 
         layout = QFormLayout(self)
 
-        self.param1 = QLineEdit()
-        self.param2 = QComboBox()
-        self.param2.addItems(["Option A", "Option B", "Option C"])
-        self.param3 = QCheckBox("Enable Something")
+        # Molecule params.
+        self.name = QLineEdit()
+        self.atom_1 = QLineEdit()
+        self.atom_2 = QLineEdit()
 
-        layout.addRow("Parameter 1:", self.param1)
-        layout.addRow("Option:", self.param2)
-        layout.addRow("", self.param3)
+        # State params.
+        self.letter_up = QLineEdit()
+        self.letter_lo = QLineEdit()
+        self.spin_multiplicity_up = QLineEdit()
+        self.spin_multiplicity_lo = QLineEdit()
+        self.term_symbol_up = QComboBox()
+        self.term_symbol_lo = QComboBox()
+
+        self.term_symbols = [term_symb.name for term_symb in TermSymbol]
+        self.term_symbol_up.addItems(self.term_symbols)
+        self.term_symbol_lo.addItems(self.term_symbols)
+
+        # Sim params.
+        self.sim_type = QComboBox()
+        self.temp_trn = QLineEdit()
+        self.temp_elc = QLineEdit()
+        self.temp_vib = QLineEdit()
+        self.temp_rot = QLineEdit()
+        self.pressure = QLineEdit()
+
+        self.sim_types = [sim_type.name for sim_type in SimType]
+        self.sim_type.addItems(self.sim_types)
+
+        layout.addRow("Molecule Name:", self.name)
+        layout.addRow("Atom 1:", self.atom_1)
+        layout.addRow("Atom 2:", self.atom_2)
+        layout.addRow("Letter Up:", self.letter_up)
+        layout.addRow("Letter Lo:", self.letter_lo)
+        layout.addRow("Spin Up:", self.spin_multiplicity_up)
+        layout.addRow("Spin Lo:", self.spin_multiplicity_lo)
+        layout.addRow("Term Symbol Up:", self.term_symbol_up)
+        layout.addRow("Term Symbol Lo:", self.term_symbol_lo)
+        layout.addRow("Simulation Type:", self.sim_type)
+        layout.addRow("Trn Temp [K]:", self.temp_trn)
+        layout.addRow("Elc Temp [K]:", self.temp_elc)
+        layout.addRow("Vib Temp [K]:", self.temp_vib)
+        layout.addRow("Rot Temp [K]:", self.temp_rot)
+        layout.addRow("Pressure [Pa]:", self.pressure)
+
+        self.name.setText(tab.molecule.name)
+        self.atom_1.setText(tab.molecule.atom_1.name)
+        self.atom_2.setText(tab.molecule.atom_2.name)
+        self.letter_up.setText(tab.state_up.letter)
+        self.letter_lo.setText(tab.state_lo.letter)
+        self.spin_multiplicity_up.setText(str(tab.state_up.spin_multiplicity))
+        self.spin_multiplicity_lo.setText(str(tab.state_lo.spin_multiplicity))
+        self.term_symbol_up.setCurrentText(tab.state_up.term_symbol.name)
+        self.term_symbol_lo.setCurrentText(tab.state_lo.term_symbol.name)
+        self.sim_type.setCurrentText(tab.sim.sim_type.name)
+        self.temp_trn.setText(str(tab.sim.temp_trn))
+        self.temp_elc.setText(str(tab.sim.temp_elc))
+        self.temp_vib.setText(str(tab.sim.temp_vib))
+        self.temp_rot.setText(str(tab.sim.temp_rot))
+        self.pressure.setText(str(tab.sim.pressure))
 
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -284,12 +357,48 @@ class ParametersDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    def get_values(self):
-        return {
-            "param1": self.param1.text(),
-            "param2": self.param2.currentText(),
-            "param3": self.param3.isChecked(),
-        }
+    def accept(self):
+        # TODO: 25/07/31 - Just create completely new objects each time. This is certainly not the
+        #       most efficient thing to do, but it ensures that everything is updated properly.
+        self.tab.molecule = Molecule(
+            self.name.text(), Atom(self.atom_1.text()), Atom(self.atom_2.text())
+        )
+        self.tab.state_up = State(
+            self.tab.molecule,
+            self.letter_up.text(),
+            int(self.spin_multiplicity_up.text()),
+            TermSymbol[self.term_symbol_up.currentText()],
+        )
+        self.tab.state_lo = State(
+            self.tab.molecule,
+            self.letter_lo.text(),
+            int(self.spin_multiplicity_lo.text()),
+            TermSymbol[self.term_symbol_lo.currentText()],
+        )
+        self.tab.sim = Sim(
+            SimType[self.sim_type.currentText()],
+            self.tab.molecule,
+            self.tab.state_up,
+            self.tab.state_lo,
+            40,
+            float(self.temp_trn.text()),
+            float(self.temp_elc.text()),
+            float(self.temp_vib.text()),
+            float(self.temp_rot.text()),
+            float(self.pressure.text()),
+            [(0, 0)],
+        )
+
+        super().accept()
+
+
+class CustomTab(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.molecule = DEFAULT_MOLECULE
+        self.state_up = DEFAULT_STATE_UP
+        self.state_lo = DEFAULT_STATE_LO
+        self.sim = DEFAULT_SIM
 
 
 class NewGUI(QMainWindow):
@@ -304,14 +413,14 @@ class NewGUI(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
 
+        # Molecule tabs.
         self.context_tabs = QTabWidget(movable=True, tabsClosable=True)
-
         for name in ["O2", "NO", "OH"]:
-            self.context_tabs.addTab(QWidget(), name)
-
+            self.context_tabs.addTab(CustomTab(), name)
         self.context_tabs.currentChanged.connect(self.on_tab_changed)
         main_layout.addWidget(self.context_tabs)
 
+        # Parameters and other options.
         param_panel = QWidget()
         h = QHBoxLayout(param_panel)
         self.btn_params = QPushButton("Parameters")
@@ -328,6 +437,7 @@ class NewGUI(QMainWindow):
 
         main_layout.addWidget(param_panel)
 
+        # Line table and plot..
         bottom = QWidget()
         bottom_h = QHBoxLayout(bottom)
 
@@ -359,11 +469,14 @@ class NewGUI(QMainWindow):
         self.input_j.setPlaceholderText(f"{name}: J")
 
     def show_parameters_dialog(self):
-        current_tab = self.context_tabs.tabText(self.context_tabs.currentIndex())
-        dialog = ParametersDialog(self, context_name=current_tab)
+        idx = self.context_tabs.currentIndex()
+        tab_widget = self.context_tabs.widget(idx)
+        context_name = self.context_tabs.tabText(idx)
+
+        dialog = ParametersDialog(tab_widget, context_name=context_name)
+
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            values = dialog.get_values()
-            print("testing values:", values)
+            pass
 
 
 class GUI(QMainWindow):

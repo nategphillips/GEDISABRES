@@ -437,18 +437,19 @@ class ParametersDialog(QDialog):
             ReflectionSymmetry[self.reflection_symmetry_lo.currentText()],
             ConstantsType[self.constants_type_lo.currentText()],
         )
+
         self.tab.sim = Sim(
             SimType[self.sim_type.currentText()],
             self.tab.molecule,
             self.tab.state_up,
             self.tab.state_lo,
-            40,
+            self.tab.maxj_spinbox.value(),
             float(self.temp_trn.text()),
             float(self.temp_elc.text()),
             float(self.temp_vib.text()),
             float(self.temp_rot.text()),
             float(self.pressure.text()),
-            [(0, 0)],
+            self.tab.get_current_bands(),
         )
 
         super().accept()
@@ -473,9 +474,6 @@ class CustomTab(QWidget):
         group_bands: QGroupBox = QGroupBox("Bands")
         bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
 
-        # TODO: 25/04/09 - Changing the mode from specific bands to band ranges resizes the UI,
-        #       which is really annoying. Fix this in the future.
-
         band_selection_layout: QHBoxLayout = QHBoxLayout()
         self.radio_specific_bands: QRadioButton = QRadioButton("Specific Bands")
         self.radio_specific_bands.setChecked(True)
@@ -485,6 +483,8 @@ class CustomTab(QWidget):
         bands_layout.addLayout(band_selection_layout)
 
         self.radio_specific_bands.toggled.connect(self.toggle_band_input_method)
+        self.radio_specific_bands.toggled.connect(self.update_sim_objects)
+        self.radio_band_ranges.toggled.connect(self.update_sim_objects)
 
         # Specific band input.
         self.specific_bands_container: QWidget = QWidget()
@@ -494,6 +494,7 @@ class CustomTab(QWidget):
         band_layout: QHBoxLayout = QHBoxLayout()
         band_label: QLabel = QLabel("Bands:")
         self.band_line_edit: QLineEdit = QLineEdit(DEFAULT_BANDS)
+        self.band_line_edit.textChanged.connect(self.update_sim_objects)
         band_layout.addWidget(band_label)
         band_layout.addWidget(self.band_line_edit)
         specific_bands_layout.addLayout(band_layout)
@@ -507,21 +508,25 @@ class CustomTab(QWidget):
         self.v_up_min_spinbox: QSpinBox = QSpinBox()
         self.v_up_min_spinbox.setRange(0, 99)
         self.v_up_min_spinbox.setValue(0)
+        self.v_up_min_spinbox.valueChanged.connect(self.update_sim_objects)
 
         v_up_max_label: QLabel = QLabel("v' max:")
         self.v_up_max_spinbox: QSpinBox = QSpinBox()
         self.v_up_max_spinbox.setRange(0, 99)
         self.v_up_max_spinbox.setValue(10)
+        self.v_up_max_spinbox.valueChanged.connect(self.update_sim_objects)
 
         v_lo_min_label: QLabel = QLabel("v'' min:")
         self.v_lo_min_spinbox: QSpinBox = QSpinBox()
         self.v_lo_min_spinbox.setRange(0, 99)
         self.v_lo_min_spinbox.setValue(5)
+        self.v_lo_min_spinbox.valueChanged.connect(self.update_sim_objects)
 
         v_lo_max_label: QLabel = QLabel("v'' max:")
         self.v_lo_max_spinbox: QSpinBox = QSpinBox()
         self.v_lo_max_spinbox.setRange(0, 99)
         self.v_lo_max_spinbox.setValue(5)
+        self.v_lo_max_spinbox.valueChanged.connect(self.update_sim_objects)
 
         band_ranges_layout.addWidget(v_up_min_label, 0, 0)
         band_ranges_layout.addWidget(self.v_up_min_spinbox, 0, 1)
@@ -546,6 +551,7 @@ class CustomTab(QWidget):
         self.maxj_spinbox: QSpinBox = QSpinBox()
         self.maxj_spinbox.setMaximum(10000)
         self.maxj_spinbox.setValue(DEFAULT_LINES)
+        self.maxj_spinbox.valueChanged.connect(self.update_sim_objects)
         maxj_layout.addWidget(self.maxj_spinbox)
         layout.addWidget(group_maxj)
 
@@ -553,6 +559,7 @@ class CustomTab(QWidget):
         broadening_layout: QHBoxLayout = QHBoxLayout(group_broadening)
         self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broadening_spinbox.valueChanged.connect(self.update_sim_objects)
         broadening_layout.addWidget(self.inst_broadening_spinbox)
 
         checkbox_layout: QHBoxLayout = QHBoxLayout()
@@ -570,6 +577,7 @@ class CustomTab(QWidget):
             self.checkbox_predissociation,
         ]:
             cb.setChecked(True)
+            cb.toggled.connect(self.update_sim_objects)
             checkbox_layout.addWidget(cb)
 
         broadening_layout.addLayout(checkbox_layout)
@@ -583,10 +591,69 @@ class CustomTab(QWidget):
             self.specific_bands_container.hide()
             self.band_ranges_container.show()
 
+    def get_current_bands(self) -> list[tuple[int, int]]:
+        if self.radio_specific_bands.isChecked():
+            return self.parse_specific_bands()
+        return self.generate_band_ranges()
+
+    def parse_specific_bands(self) -> list[tuple[int, int]]:
+        band_ranges_str: str = self.band_line_edit.text()
+        bands: list[tuple[int, int]] = []
+
+        for range_str in band_ranges_str.split(","):
+            range_str = range_str.strip()
+            if "-" in range_str:
+                try:
+                    v_up, v_lo = map(int, range_str.split("-"))
+                    bands.append((v_up, v_lo))
+                except ValueError:
+                    continue
+
+        return bands if bands else [(0, 0)]
+
+    def generate_band_ranges(self) -> list[tuple[int, int]]:
+        v_up_min: int = self.v_up_min_spinbox.value()
+        v_up_max: int = self.v_up_max_spinbox.value()
+        v_lo_min: int = self.v_lo_min_spinbox.value()
+        v_lo_max: int = self.v_lo_max_spinbox.value()
+
+        if v_up_min > v_up_max or v_lo_min > v_lo_max:
+            return [(0, 0)]
+
+        if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
+            return [(v_up_min, v_lo_min)]
+        if v_up_min == v_up_max:
+            return [(v_up_min, v_lo) for v_lo in range(v_lo_min, v_lo_max + 1)]
+        if v_lo_min == v_lo_max:
+            return [(v_up, v_lo_min) for v_up in range(v_up_min, v_up_max + 1)]
+        return [
+            (v_up, v_lo)
+            for v_up in range(v_up_min, v_up_max + 1)
+            for v_lo in range(v_lo_min, v_lo_max + 1)
+        ]
+
+    def update_sim_objects(self) -> None:
+        current_bands = self.get_current_bands()
+
+        # Only update the values that are controlled by the tab specifically.
+        self.sim = Sim(
+            self.sim.sim_type,
+            self.molecule,
+            self.state_up,
+            self.state_lo,
+            self.maxj_spinbox.value(),
+            self.sim.temp_trn,
+            self.sim.temp_elc,
+            self.sim.temp_vib,
+            self.sim.temp_rot,
+            self.sim.pressure,
+            current_bands,
+        )
+
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            pass
+            self.update_sim_objects()
 
 
 class GUI(QMainWindow):
@@ -772,53 +839,13 @@ class GUI(QMainWindow):
         """Run a simulation instance, then update the plot and table tabs."""
         start_time: float = time.time()
 
-        # TODO: 25/04/14 - Split this method up. Process the temperature mode, parse the bands,
-        #       create the simulation, plot the data, and finally make a new tab in the table.
         idx = self.molecule_tab_widget.currentIndex()
         current_tab: CustomTab = self.molecule_tab_widget.widget(idx)
-
-        if current_tab.radio_specific_bands.isChecked():
-            bands: list[tuple[int, int]] = self.parse_band_ranges()
-            if not bands:
-                QMessageBox.warning(
-                    self,
-                    "Warning",
-                    "No valid band ranges specified. Please check your input.",
-                    QMessageBox.StandardButton.Ok,
-                )
-                return
-        else:
-            v_up_min: int = current_tab.v_up_min_spinbox.value()
-            v_up_max: int = current_tab.v_up_max_spinbox.value()
-            v_lo_min: int = current_tab.v_lo_min_spinbox.value()
-            v_lo_max: int = current_tab.v_lo_max_spinbox.value()
-
-            if v_up_min > v_up_max or v_lo_min > v_lo_max:
-                QMessageBox.warning(
-                    self,
-                    "Warning",
-                    "Invalid band range: min value cannot be greater than max value.",
-                    QMessageBox.StandardButton.Ok,
-                )
-                return
-
-            # Generate band combinations based on the given ranges.
-            if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
-                bands = [(v_up_min, v_lo_min)]
-            elif v_up_min == v_up_max:
-                bands = [(v_up_min, v_lo) for v_lo in range(v_lo_min, v_lo_max + 1)]
-            elif v_lo_min == v_lo_max:
-                bands = [(v_up, v_lo_min) for v_up in range(v_up_min, v_up_max + 1)]
-            else:
-                bands = [
-                    (v_up, v_lo)
-                    for v_up in range(v_up_min, v_up_max + 1)
-                    for v_lo in range(v_lo_min, v_lo_max + 1)
-                ]
 
         print(f"Time to create sim: {time.time() - start_time} s")
         start_plot_time: float = time.time()
 
+        bands = current_tab.get_current_bands()
         colors: list[str] = get_colors(bands)
 
         self.plot_widget.clear()
@@ -898,50 +925,6 @@ class GUI(QMainWindow):
 
         print(f"Time to create table: {time.time() - start_table_time} s")
         print(f"Total time: {time.time() - start_time} s\n")
-
-    def parse_band_ranges(self) -> list[tuple[int, int]]:
-        """Parse comma-separated band ranges from user input.
-
-        Returns:
-            list[tuple[int, int]]: A list of vibrational bands, e.g. [(1, 2), (3, 4)].
-        """
-        idx = self.molecule_tab_widget.currentIndex()
-        current_tab: CustomTab = self.molecule_tab_widget.widget(idx)
-
-        band_ranges_str: str = current_tab.band_line_edit.text()
-        bands: list[tuple[int, int]] = []
-
-        for range_str in band_ranges_str.split(","):
-            if "-" in range_str.strip():
-                try:
-                    v_up, v_lo = map(int, range_str.split("-"))
-                    bands.append((v_up, v_lo))
-                except ValueError:
-                    QMessageBox.information(
-                        self,
-                        "Info",
-                        f"Invalid band range format: {range_str}",
-                        QMessageBox.StandardButton.Ok,
-                    )
-            else:
-                QMessageBox.information(
-                    self,
-                    "Info",
-                    f"Invalid band range format: {range_str}",
-                    QMessageBox.StandardButton.Ok,
-                )
-
-        return bands
-
-    def show_parameters_dialog(self):
-        idx = self.molecule_tab_widget.currentIndex()
-        tab_widget = self.molecule_tab_widget.widget(idx)
-        context_name = self.molecule_tab_widget.tabText(idx)
-
-        dialog = ParametersDialog(tab_widget, context_name=context_name)
-
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            pass
 
 
 class WavenumberAxis(pg.AxisItem):

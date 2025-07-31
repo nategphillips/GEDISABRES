@@ -73,7 +73,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
 DEFAULT_LINES: int = 40
-DEFAULT_GRANULARITY: int = int(1e4)
+DEFAULT_RESOLUTION: int = int(1e4)
 
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
 DEFAULT_PRESSURE: float = 101325.0  # [Pa]
@@ -83,11 +83,25 @@ DEFAULT_BANDS: str = "0-0"
 DEFAULT_PLOTTYPE: str = "Line"
 DEFAULT_SIMTYPE: str = "Absorption"
 
-DEFAULT_MOLECULE: Molecule = Molecule("NO", Atom("N"), Atom("O"))
+DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom("O"), Atom("O"))
 DEFAULT_STATE_UP: State = State(
-    DEFAULT_MOLECULE, "B", 2, TermSymbol.SIGMA, reflection_symmetry=ReflectionSymmetry.PLUS
+    DEFAULT_MOLECULE,
+    "B",
+    3,
+    TermSymbol.SIGMA,
+    InversionSymmetry.UNGERADE,
+    ReflectionSymmetry.MINUS,
+    ConstantsType.PERLEVEL,
 )
-DEFAULT_STATE_LO: State = State(DEFAULT_MOLECULE, "X", 2, TermSymbol.PI)
+DEFAULT_STATE_LO: State = State(
+    DEFAULT_MOLECULE,
+    "X",
+    3,
+    TermSymbol.SIGMA,
+    InversionSymmetry.GERADE,
+    ReflectionSymmetry.MINUS,
+    ConstantsType.PERLEVEL,
+)
 DEFAULT_SIM: Sim = Sim(
     SimType.ABSORPTION,
     DEFAULT_MOLECULE,
@@ -282,58 +296,101 @@ class ParametersDialog(QDialog):
     def __init__(self, tab, context_name=""):
         super().__init__(tab)
         self.setWindowTitle(f"{context_name} Parameters")
-        # Modal ensures this window must be closed before the main window can be changed.
+        # Prevent modification of the main window while the dialog box is open.
         self.setModal(True)
-        self.resize(400, 300)
-
+        self.resize(600, 400)
         self.tab = tab
 
-        layout = QFormLayout(self)
-
-        # Molecule params.
         self.name = QLineEdit()
         self.atom_1 = QLineEdit()
         self.atom_2 = QLineEdit()
 
-        # State params.
+        molecule_form = QFormLayout()
+        molecule_form.addRow("Molecule Name:", self.name)
+        molecule_form.addRow("Atom 1:", self.atom_1)
+        molecule_form.addRow("Atom 2:", self.atom_2)
+
         self.letter_up = QLineEdit()
-        self.letter_lo = QLineEdit()
         self.spin_multiplicity_up = QLineEdit()
-        self.spin_multiplicity_lo = QLineEdit()
         self.term_symbol_up = QComboBox()
+        self.inversion_symmetry_up = QComboBox()
+        self.reflection_symmetry_up = QComboBox()
+        self.constants_type_up = QComboBox()
+
+        term_symbols = [t.name for t in TermSymbol]
+        inv_syms = [i.name for i in InversionSymmetry]
+        ref_syms = [r.name for r in ReflectionSymmetry]
+        const_types = [c.name for c in ConstantsType]
+
+        self.term_symbol_up.addItems(term_symbols)
+        self.inversion_symmetry_up.addItems(inv_syms)
+        self.reflection_symmetry_up.addItems(ref_syms)
+        self.constants_type_up.addItems(const_types)
+
+        state_up_form = QFormLayout()
+        state_up_form.addRow(QLabel("<b>Upper State</b>"))
+        state_up_form.addRow("Letter:", self.letter_up)
+        state_up_form.addRow("Spin Mult:", self.spin_multiplicity_up)
+        state_up_form.addRow("Term Symbol:", self.term_symbol_up)
+        state_up_form.addRow("Inversion:", self.inversion_symmetry_up)
+        state_up_form.addRow("Reflection:", self.reflection_symmetry_up)
+        state_up_form.addRow("Constants:", self.constants_type_up)
+
+        self.letter_lo = QLineEdit()
+        self.spin_multiplicity_lo = QLineEdit()
         self.term_symbol_lo = QComboBox()
+        self.inversion_symmetry_lo = QComboBox()
+        self.reflection_symmetry_lo = QComboBox()
+        self.constants_type_lo = QComboBox()
 
-        self.term_symbols = [term_symb.name for term_symb in TermSymbol]
-        self.term_symbol_up.addItems(self.term_symbols)
-        self.term_symbol_lo.addItems(self.term_symbols)
+        self.term_symbol_lo.addItems(term_symbols)
+        self.inversion_symmetry_lo.addItems(inv_syms)
+        self.reflection_symmetry_lo.addItems(ref_syms)
+        self.constants_type_lo.addItems(const_types)
 
-        # Sim params.
+        state_lo_form = QFormLayout()
+        state_lo_form.addRow(QLabel("<b>Lower State</b>"))
+        state_lo_form.addRow("Letter:", self.letter_lo)
+        state_lo_form.addRow("Spin Mult:", self.spin_multiplicity_lo)
+        state_lo_form.addRow("Term Symbol:", self.term_symbol_lo)
+        state_lo_form.addRow("Inversion:", self.inversion_symmetry_lo)
+        state_lo_form.addRow("Reflection:", self.reflection_symmetry_lo)
+        state_lo_form.addRow("Constants:", self.constants_type_lo)
+
         self.sim_type = QComboBox()
+        self.sim_type.addItems([s.name for s in SimType])
         self.temp_trn = QLineEdit()
         self.temp_elc = QLineEdit()
         self.temp_vib = QLineEdit()
         self.temp_rot = QLineEdit()
         self.pressure = QLineEdit()
 
-        self.sim_types = [sim_type.name for sim_type in SimType]
-        self.sim_type.addItems(self.sim_types)
+        sim_form = QFormLayout()
+        sim_form.addRow(QLabel("<b>Simulation</b>"))
+        sim_form.addRow("Type:", self.sim_type)
+        sim_form.addRow("T_trn [K]:", self.temp_trn)
+        sim_form.addRow("T_elc [K]:", self.temp_elc)
+        sim_form.addRow("T_vib [K]:", self.temp_vib)
+        sim_form.addRow("T_rot [K]:", self.temp_rot)
+        sim_form.addRow("Pressure [Pa]:", self.pressure)
 
-        layout.addRow("Molecule Name:", self.name)
-        layout.addRow("Atom 1:", self.atom_1)
-        layout.addRow("Atom 2:", self.atom_2)
-        layout.addRow("Letter Up:", self.letter_up)
-        layout.addRow("Letter Lo:", self.letter_lo)
-        layout.addRow("Spin Up:", self.spin_multiplicity_up)
-        layout.addRow("Spin Lo:", self.spin_multiplicity_lo)
-        layout.addRow("Term Symbol Up:", self.term_symbol_up)
-        layout.addRow("Term Symbol Lo:", self.term_symbol_lo)
-        layout.addRow("Simulation Type:", self.sim_type)
-        layout.addRow("Trn Temp [K]:", self.temp_trn)
-        layout.addRow("Elc Temp [K]:", self.temp_elc)
-        layout.addRow("Vib Temp [K]:", self.temp_vib)
-        layout.addRow("Rot Temp [K]:", self.temp_rot)
-        layout.addRow("Pressure [Pa]:", self.pressure)
+        main_layout = QVBoxLayout(self)
+        main_layout.addLayout(molecule_form)
 
+        columns = QHBoxLayout()
+        columns.addLayout(state_up_form)
+        columns.addLayout(state_lo_form)
+        columns.addLayout(sim_form)
+        main_layout.addLayout(columns)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        main_layout.addWidget(buttons)
+
+        # Set values from the parent tab.
         self.name.setText(tab.molecule.name)
         self.atom_1.setText(tab.molecule.atom_1.name)
         self.atom_2.setText(tab.molecule.atom_2.name)
@@ -341,6 +398,12 @@ class ParametersDialog(QDialog):
         self.letter_lo.setText(tab.state_lo.letter)
         self.spin_multiplicity_up.setText(str(tab.state_up.spin_multiplicity))
         self.spin_multiplicity_lo.setText(str(tab.state_lo.spin_multiplicity))
+        self.inversion_symmetry_up.setCurrentText(tab.state_up.inversion_symmetry.name)
+        self.inversion_symmetry_lo.setCurrentText(tab.state_lo.inversion_symmetry.name)
+        self.reflection_symmetry_up.setCurrentText(tab.state_up.reflection_symmetry.name)
+        self.reflection_symmetry_lo.setCurrentText(tab.state_lo.reflection_symmetry.name)
+        self.constants_type_up.setCurrentText(tab.state_up.constants_type.name)
+        self.constants_type_lo.setCurrentText(tab.state_lo.constants_type.name)
         self.term_symbol_up.setCurrentText(tab.state_up.term_symbol.name)
         self.term_symbol_lo.setCurrentText(tab.state_lo.term_symbol.name)
         self.sim_type.setCurrentText(tab.sim.sim_type.name)
@@ -349,13 +412,6 @@ class ParametersDialog(QDialog):
         self.temp_vib.setText(str(tab.sim.temp_vib))
         self.temp_rot.setText(str(tab.sim.temp_rot))
         self.pressure.setText(str(tab.sim.pressure))
-
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
 
     def accept(self):
         # TODO: 25/07/31 - Just create completely new objects each time. This is certainly not the
@@ -368,12 +424,18 @@ class ParametersDialog(QDialog):
             self.letter_up.text(),
             int(self.spin_multiplicity_up.text()),
             TermSymbol[self.term_symbol_up.currentText()],
+            InversionSymmetry[self.inversion_symmetry_up.currentText()],
+            ReflectionSymmetry[self.reflection_symmetry_up.currentText()],
+            ConstantsType[self.constants_type_up.currentText()],
         )
         self.tab.state_lo = State(
             self.tab.molecule,
             self.letter_lo.text(),
             int(self.spin_multiplicity_lo.text()),
             TermSymbol[self.term_symbol_lo.currentText()],
+            InversionSymmetry[self.inversion_symmetry_lo.currentText()],
+            ReflectionSymmetry[self.reflection_symmetry_lo.currentText()],
+            ConstantsType[self.constants_type_lo.currentText()],
         )
         self.tab.sim = Sim(
             SimType[self.sim_type.currentText()],
@@ -395,143 +457,17 @@ class ParametersDialog(QDialog):
 class CustomTab(QWidget):
     def __init__(self):
         super().__init__()
+
         self.molecule = DEFAULT_MOLECULE
         self.state_up = DEFAULT_STATE_UP
         self.state_lo = DEFAULT_STATE_LO
         self.sim = DEFAULT_SIM
 
+        layout = QHBoxLayout(self)
 
-class NewGUI(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("pyGEONOSIS")
-        self.resize(1600, 800)
-        self.init_ui()
-
-    def init_ui(self):
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-
-        # Molecule tabs.
-        self.context_tabs = QTabWidget(movable=True, tabsClosable=True)
-        for name in ["O2", "NO", "OH"]:
-            self.context_tabs.addTab(CustomTab(), name)
-        self.context_tabs.currentChanged.connect(self.on_tab_changed)
-        main_layout.addWidget(self.context_tabs)
-
-        # Parameters and other options.
-        param_panel = QWidget()
-        h = QHBoxLayout(param_panel)
         self.btn_params = QPushButton("Parameters")
-        self.btn_params.clicked.connect(self.show_parameters_dialog)
-        self.input_bands = QLineEdit()
-        self.input_bands.setPlaceholderText("Bands")
-        self.input_broad = QLineEdit()
-        self.input_broad.setPlaceholderText("Broadening")
-        self.input_j = QLineEdit()
-        self.input_j.setPlaceholderText("J")
-
-        for w in (self.btn_params, self.input_bands, self.input_broad, self.input_j):
-            h.addWidget(w)
-
-        main_layout.addWidget(param_panel)
-
-        # Line table and plot..
-        bottom = QWidget()
-        bottom_h = QHBoxLayout(bottom)
-
-        self.tab_widget = QTabWidget()
-        empty_df = pl.DataFrame()
-        page = create_dataframe_tab(empty_df, "v'-v''")
-        self.tab_widget.addTab(page, "v'-v''")
-
-        bottom_h.addWidget(self.tab_widget)
-
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
-        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
-        bottom_h.addWidget(self.plot_widget)
-
-        main_layout.addWidget(bottom)
-
-        self.on_tab_changed(0)
-
-    def on_tab_changed(self, idx: int):
-        name = self.context_tabs.tabText(idx)
-        self.input_bands.setPlaceholderText(f"{name}: Bands")
-        self.input_broad.setPlaceholderText(f"{name}: Broadening")
-        self.input_j.setPlaceholderText(f"{name}: J")
-
-    def show_parameters_dialog(self):
-        idx = self.context_tabs.currentIndex()
-        tab_widget = self.context_tabs.widget(idx)
-        context_name = self.context_tabs.tabText(idx)
-
-        dialog = ParametersDialog(tab_widget, context_name=context_name)
-
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            pass
-
-
-class GUI(QMainWindow):
-    """The GUI implemented with PySide6."""
-
-    def __init__(self) -> None:
-        """Initialize class variables."""
-        super().__init__()
-
-        pg.setConfigOption("background", (30, 30, 30))
-        pg.setConfigOption("foreground", "w")
-
-        # NOTE: 25/03/27 - Enabling antialiasing with a line width greater than 1 leads to severe
-        #       performance issues. Setting `useOpenGL=True` doesn't help since antialiasing does
-        #       not work with OpenGL from what I've seen. Relevant topics:
-        #       - https://github.com/pyqtgraph/pyqtgraph/issues/533
-        #       - https://pyqtgraph.narkive.com/aIpWRh9F/is-antialiasing-for-2d-plots-with-opengl-not-supported
-        #
-        # pg.setConfigOptions(antialias=True, useOpenGL=True)
-
-        self.setWindowTitle("pyGEONOSIS")
-        self.resize(1600, 800)
-        self.center()
-        self.init_ui()
-
-    def center(self) -> None:
-        """Center the window on the screen."""
-        qr: QRect = self.frameGeometry()
-        qp: QPoint = self.screen().availableGeometry().center()
-        qr.moveCenter(qp)
-        self.move(qr.topLeft())
-
-    def init_ui(self) -> None:
-        """Initialize the user interface."""
-        central_widget: QWidget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout: QVBoxLayout = QVBoxLayout(central_widget)
-
-        top_panel: QWidget = self.create_top_panel()
-        main_layout.addWidget(top_panel)
-
-        main_panel: QWidget = self.create_main_panel()
-        main_layout.addWidget(main_panel, stretch=1)
-
-        bottom_panel: QWidget = self.create_bottom_panel()
-        main_layout.addWidget(bottom_panel)
-
-    def create_top_panel(self) -> QWidget:  # noqa: PLR0915
-        """Create the top panel with band ranges, broadening, granularity, and run controls.
-
-        Returns:
-            QWidget: The top panel widget.
-        """
-        top_widget: QWidget = QWidget()
-        layout: QHBoxLayout = QHBoxLayout(top_widget)
+        self.btn_params.clicked.connect(self.open_parameters_dialog)
+        layout.addWidget(self.btn_params)
 
         # Specific bands or band range inputs.
         group_bands: QGroupBox = QGroupBox("Bands")
@@ -604,41 +540,6 @@ class GUI(QMainWindow):
 
         layout.addWidget(group_bands)
 
-        # Broadening inputs.
-        group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
-        broadening_layout: QHBoxLayout = QHBoxLayout(group_broadening)
-        self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        broadening_layout.addWidget(self.inst_broadening_spinbox)
-
-        checkbox_layout: QHBoxLayout = QHBoxLayout()
-        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument FWHM")
-        self.checkbox_instrument.setChecked(True)
-        self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
-        self.checkbox_doppler.setChecked(True)
-        self.checkbox_natural: QCheckBox = QCheckBox("Natural")
-        self.checkbox_natural.setChecked(True)
-        self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
-        self.checkbox_collisional.setChecked(True)
-        self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
-        self.checkbox_predissociation.setChecked(True)
-        checkbox_layout.addWidget(self.checkbox_instrument)
-        checkbox_layout.addWidget(self.checkbox_doppler)
-        checkbox_layout.addWidget(self.checkbox_natural)
-        checkbox_layout.addWidget(self.checkbox_collisional)
-        checkbox_layout.addWidget(self.checkbox_predissociation)
-        broadening_layout.addLayout(checkbox_layout)
-        layout.addWidget(group_broadening)
-
-        # Granularity input.
-        group_granularity: QGroupBox = QGroupBox("Granularity")
-        granularity_layout: QHBoxLayout = QHBoxLayout(group_granularity)
-        self.granularity_spinbox: QSpinBox = QSpinBox()
-        self.granularity_spinbox.setMaximum(10000000)
-        self.granularity_spinbox.setValue(DEFAULT_GRANULARITY)
-        granularity_layout.addWidget(self.granularity_spinbox)
-        layout.addWidget(group_granularity)
-
         # Rotational line input.
         group_maxj: QGroupBox = QGroupBox("Max J'")
         maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
@@ -648,9 +549,119 @@ class GUI(QMainWindow):
         maxj_layout.addWidget(self.maxj_spinbox)
         layout.addWidget(group_maxj)
 
+        group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
+        broadening_layout: QHBoxLayout = QHBoxLayout(group_broadening)
+        self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
+        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        broadening_layout.addWidget(self.inst_broadening_spinbox)
+
+        checkbox_layout: QHBoxLayout = QHBoxLayout()
+        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument FWHM")
+        self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
+        self.checkbox_natural: QCheckBox = QCheckBox("Natural")
+        self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
+        self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
+
+        for cb in [
+            self.checkbox_instrument,
+            self.checkbox_doppler,
+            self.checkbox_natural,
+            self.checkbox_collisional,
+            self.checkbox_predissociation,
+        ]:
+            cb.setChecked(True)
+            checkbox_layout.addWidget(cb)
+
+        broadening_layout.addLayout(checkbox_layout)
+        layout.addWidget(group_broadening)
+
+    def toggle_band_input_method(self, checked: bool) -> None:
+        if checked:
+            self.specific_bands_container.show()
+            self.band_ranges_container.hide()
+        else:
+            self.specific_bands_container.hide()
+            self.band_ranges_container.show()
+
+    def open_parameters_dialog(self):
+        dialog = ParametersDialog(self, context_name=self.molecule.name)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            pass
+
+
+class GUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        # NOTE: 25/03/27 - Enabling antialiasing with a line width greater than 1 leads to severe
+        #       performance issues. Setting `useOpenGL=True` doesn't help since antialiasing does
+        #       not work with OpenGL from what I've seen. Relevant topics:
+        #       - https://github.com/pyqtgraph/pyqtgraph/issues/533
+        #       - https://pyqtgraph.narkive.com/aIpWRh9F/is-antialiasing-for-2d-plots-with-opengl-not-supported
+        #
+        # pg.setConfigOptions(antialias=True, useOpenGL=True)
+
+        self.setWindowTitle("pyGEONOSIS")
+        self.resize(1600, 800)
+        self.center()
+        self.init_ui()
+
+    def center(self) -> None:
+        qr: QRect = self.frameGeometry()
+        qp: QPoint = self.screen().availableGeometry().center()
+        qr.moveCenter(qp)
+        self.move(qr.topLeft())
+
+    def init_ui(self):
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        central_widget: QWidget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout: QVBoxLayout = QVBoxLayout(central_widget)
+
+        tab_panel: QWidget = self.create_tab_panel()
+        main_layout.addWidget(tab_panel)
+
+        global_panel: QWidget = self.create_global_panel()
+        main_layout.addWidget(global_panel)
+
+        plot_panel: QWidget = self.create_plot_panel()
+        main_layout.addWidget(plot_panel, stretch=1)
+
+    def create_tab_panel(self):
+        self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
+
+        for name in ["O2", "NO", "OH"]:
+            self.molecule_tab_widget.addTab(CustomTab(), name)
+
+        return self.molecule_tab_widget
+
+    def create_global_panel(self):
+        global_widget = QWidget()
+        global_layout = QHBoxLayout(global_widget)
+
+        # Resolution.
+        granularity_group: QGroupBox = QGroupBox("Resolution")
+        granularity_layout: QHBoxLayout = QHBoxLayout(granularity_group)
+        self.resolution_spinbox: QSpinBox = QSpinBox()
+        self.resolution_spinbox.setMaximum(10000000)
+        self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
+        granularity_layout.addWidget(self.resolution_spinbox)
+        global_layout.addWidget(granularity_group)
+
+        # Plot type.
+        plot_group: QGroupBox = QGroupBox("Plot Type:")
+        plot_layout: QHBoxLayout = QHBoxLayout(plot_group)
+        self.plot_type_combo: QComboBox = QComboBox()
+        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        plot_layout.addWidget(self.plot_type_combo)
+        global_layout.addWidget(plot_group)
+
         # Run controls.
-        group_run: QGroupBox = QGroupBox("Actions")
-        run_layout: QHBoxLayout = QHBoxLayout(group_run)
+        run_group: QGroupBox = QGroupBox("Actions")
+        run_layout: QHBoxLayout = QHBoxLayout(run_group)
         self.run_button: QPushButton = QPushButton("Run Simulation")
         self.run_button.clicked.connect(self.add_simulation)
         run_layout.addWidget(self.run_button)
@@ -660,146 +671,33 @@ class GUI(QMainWindow):
         self.export_button: QPushButton = QPushButton("Export Table")
         self.export_button.clicked.connect(self.export_current_table)
         run_layout.addWidget(self.export_button)
-        layout.addWidget(group_run)
+        global_layout.addWidget(run_group)
 
-        return top_widget
+        return global_widget
 
-    def toggle_band_input_method(self, checked: bool) -> None:
-        """Toggle between band input methods based on radio button selection.
+    def create_plot_panel(self):
+        plot_widget = QWidget()
+        plot_layout = QHBoxLayout(plot_widget)
 
-        Args:
-            checked (bool): True if specific bands radio button is checked
-        """
-        if checked:
-            self.specific_bands_container.show()
-            self.band_ranges_container.hide()
-        else:
-            self.specific_bands_container.hide()
-            self.band_ranges_container.show()
+        # Table.
+        self.table_tab_widget = QTabWidget()
+        empty_df = pl.DataFrame()
+        page = create_dataframe_tab(empty_df, "v'-v''")
+        self.table_tab_widget.addTab(page, "v'-v''")
+        plot_layout.addWidget(self.table_tab_widget, stretch=1)
 
-    def create_main_panel(self) -> QWidget:
-        """Create the main panel with table tabs on the left and a plot on the right."""
-        main_widget: QWidget = QWidget()
-        layout: QHBoxLayout = QHBoxLayout(main_widget)
-
-        # Tabs containing tables.
-        self.tab_widget: QTabWidget = QTabWidget()
-        empty_df: pl.DataFrame = pl.DataFrame()
-        empty_tab: QWidget = create_dataframe_tab(empty_df, "v'-v''")
-        self.tab_widget.addTab(empty_tab, "v'-v''")
-        layout.addWidget(self.tab_widget, stretch=1)
-
-        # Plot area.
-        self.plot_widget: pg.PlotWidget = pg.PlotWidget()
-
+        # Plot.
+        self.plot_widget = pg.PlotWidget()
         self.plot_widget.addLegend(offset=(0, 1))
         self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm<sup>-1</sup>]")
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-
         self.plot_widget.setXRange(100, 200)
+        plot_layout.addWidget(self.plot_widget, stretch=2)
 
-        layout.addWidget(self.plot_widget, stretch=2)
-        self.legend = self.plot_widget.addLegend()
-
-        return main_widget
-
-    def create_bottom_panel(self) -> QWidget:  # noqa: PLR0915
-        """Create the bottom panel with temperature, pressure, and combo selections.
-
-        Returns:
-            QWidget: The bottom panel widget.
-        """
-        bottom_widget: QWidget = QWidget()
-        layout: QHBoxLayout = QHBoxLayout(bottom_widget)
-
-        # Temperature and pressure inputs.
-        entries_widget: QWidget = QWidget()
-        entries_layout: QGridLayout = QGridLayout(entries_widget)
-
-        # Equilibrium temperature input.
-        self.temp_label: QLabel = QLabel("Temperature [K]:")
-        self.temp_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.temp_spinbox.setValue(DEFAULT_TEMPERATURE)
-        entries_layout.addWidget(self.temp_label, 0, 0)
-        entries_layout.addWidget(self.temp_spinbox, 0, 1)
-
-        # Nonequilibrium temperature input.
-        self.temp_trn_label: QLabel = QLabel("Translational Temp. [K]:")
-        self.temp_trn_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.temp_trn_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_elc_label: QLabel = QLabel("Electronic Temp. [K]:")
-        self.temp_elc_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.temp_elc_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_vib_label: QLabel = QLabel("Vibrational Temp. [K]:")
-        self.temp_vib_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.temp_vib_spinbox.setValue(DEFAULT_TEMPERATURE)
-        self.temp_rot_label: QLabel = QLabel("Rotational Temp. [K]:")
-        self.temp_rot_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.temp_rot_spinbox.setValue(DEFAULT_TEMPERATURE)
-
-        # Show equilibrium temperature input by default.
-        for widget in (
-            self.temp_trn_label,
-            self.temp_trn_spinbox,
-            self.temp_elc_label,
-            self.temp_elc_spinbox,
-            self.temp_vib_label,
-            self.temp_vib_spinbox,
-            self.temp_rot_label,
-            self.temp_rot_spinbox,
-        ):
-            widget.hide()
-
-        entries_layout.addWidget(self.temp_trn_label, 0, 2)
-        entries_layout.addWidget(self.temp_trn_spinbox, 0, 3)
-        entries_layout.addWidget(self.temp_elc_label, 0, 4)
-        entries_layout.addWidget(self.temp_elc_spinbox, 0, 5)
-        entries_layout.addWidget(self.temp_vib_label, 0, 6)
-        entries_layout.addWidget(self.temp_vib_spinbox, 0, 7)
-        entries_layout.addWidget(self.temp_rot_label, 0, 8)
-        entries_layout.addWidget(self.temp_rot_spinbox, 0, 9)
-
-        # Pressure input.
-        pressure_label = QLabel("Pressure [Pa]:")
-        self.pressure_spinbox = MyDoubleSpinBox()
-        self.pressure_spinbox.setValue(DEFAULT_PRESSURE)
-        entries_layout.addWidget(pressure_label, 1, 0)
-        entries_layout.addWidget(self.pressure_spinbox, 1, 1)
-
-        layout.addWidget(entries_widget)
-
-        # Simulation and plot parameters.
-        combos_widget: QWidget = QWidget()
-        combos_layout: QGridLayout = QGridLayout(combos_widget)
-
-        # Temperature Type.
-        temp_type_label: QLabel = QLabel("Temperature Type:")
-        self.temp_type_combo: QComboBox = QComboBox()
-        self.temp_type_combo.addItems(["Equilibrium", "Nonequilibrium"])
-        self.temp_type_combo.currentTextChanged.connect(self.switch_temp_mode)
-        combos_layout.addWidget(temp_type_label, 0, 0)
-        combos_layout.addWidget(self.temp_type_combo, 0, 1)
-
-        # Simulation Type.
-        sim_type_label: QLabel = QLabel("Simulation Type:")
-        self.sim_type_combo: QComboBox = QComboBox()
-        self.sim_type_combo.addItems(["Absorption", "Emission"])
-        combos_layout.addWidget(sim_type_label, 1, 0)
-        combos_layout.addWidget(self.sim_type_combo, 1, 1)
-
-        # Plot Type.
-        plot_type_label: QLabel = QLabel("Plot Type:")
-        self.plot_type_combo: QComboBox = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
-        combos_layout.addWidget(plot_type_label, 2, 0)
-        combos_layout.addWidget(self.plot_type_combo, 2, 1)
-
-        layout.addWidget(combos_widget)
-
-        return bottom_widget
+        return plot_widget
 
     def add_sample(self) -> None:
         """Open a CSV file and add a new tab showing the contents."""
@@ -821,7 +719,7 @@ class GUI(QMainWindow):
         display_name: str = Path(filename).name
 
         new_tab: QWidget = create_dataframe_tab(df, display_name)
-        self.tab_widget.addTab(new_tab, display_name)
+        self.table_tab_widget.addTab(new_tab, display_name)
 
         wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
         intensities: NDArray[np.float64] = df["intensity"].to_numpy()
@@ -830,238 +728,9 @@ class GUI(QMainWindow):
 
         self.plot_widget.autoRange()
 
-    def switch_temp_mode(self) -> None:
-        """Switch between equilibrium and nonequilibrium temperature modes."""
-        if self.temp_type_combo.currentText() == "Nonequilibrium":
-            self.temp_label.hide()
-            self.temp_spinbox.hide()
-            self.temp_trn_label.show()
-            self.temp_trn_spinbox.show()
-            self.temp_elc_label.show()
-            self.temp_elc_spinbox.show()
-            self.temp_vib_label.show()
-            self.temp_vib_spinbox.show()
-            self.temp_rot_label.show()
-            self.temp_rot_spinbox.show()
-        else:
-            self.temp_trn_label.hide()
-            self.temp_trn_spinbox.hide()
-            self.temp_elc_label.hide()
-            self.temp_elc_spinbox.hide()
-            self.temp_vib_label.hide()
-            self.temp_vib_spinbox.hide()
-            self.temp_rot_label.hide()
-            self.temp_rot_spinbox.hide()
-            self.temp_label.show()
-            self.temp_spinbox.show()
-
-    def parse_band_ranges(self) -> list[tuple[int, int]]:
-        """Parse comma-separated band ranges from user input.
-
-        Returns:
-            list[tuple[int, int]]: A list of vibrational bands, e.g. [(1, 2), (3, 4)].
-        """
-        band_ranges_str: str = self.band_line_edit.text()
-        bands: list[tuple[int, int]] = []
-
-        for range_str in band_ranges_str.split(","):
-            if "-" in range_str.strip():
-                try:
-                    v_up, v_lo = map(int, range_str.split("-"))
-                    bands.append((v_up, v_lo))
-                except ValueError:
-                    QMessageBox.information(
-                        self,
-                        "Info",
-                        f"Invalid band range format: {range_str}",
-                        QMessageBox.StandardButton.Ok,
-                    )
-            else:
-                QMessageBox.information(
-                    self,
-                    "Info",
-                    f"Invalid band range format: {range_str}",
-                    QMessageBox.StandardButton.Ok,
-                )
-
-        return bands
-
-    def add_simulation(self) -> None:
-        """Run a simulation instance, then update the plot and table tabs."""
-        start_time: float = time.time()
-
-        # TODO: 25/04/14 - Split this method up. Process the temperature mode, parse the bands,
-        #       create the simulation, plot the data, and finally make a new tab in the table.
-
-        # Determine temperatures based on mode.
-        temp: float = self.temp_spinbox.value()
-        temp_trn = temp_elc = temp_vib = temp_rot = temp
-        if self.temp_type_combo.currentText() == "Nonequilibrium":
-            temp_trn = self.temp_trn_spinbox.value()
-            temp_elc = self.temp_elc_spinbox.value()
-            temp_vib = self.temp_vib_spinbox.value()
-            temp_rot = self.temp_rot_spinbox.value()
-
-        pres: float = self.pressure_spinbox.value()
-        sim_type: SimType = SimType[self.sim_type_combo.currentText().upper()]
-
-        if self.radio_specific_bands.isChecked():
-            bands: list[tuple[int, int]] = self.parse_band_ranges()
-            if not bands:
-                QMessageBox.warning(
-                    self,
-                    "Warning",
-                    "No valid band ranges specified. Please check your input.",
-                    QMessageBox.StandardButton.Ok,
-                )
-                return
-        else:
-            v_up_min: int = self.v_up_min_spinbox.value()
-            v_up_max: int = self.v_up_max_spinbox.value()
-            v_lo_min: int = self.v_lo_min_spinbox.value()
-            v_lo_max: int = self.v_lo_max_spinbox.value()
-
-            if v_up_min > v_up_max or v_lo_min > v_lo_max:
-                QMessageBox.warning(
-                    self,
-                    "Warning",
-                    "Invalid band range: min value cannot be greater than max value.",
-                    QMessageBox.StandardButton.Ok,
-                )
-                return
-
-            # Generate band combinations based on the given ranges.
-            if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
-                bands = [(v_up_min, v_lo_min)]
-            elif v_up_min == v_up_max:
-                bands = [(v_up_min, v_lo) for v_lo in range(v_lo_min, v_lo_max + 1)]
-            elif v_lo_min == v_lo_max:
-                bands = [(v_up, v_lo_min) for v_up in range(v_up_min, v_up_max + 1)]
-            else:
-                bands = [
-                    (v_up, v_lo)
-                    for v_up in range(v_up_min, v_up_max + 1)
-                    for v_lo in range(v_lo_min, v_lo_max + 1)
-                ]
-
-        molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-        state_up: State = State(
-            molecule=molecule,
-            letter="B",
-            spin_multiplicity=3,
-            term_symbol=TermSymbol.SIGMA,
-            inversion_symmetry=InversionSymmetry.UNGERADE,
-            reflection_symmetry=ReflectionSymmetry.MINUS,
-            constants_type=ConstantsType.PERLEVEL,
-        )
-        state_lo: State = State(
-            molecule=molecule,
-            letter="X",
-            spin_multiplicity=3,
-            term_symbol=TermSymbol.SIGMA,
-            inversion_symmetry=InversionSymmetry.GERADE,
-            reflection_symmetry=ReflectionSymmetry.MINUS,
-            constants_type=ConstantsType.PERLEVEL,
-        )
-
-        sim: Sim = Sim(
-            sim_type=sim_type,
-            molecule=molecule,
-            state_up=state_up,
-            state_lo=state_lo,
-            j_qn_up_max=self.maxj_spinbox.value(),
-            temp_trn=temp_trn,
-            temp_elc=temp_elc,
-            temp_vib=temp_vib,
-            temp_rot=temp_rot,
-            pressure=pres,
-            bands_input=bands,
-        )
-
-        print(f"Time to create sim: {time.time() - start_time} s")
-        start_plot_time: float = time.time()
-
-        colors: list[str] = get_colors(bands)
-
-        self.plot_widget.clear()
-
-        # Map plot types to functions.
-        map_functions: dict[str, Callable] = {
-            "Line": plot.plot_line,
-            "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
-        }
-        plot_type: str = self.plot_type_combo.currentText()
-        plot_function: Callable | None = map_functions.get(plot_type)
-
-        # Check which FWHM parameters the user has selected.
-        fwhm_selections: dict[str, bool] = {
-            "instrument": self.checkbox_instrument.isChecked(),
-            "doppler": self.checkbox_doppler.isChecked(),
-            "natural": self.checkbox_natural.isChecked(),
-            "collisional": self.checkbox_collisional.isChecked(),
-            "predissociation": self.checkbox_predissociation.isChecked(),
-        }
-
-        if plot_function is not None:
-            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
-                plot_function(
-                    self.plot_widget,
-                    sim,
-                    colors,
-                    fwhm_selections,
-                    self.inst_broadening_spinbox.value(),
-                    self.granularity_spinbox.value(),
-                )
-            else:
-                plot_function(self.plot_widget, sim, colors)
-        else:
-            QMessageBox.information(
-                self,
-                "Info",
-                f"Plot type '{plot_type}' is not recognized.",
-                QMessageBox.StandardButton.Ok,
-            )
-
-        self.plot_widget.autoRange()
-
-        print(f"Time to create plot: {time.time() - start_plot_time} s")
-        start_table_time: float = time.time()
-
-        # Clear previous tabs.
-        while self.tab_widget.count() > 0:
-            self.tab_widget.removeTab(0)
-
-        # Create a new tab for each vibrational band.
-        for i, band in enumerate(bands):
-            df: pl.DataFrame = pl.DataFrame(
-                [
-                    {
-                        "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
-                        "Wavenumber": line.wavenumber,
-                        "Intensity": line.intensity,
-                        "J'": f"{line.j_qn_up:.1f}",
-                        "J''": f"{line.j_qn_lo:.1f}",
-                        "N'": f"{line.n_qn_up:.1f}",
-                        "N''": f"{line.n_qn_lo:.1f}",
-                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
-                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
-                    }
-                    for line in sim.bands[i].lines
-                ]
-            )
-
-            tab_name: str = f"{band[0]}-{band[1]}"
-            new_tab: QWidget = create_dataframe_tab(df, tab_name)
-            self.tab_widget.addTab(new_tab, tab_name)
-
-        print(f"Time to create table: {time.time() - start_table_time} s")
-        print(f"Total time: {time.time() - start_time} s\n")
-
     def export_current_table(self) -> None:
         """Export the currently displayed table to a CSV file."""
-        current_widget: QWidget = self.tab_widget.currentWidget()
+        current_widget: QWidget = self.table_tab_widget.currentWidget()
 
         # TODO: 25/03/28 - Currently only the currently selected table is grabbed and exported. In
         #       the future, there should be an option to export any number of tables.
@@ -1098,6 +767,181 @@ class GUI(QMainWindow):
                 )
             except Exception as e:
                 QMessageBox.critical(self, "Export Error", f"An error occurred: {e}")
+
+    def add_simulation(self) -> None:
+        """Run a simulation instance, then update the plot and table tabs."""
+        start_time: float = time.time()
+
+        # TODO: 25/04/14 - Split this method up. Process the temperature mode, parse the bands,
+        #       create the simulation, plot the data, and finally make a new tab in the table.
+        idx = self.molecule_tab_widget.currentIndex()
+        current_tab: CustomTab = self.molecule_tab_widget.widget(idx)
+
+        if current_tab.radio_specific_bands.isChecked():
+            bands: list[tuple[int, int]] = self.parse_band_ranges()
+            if not bands:
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "No valid band ranges specified. Please check your input.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+        else:
+            v_up_min: int = current_tab.v_up_min_spinbox.value()
+            v_up_max: int = current_tab.v_up_max_spinbox.value()
+            v_lo_min: int = current_tab.v_lo_min_spinbox.value()
+            v_lo_max: int = current_tab.v_lo_max_spinbox.value()
+
+            if v_up_min > v_up_max or v_lo_min > v_lo_max:
+                QMessageBox.warning(
+                    self,
+                    "Warning",
+                    "Invalid band range: min value cannot be greater than max value.",
+                    QMessageBox.StandardButton.Ok,
+                )
+                return
+
+            # Generate band combinations based on the given ranges.
+            if (v_up_min == v_up_max) and (v_lo_min == v_lo_max):
+                bands = [(v_up_min, v_lo_min)]
+            elif v_up_min == v_up_max:
+                bands = [(v_up_min, v_lo) for v_lo in range(v_lo_min, v_lo_max + 1)]
+            elif v_lo_min == v_lo_max:
+                bands = [(v_up, v_lo_min) for v_up in range(v_up_min, v_up_max + 1)]
+            else:
+                bands = [
+                    (v_up, v_lo)
+                    for v_up in range(v_up_min, v_up_max + 1)
+                    for v_lo in range(v_lo_min, v_lo_max + 1)
+                ]
+
+        print(f"Time to create sim: {time.time() - start_time} s")
+        start_plot_time: float = time.time()
+
+        colors: list[str] = get_colors(bands)
+
+        self.plot_widget.clear()
+
+        # Map plot types to functions.
+        map_functions: dict[str, Callable] = {
+            "Line": plot.plot_line,
+            "Line Info": plot.plot_line_info,
+            "Convolve Separate": plot.plot_conv_sep,
+            "Convolve All": plot.plot_conv_all,
+        }
+        plot_type: str = self.plot_type_combo.currentText()
+        plot_function: Callable | None = map_functions.get(plot_type)
+
+        # Check which FWHM parameters the user has selected.
+        fwhm_selections: dict[str, bool] = {
+            "instrument": current_tab.checkbox_instrument.isChecked(),
+            "doppler": current_tab.checkbox_doppler.isChecked(),
+            "natural": current_tab.checkbox_natural.isChecked(),
+            "collisional": current_tab.checkbox_collisional.isChecked(),
+            "predissociation": current_tab.checkbox_predissociation.isChecked(),
+        }
+
+        sim = current_tab.sim
+
+        if plot_function is not None:
+            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                plot_function(
+                    self.plot_widget,
+                    sim,
+                    colors,
+                    fwhm_selections,
+                    current_tab.inst_broadening_spinbox.value(),
+                    self.resolution_spinbox.value(),
+                )
+            else:
+                plot_function(self.plot_widget, sim, colors)
+        else:
+            QMessageBox.information(
+                self,
+                "Info",
+                f"Plot type '{plot_type}' is not recognized.",
+                QMessageBox.StandardButton.Ok,
+            )
+
+        self.plot_widget.autoRange()
+
+        print(f"Time to create plot: {time.time() - start_plot_time} s")
+        start_table_time: float = time.time()
+
+        # Clear previous tabs.
+        while self.table_tab_widget.count() > 0:
+            self.table_tab_widget.removeTab(0)
+
+        # Create a new tab for each vibrational band.
+        for i, band in enumerate(bands):
+            df: pl.DataFrame = pl.DataFrame(
+                [
+                    {
+                        "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
+                        "Wavenumber": line.wavenumber,
+                        "Intensity": line.intensity,
+                        "J'": f"{line.j_qn_up:.1f}",
+                        "J''": f"{line.j_qn_lo:.1f}",
+                        "N'": f"{line.n_qn_up:.1f}",
+                        "N''": f"{line.n_qn_lo:.1f}",
+                        "ΔJ Branch": f"{line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}",
+                        "ΔN Branch": f"{line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}",
+                    }
+                    for line in sim.bands[i].lines
+                ]
+            )
+
+            tab_name: str = f"{band[0]}-{band[1]}"
+            new_tab: QWidget = create_dataframe_tab(df, tab_name)
+            self.table_tab_widget.addTab(new_tab, tab_name)
+
+        print(f"Time to create table: {time.time() - start_table_time} s")
+        print(f"Total time: {time.time() - start_time} s\n")
+
+    def parse_band_ranges(self) -> list[tuple[int, int]]:
+        """Parse comma-separated band ranges from user input.
+
+        Returns:
+            list[tuple[int, int]]: A list of vibrational bands, e.g. [(1, 2), (3, 4)].
+        """
+        idx = self.molecule_tab_widget.currentIndex()
+        current_tab: CustomTab = self.molecule_tab_widget.widget(idx)
+
+        band_ranges_str: str = current_tab.band_line_edit.text()
+        bands: list[tuple[int, int]] = []
+
+        for range_str in band_ranges_str.split(","):
+            if "-" in range_str.strip():
+                try:
+                    v_up, v_lo = map(int, range_str.split("-"))
+                    bands.append((v_up, v_lo))
+                except ValueError:
+                    QMessageBox.information(
+                        self,
+                        "Info",
+                        f"Invalid band range format: {range_str}",
+                        QMessageBox.StandardButton.Ok,
+                    )
+            else:
+                QMessageBox.information(
+                    self,
+                    "Info",
+                    f"Invalid band range format: {range_str}",
+                    QMessageBox.StandardButton.Ok,
+                )
+
+        return bands
+
+    def show_parameters_dialog(self):
+        idx = self.molecule_tab_widget.currentIndex()
+        tab_widget = self.molecule_tab_widget.widget(idx)
+        context_name = self.molecule_tab_widget.tabText(idx)
+
+        dialog = ParametersDialog(tab_widget, context_name=context_name)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            pass
 
 
 class WavenumberAxis(pg.AxisItem):
@@ -1136,7 +980,7 @@ def main() -> None:
     app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
     app.setWindowIcon(app_icon)
 
-    gui: NewGUI = NewGUI()
+    gui: GUI = GUI()
     gui.show()
 
     sys.exit(app.exec())

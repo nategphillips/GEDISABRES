@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 import pyqtgraph as pg
+import qdarktheme
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -1064,6 +1065,7 @@ class SplashScreen(QWidget):
 def main() -> None:
     """Entry point."""
     app: QApplication = QApplication(sys.argv)
+    qdarktheme.setup_theme()
 
     app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
     app.setWindowIcon(app_icon)

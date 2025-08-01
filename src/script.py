@@ -73,7 +73,9 @@ def main() -> None:
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(
-        fname=utils.get_data_path("data", "samples", "harvard_20.csv"), delimiter=",", skip_header=1
+        fname=utils.get_data_path("data", "samples", "harvard-o2-bx-20.csv"),
+        delimiter=",",
+        skip_header=1,
     )
     wns_samp: NDArray[np.float64] = sample[:, 0]
     ins_samp: NDArray[np.float64] = sample[:, 1] / sample[:, 1].max()

@@ -10,6 +10,7 @@ dependencies = [
     "numpy==2.3.1",
     "polars==1.31.0",
     "py3nj",
+    "pyqtdarktheme==2.1.0",
     "pyqtgraph==0.13.7",
     # Pyside6 version 6.9.1 breaks plotting entirely. Pin all versions to prevent future breakage.
     # See https://github.com/pyqtgraph/pyqtgraph/issues/3321 and https://bugreports.qt.io/browse/PYSIDE-3115.

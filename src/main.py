@@ -48,6 +48,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSpinBox,
+    QTabBar,
     QTableView,
     QTabWidget,
     QVBoxLayout,
@@ -960,6 +961,138 @@ class CustomTab(QWidget):
             self.update_tab_name()
 
 
+class AllSimulationsTab(QWidget):
+    def __init__(self, parent_tab_widget=None):
+        super().__init__()
+
+        self.parent_tab_widget = parent_tab_widget
+
+        main_layout = QVBoxLayout(self)
+
+        controls_widget = QWidget()
+        controls_layout = QHBoxLayout(controls_widget)
+
+        resolution_group = QGroupBox("Resolution")
+        resolution_layout = QHBoxLayout(resolution_group)
+        self.resolution_spinbox = QSpinBox()
+        self.resolution_spinbox.setMaximum(10000000)
+        self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
+        resolution_layout.addWidget(self.resolution_spinbox)
+        controls_layout.addWidget(resolution_group)
+
+        plot_group = QGroupBox("Plot Type")
+        plot_layout = QHBoxLayout(plot_group)
+        self.plot_type_combo = QComboBox()
+        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        plot_layout.addWidget(self.plot_type_combo)
+        controls_layout.addWidget(plot_group)
+
+        broadening_group = QGroupBox("Instrument Broadening [nm]")
+        broadening_layout = QVBoxLayout(broadening_group)
+
+        self.inst_broadening_spinbox = MyDoubleSpinBox()
+        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        broadening_layout.addWidget(self.inst_broadening_spinbox)
+
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument FWHM")
+        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_predissociation = QCheckBox("Predissociation")
+
+        checkboxes = [
+            self.checkbox_instrument,
+            self.checkbox_doppler,
+            self.checkbox_natural,
+            self.checkbox_collisional,
+            self.checkbox_predissociation,
+        ]
+
+        for cb in checkboxes:
+            cb.setChecked(True)
+            checkbox_layout.addWidget(cb)
+
+        broadening_layout.addLayout(checkbox_layout)
+        controls_layout.addWidget(broadening_group)
+
+        actions_group = QGroupBox("Actions")
+        actions_layout = QVBoxLayout(actions_group)
+        self.run_button: QPushButton = QPushButton("Run All Simulations")
+        self.run_button.clicked.connect(self.run_all_simulations)
+        actions_layout.addWidget(self.run_button)
+        controls_layout.addWidget(actions_group)
+
+        main_layout.addWidget(controls_widget)
+
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.addLegend(offset=(0, 1))
+        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
+        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setXRange(100, 200)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+
+    def run_all_simulations(self):
+        if self.parent_tab_widget is None:
+            return
+
+        self.plot_widget.clear()
+
+        custom_tabs = []
+        for i in range(self.parent_tab_widget.count()):
+            tab = self.parent_tab_widget.widget(i)
+            if isinstance(tab, CustomTab):
+                custom_tabs.append(tab)
+
+        if not custom_tabs:
+            QMessageBox.information(
+                self,
+                "No Simulations",
+                "No simulation tabs found to plot.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        map_functions = {
+            "Line": plot.plot_line,
+            "Line Info": plot.plot_line_info,
+            "Convolve Separate": plot.plot_conv_sep,
+            "Convolve All": plot.plot_conv_all,
+        }
+        plot_type = self.plot_type_combo.currentText()
+        plot_function = map_functions.get(plot_type)
+
+        fwhm_selections = {
+            "instrument": self.checkbox_instrument.isChecked(),
+            "doppler": self.checkbox_doppler.isChecked(),
+            "natural": self.checkbox_natural.isChecked(),
+            "collisional": self.checkbox_collisional.isChecked(),
+            "predissociation": self.checkbox_predissociation.isChecked(),
+        }
+
+        for i, tab in enumerate(custom_tabs):
+            bands = tab.get_current_bands()
+            colors = get_colors(bands)
+
+            if plot_function is not None:
+                if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                    plot_function(
+                        self.plot_widget,
+                        tab.sim,
+                        colors,
+                        fwhm_selections,
+                        self.inst_broadening_spinbox.value(),
+                        self.resolution_spinbox.value(),
+                    )
+                else:
+                    plot_function(self.plot_widget, tab.sim, colors)
+
+        self.plot_widget.autoRange()
+
+
 class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -993,6 +1126,11 @@ class GUI(QMainWindow):
     def create_tab_panel(self):
         self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
 
+        all_sims_tab = AllSimulationsTab(parent_tab_widget=self.molecule_tab_widget)
+        self.molecule_tab_widget.addTab(all_sims_tab, "All Simulations")
+        self.molecule_tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+        self.molecule_tab_widget.tabBar().setMovable(False)
+
         for preset in MOLECULAR_PRESETS[:3]:
             tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
             tab.molecule = preset["molecule"]
@@ -1004,18 +1142,19 @@ class GUI(QMainWindow):
             tab.update_tab_name()
             tab.run_simulation()
 
+        self.molecule_tab_widget.setCurrentIndex(1)
         self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
 
         return self.molecule_tab_widget
 
     def close_tab(self, index):
-        if self.molecule_tab_widget.count() > 1:
+        if self.molecule_tab_widget.count() > 2:
             self.molecule_tab_widget.removeTab(index)
         else:
             QMessageBox.information(
                 self,
                 "Cannot Close Tab",
-                "At least one tab must remain open.",
+                "At least one simulation tab must remain open.",
                 QMessageBox.StandardButton.Ok,
             )
 

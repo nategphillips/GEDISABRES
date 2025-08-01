@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 import polars as pl
 import pyqtgraph as pg
 import qdarktheme
@@ -1041,7 +1042,7 @@ class AllSimulationsTab(QWidget):
 
         self.plot_widget.clear()
 
-        custom_tabs = []
+        custom_tabs: list[CustomTab] = []
         for i in range(self.parent_tab_widget.count()):
             tab = self.parent_tab_widget.widget(i)
             if isinstance(tab, CustomTab):
@@ -1065,6 +1066,8 @@ class AllSimulationsTab(QWidget):
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
 
+        # TODO: 25/08/01 - Broadening parameters should be pulled from each individual tab instead.
+
         fwhm_selections = {
             "instrument": self.checkbox_instrument.isChecked(),
             "doppler": self.checkbox_doppler.isChecked(),
@@ -1073,12 +1076,68 @@ class AllSimulationsTab(QWidget):
             "predissociation": self.checkbox_predissociation.isChecked(),
         }
 
+        def max_intensity_line():
+            intensities_line: NDArray[np.float64] = np.array([])
+
+            for tab in custom_tabs:
+                _, ins = tab.sim.all_line_data()
+                intensities_line = np.concatenate((intensities_line, ins))
+
+            return intensities_line.max()
+
+        def max_intensity_conv_sep(inst_broadening_wl, granularity):
+            convolved_data: list[NDArray[np.float64]] = []
+            max_intensity: float = 0.0
+
+            for tab in custom_tabs:
+                for band in tab.sim.bands:
+                    intensities_conv = band.intensities_conv(
+                        fwhm_selections,
+                        inst_broadening_wl,
+                        band.wavenumbers_conv(inst_broadening_wl, granularity),
+                    )
+
+                    convolved_data.append(intensities_conv)
+
+                    max_intensity = max(max_intensity, intensities_conv.max())
+
+            return max_intensity
+
+        def max_intensity_conv_all():
+            intensities_conv: NDArray[np.float64] = np.array([])
+
+            for tab in custom_tabs:
+                _, ins = tab.sim.all_conv_data(
+                    fwhm_selections,
+                    self.inst_broadening_spinbox.value(),
+                    self.resolution_spinbox.value(),
+                )
+                intensities_conv = np.concatenate((intensities_conv, ins))
+
+            return intensities_conv.max()
+
+        # TODO: 25/08/01 - Convolving all bands together needs to create a new wavenumber axis
+        #       common to all simulations and then add the contributions of all simulations to the
+        #       plot.
+
         for i, tab in enumerate(custom_tabs):
             bands = tab.get_current_bands()
             colors = get_colors(bands)
 
             if plot_function is not None:
-                if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+                if plot_function.__name__ == "plot_conv_sep":
+                    broadening = self.inst_broadening_spinbox.value()
+                    resolution = self.resolution_spinbox.value()
+                    plot_function(
+                        self.plot_widget,
+                        tab.sim,
+                        colors,
+                        fwhm_selections,
+                        broadening,
+                        resolution,
+                        max_intensity_conv_sep(broadening, resolution),
+                    )
+                elif plot_function.__name__ == "plot_conv_all":
                     plot_function(
                         self.plot_widget,
                         tab.sim,
@@ -1086,9 +1145,10 @@ class AllSimulationsTab(QWidget):
                         fwhm_selections,
                         self.inst_broadening_spinbox.value(),
                         self.resolution_spinbox.value(),
+                        max_intensity_conv_all(),
                     )
                 else:
-                    plot_function(self.plot_widget, tab.sim, colors)
+                    plot_function(self.plot_widget, tab.sim, colors, max_intensity_line())
 
         self.plot_widget.autoRange()
 

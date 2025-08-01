@@ -135,33 +135,31 @@ def plot_conv_sep(
         inst_broadening_wl (float): Instrument broadening FWHM in [nm].
         granularity (int): Number of points on the wavenumber axis.
     """
+    convolved_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
+    max_intensity: float = 0.0
+
     # Need to convolve all bands separately, get their maximum intensities, store the largest, and
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
-    max_intensity: float = max(
-        band.intensities_conv(
-            fwhm_selections,
-            inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-        ).max()
-        for band in sim.bands
-    )
-
     for idx, band in enumerate(sim.bands):
-        wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(
-            band.wavenumbers_conv(inst_broadening_wl, granularity)
-        )
-        intensities_conv: NDArray[np.float64] = band.intensities_conv(
+        wavenumbers_conv = band.wavenumbers_conv(inst_broadening_wl, granularity)
+        intensities_conv = band.intensities_conv(
             fwhm_selections,
             inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
+            wavenumbers_conv,
         )
+        wavelengths_conv = utils.wavenum_to_wavelen(wavenumbers_conv)
 
+        convolved_data.append((wavelengths_conv, intensities_conv))
+
+        max_intensity = max(max_intensity, intensities_conv.max())
+
+    for idx, (wavelengths_conv, intensities_conv) in enumerate(convolved_data):
         plot_widget.plot(
             wavelengths_conv,
             intensities_conv / max_intensity,
             pen=pg.mkPen(colors[idx], width=PEN_WIDTH),
-            name=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} conv",
+            name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} conv",
         )
 
 

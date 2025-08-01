@@ -712,13 +712,13 @@ class CustomTab(QWidget):
         self.run_button.clicked.connect(self.run_simulation)
         actions_layout.addWidget(self.run_button)
 
-        self.export_button: QPushButton = QPushButton("Export Table")
-        self.export_button.clicked.connect(self.export_current_table)
-        actions_layout.addWidget(self.export_button)
-
         self.open_sample_button: QPushButton = QPushButton("Open Sample")
         self.open_sample_button.clicked.connect(self.open_sample)
         actions_layout.addWidget(self.open_sample_button)
+
+        self.export_button: QPushButton = QPushButton("Export Table")
+        self.export_button.clicked.connect(self.export_current_table)
+        actions_layout.addWidget(self.export_button)
 
         controls_layout.addWidget(actions_group)
         main_layout.addWidget(controls_widget)
@@ -963,6 +963,9 @@ class CustomTab(QWidget):
 class GUI(QMainWindow):
     def __init__(self):
         super().__init__()
+
+        pg.setConfigOption("background", (32, 33, 36))
+        pg.setConfigOption("foreground", "w")
 
         self.setWindowTitle("pyGEONOSIS")
         self.showMaximized()

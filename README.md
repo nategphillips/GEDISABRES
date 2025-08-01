@@ -1,6 +1,6 @@
 # pyGEONOSIS
 
-Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a tool for simulating the Schumann–Runge (B-X) bands of molecular oxygen, and eventually the $\gamma$ (A-X) bands of nitric oxide. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
+Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a general-purpose tool for simulating diatomic spectra. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 
@@ -8,23 +8,7 @@ The capabilities of this tool are briefly summarized below. More detailed theory
 
 ### Rotational Hamiltonian
 
-The rotational Hamiltonian used for both the $B^3\Sigma_u^-$ and $X^3\Sigma_g^-$ states is
-
-$$
-H = H_{r} + H_{ss} + H_{sr},
-$$
-
-where
-
-$$
-\begin{aligned}
-    H_{r}  &= B\mathbf{N}^{2} - D\mathbf{N}^{4} \\
-    H_{ss} &= \frac{2}{3}\lambda(3S_{z}^{2} - \mathbf{S}^{2}) \\
-    H_{sr} &= \gamma\mathbf{N}\cdot\mathbf{S}.
-\end{aligned}
-$$
-
-Upper state constants are taken from [*Molecular Spectroscopic Constants of O2: The Upper State of the Schumann–Runge Bands*](https://doi.org/10.1016/0022-2852(86)90196-7) by Cheung et al. (1986). Ground state constants are taken from [*High Resolution Spectral Analysis of Oxygen: IV*](https://doi.org/10.1063/1.4900510) by Yu et al. (2014).
+The rotational Hamiltonian is computed on a per-term basis according to the molecular term symbol of the molecule in question along with the supplied constants. For more information, see [hamilterm](https://github.com/nategphillips/hamilterm).
 
 ### Spectral Broadening
 
@@ -39,15 +23,11 @@ Convolutions include the effects of both Gaussian and Lorentzian broadening mech
 
 - Pressure broadening
 - Natural broadening
-- Predissociation broadening
-
-### Rotational Lines
-
-By default, the maximum upper state rotational quantum number is set to $J'_\text{max} = 40$. Currently, predissociation factors are computed for each rotational line using a polynomial fit that is valid up to $v = 21$ and $J = 40$. Therefore, it is recommended not to exceed $J = 40$ by a large margin if accuracy is to be preserved.
+- Predissociation broadening (only O2 is supported for now)
 
 ### Equilibrium & Non-equilibrium
 
-In general, the electronic, vibrational, and rotational Boltzmann partition functions are computed assuming Boltzmann population distributions. For equilibrium simulations, the input temperature for all states (translational, electronic, vibrational, and rotational) is the same. Non-equilibrium simulations have different temperatures specified for each state, but the population distributions within each state remain Boltzmann.
+The translational, electronic, vibrational, and rotational temperatures can be specified separately. Boltzmann population distributions are assumed for now.
 
 ### Plot Types
 
@@ -107,21 +87,13 @@ uv run ./main.py
 - [x] Switch to PyQtGraph instead of Matplotlib for improved plot performance
 - [x] Add the ability to export rotational line data from the built-in spreadsheet
 - [x] Make a custom GUI icon
-- [ ] Build a more intuitive interface for adding/removing simulated and experimental data, especially once multiple molecules are added
+- [ ] Improve the interface for adding and removing experimental data
 - [ ] Design and implement a GUI for LIF computations, including estimated fluorescence yield and the ability to search for rotational line overlaps
 
 ### Physics
 
-- [ ] Add support for more diatomic molecules, starting with $\text{NO}$
-- [ ] Implement electronic spectra for atomic species
-- [ ] Include the ability to view and edit the rotational Hamiltonian on a per-term basis
-- [ ] Include non-Boltzmann temperature distributions
-
-### Packaging
-
-- [x] Package a pre-compiled binary to improve user experience
-- [x] Implement a splash screen to show that the program is loading
-- [x] Create an icon executable file (Windows only for now)
+- [x] Add support for more diatomic molecules, starting with $\text{NO}$
+- [ ] Include support for non-Boltzmann temperature distributions
 
 ## License and Copyright
 

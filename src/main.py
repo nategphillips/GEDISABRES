@@ -948,10 +948,23 @@ class CustomTab(QWidget):
         new_table_tab: QWidget = create_dataframe_tab(df, display_name)
         self.table_tab_widget.addTab(new_table_tab, display_name)
 
-        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
-        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
+        if "wavenumber" in df.columns:
+            x_values = df["wavenumber"].to_numpy()
+            value_type = "wavenumber"
+        elif "wavelength" in df.columns:
+            x_values = df["wavelength"].to_numpy()
+            value_type = "wavelength"
+        else:
+            QMessageBox.critical(self, "Error", "No 'wavenumber' or 'wavelength' column found.")
+            return
 
-        plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
+        try:
+            intensities = df["intensity"].to_numpy()
+        except pl.ColumnNotFoundError:
+            QMessageBox.critical(self, "Error", "No 'intensity' column found.")
+            return
+
+        plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
         self.plot_widget.autoRange()
 
     def open_parameters_dialog(self):

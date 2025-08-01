@@ -33,22 +33,25 @@ PEN_WIDTH: int = 1
 
 def plot_sample(
     plot_widget: pg.PlotWidget,
-    wavenumbers: NDArray[np.float64],
+    x_values: NDArray[np.float64],
     intensities: NDArray[np.float64],
     display_name: str,
+    value_type: str,
 ) -> None:
     """Plot sample data.
 
     Args:
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        wavenumbers (NDArray[np.float64]): Sample wavenumbers.
+        x_values (NDArray[np.float64]): Sample wavenumbers.
         intensities (NDArray[np.float64]): Sample intensities.
         display_name (str): The name of the file without directory information.
+        value_type (str): Either wavenumbers or wavelengths.
     """
-    wavelengths: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers)
+    if value_type == "wavenumbers":
+        x_values = utils.wavenum_to_wavelen(x_values)
 
     plot_widget.plot(
-        wavelengths,
+        x_values,
         intensities / intensities.max(),
         pen=pg.mkPen("w", width=PEN_WIDTH),
         name=display_name,

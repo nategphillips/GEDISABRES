@@ -68,7 +68,6 @@ from state import State
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import numpy as np
     from numpy.typing import NDArray
 
 DEFAULT_LINES: int = 40

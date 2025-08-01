@@ -3,16 +3,24 @@ name = "pyGEONOSIS"
 version = "0.1.0"
 description = "A tool for simulating the Schumann-Runge (B-X) bands of molecular oxygen, and eventually the A-X transition of nitric oxide."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = "==3.13.5"
 dependencies = [
-    # Pyside6 version 6.9.1 breaks plotting entirely. Pin all versions to prevent future breakage.
+    "hamilterm",
     "matplotlib==3.10.3",
-    "numpy==2.2.6",
-    "polars==1.30.0",
+    "numpy==2.3.1",
+    "polars==1.31.0",
+    "py3nj",
+    "pyqtdarktheme==2.1.0",
     "pyqtgraph==0.13.7",
+    # Pyside6 version 6.9.1 breaks plotting entirely. Pin all versions to prevent future breakage.
+    # See https://github.com/pyqtgraph/pyqtgraph/issues/3321 and https://bugreports.qt.io/browse/PYSIDE-3115.
+    # Fixed in PyQt 6.9.2, just waiting for the release.
     "pyside6-essentials==6.9.0",
-    "scipy==1.15.3",
+    "scipy==1.16.0",
 ]
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
 
 [tool.ruff]
 line-length = 100
@@ -39,3 +47,10 @@ extend-select = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.uv.sources]
+hamilterm = { git = "https://github.com/nategphillips/hamilterm", rev = "fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" }
+py3nj = { git = "https://github.com/fujiisoup/py3nj", rev = "098e40e433d6c1f32b1b488519bbae40f40b812b" }
+
+[tool.uv]
+required-version = "==0.8.4"

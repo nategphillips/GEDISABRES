@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from fractions import Fraction
+
+from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
+
 # Avodagro constant [1/mol]
 AVOGD: float = 6.02214076e23
 # Boltzmann constant [J/K]
@@ -26,12 +30,51 @@ LIGHT: float = 2.99792458e10
 PLANC: float = 6.62607015e-34
 
 # Atomic masses [g/mol]
-ATOMIC_MASSES: dict[str, float] = {"O": 15.999}
+# Data from IUPAC - Atomic Weights of The Elements 2023 <https://iupac.qmul.ac.uk/AtWt/>
+ATOMIC_MASSES: dict[str, float] = {"H": 1.008, "N": 14.007, "O": 15.999}
+
+# Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
+# standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
+BRANCH_NAME_MAP: dict[Fraction, str] = {
+    Fraction(-3): "N",
+    Fraction(-2): "O",
+    Fraction(-1): "P",
+    Fraction(0): "Q",
+    Fraction(+1): "R",
+    Fraction(+2): "S",
+    Fraction(+3): "T",
+}
+
+# TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
+#       should also contain the atomic mass number.
+
+# Nuclear spin [-]
+# Data from the NUBASE 2012 database contained in JANIS
+NUCLEAR_SPIN: dict[str, Fraction] = {"H": Fraction(1, 2), "N": Fraction(1), "O": Fraction(0)}
+
+# Mappings from enums to strings for use with the dictionaries below.
+TERM_SYMBOL_MAP: dict[TermSymbol, str] = {
+    TermSymbol.SIGMA: "S",
+    TermSymbol.PI: "P",
+    TermSymbol.DELTA: "D",
+}
+INVERSION_SYMMETRY_MAP: dict[InversionSymmetry, str] = {
+    InversionSymmetry.NONE: "",
+    InversionSymmetry.GERADE: "g",
+    InversionSymmetry.UNGERADE: "u",
+}
+REFLECTION_SYMMETRY_MAP: dict[ReflectionSymmetry, str] = {
+    ReflectionSymmetry.NONE: "",
+    ReflectionSymmetry.PLUS: "+",
+    ReflectionSymmetry.MINUS: "-",
+}
 
 # Internuclear distance [m]
 # Data from NIST Chemistry WebBook
 INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
-    "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10}
+    "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10},
+    "NO": {"X2P": 1.15077e-10, "A2S+": 1.06434e-10},
+    "OH": {"X2P": 0.96966e-10, "A2S+": 1.0121e-10},
 }
 
 # Electronic energies [1/cm]
@@ -45,11 +88,36 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
         "A3Pu": 34690.0,
         "A3Su+": 35397.8,
         "B3Su-": 49793.28,
-    }
+    },
+    "NO": {
+        "X2P": 0.0,
+        "a4P": 38440.0,
+        "A2S+": 43965.7,
+        "B2P": 45942.6,
+        "b4S-": 48680.0,
+        "C2P": 52126.0,
+        "D2S+": 53084.7,
+    },
+    "OH": {
+        "X2P": 0.0,
+        "A2S+": 32684.1,
+        "B2S+": 69774.0,
+        "D2S-": 82130.0,
+        "C2S+": 89459.1,
+    },
 }
 
 # Electronic degeneracies [-]
-# Data from Park, 1990
+# Data from Table 1.4 of "Nonequilibrium Hypersonic Aerodynamics" by Park
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
-    "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3}
+    "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3},
+    "NO": {"X2P": 4, "a4P": 8, "A2S+": 2, "B2P": 4, "b4S-": 4, "C2P": 4, "D2S+": 2},
+    "OH": {"X2P": 4, "A2S+": 2, "B2S+": 2, "D2S-": 2, "C2S+": 2},
 }
+
+# A somewhat arbitrary cutoff value for the Hönl-London factors. If the HLF of a line is lower than
+# this value, the transition is considered "forbidden" and the line is not simulated.
+HONL_LONDON_CUTOFF: float = 1e-6
+# The maximum v' and v'' levels to be used when evaluating the vibrational partition function for
+# a simulation using Dunham coefficients.
+V_QN_MAX_DUNHAM: int = 20

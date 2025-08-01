@@ -16,16 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from functools import cached_property
+
 import numpy as np
 import polars as pl
 from numpy.typing import NDArray
 
 import constants
-import terms
 import utils
 from band import Band
+from enums import ConstantsType, SimType
 from molecule import Molecule
-from simtype import SimType
 from state import State
 
 
@@ -38,13 +39,13 @@ class Sim:
         molecule: Molecule,
         state_up: State,
         state_lo: State,
-        rot_lvls: NDArray[np.int64],
+        j_qn_up_max: int,
         temp_trn: float,
         temp_elc: float,
         temp_vib: float,
         temp_rot: float,
         pressure: float,
-        bands: list[tuple[int, int]],
+        bands_input: list[tuple[int, int]],
     ) -> None:
         """Initialize class variables.
 
@@ -53,31 +54,25 @@ class Sim:
             molecule (Molecule): Which molecule to simulate.
             state_up (State): Upper electronic state.
             state_lo (State): Lower electronic state.
-            rot_lvls (NDArray[np.int64]): Which rotational levels to simulate.
+            j_qn_up_max (int): Maximum J' quantum number.
             temp_trn (float): Translational temperature.
             temp_elc (float): Electronic temperature.
             temp_vib (float): Vibrational temperature.
             temp_rot (float): Rotational temperature.
             pressure (float): Pressure.
-            bands (list[tuple[int, int]]): Which vibrational bands to simulate.
+            bands_input (list[tuple[int, int]]): Which vibrational bands to simulate.
         """
         self.sim_type: SimType = sim_type
         self.molecule: Molecule = molecule
         self.state_up: State = state_up
         self.state_lo: State = state_lo
-        self.rot_lvls: NDArray[np.int64] = rot_lvls
+        self.j_qn_up_max: int = j_qn_up_max
         self.temp_trn: float = temp_trn
         self.temp_elc: float = temp_elc
         self.temp_vib: float = temp_vib
         self.temp_rot: float = temp_rot
         self.pressure: float = pressure
-        self.elc_part: float = self.get_elc_partition_fn()
-        self.vib_part: float = self.get_vib_partition_fn()
-        self.elc_boltz_frac: float = self.get_elc_boltz_frac()
-        self.franck_condon: NDArray[np.float64] = self.get_franck_condon()
-        self.einstein: NDArray[np.float64] = self.get_einstein()
-        self.predissociation: dict[str, list[float]] = self.get_predissociation()
-        self.bands: list[Band] = self.get_bands(bands)
+        self.bands_input: list[tuple[int, int]] = bands_input
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -130,13 +125,15 @@ class Sim:
 
         return wavenumbers_conv, intensities_conv
 
-    def get_predissociation(self) -> dict[str, list[float]]:
+    @cached_property
+    def predissociation(self) -> dict[str, list[float]]:
         """Return polynomial coefficients for computing predissociation linewidths."""
         return pl.read_csv(
             utils.get_data_path("data", self.molecule.name, "predissociation", "lewis_coeffs.csv")
         ).to_dict(as_series=False)
 
-    def get_einstein(self) -> NDArray[np.float64]:
+    @cached_property
+    def einstein(self) -> NDArray[np.float64]:
         """Return a table of Einstein coefficients for spontaneous emission: A_{v'v''}.
 
         Rows correspond to the upper state vibrational quantum number (v'), while columns correspond
@@ -147,12 +144,13 @@ class Sim:
                 "data",
                 self.molecule.name,
                 "einstein",
-                f"{self.state_up.name}_to_{self.state_lo.name}_laux.csv",
+                f"{self.state_up.name}_to_{self.state_lo.name}.csv",
             ),
             delimiter=",",
         )
 
-    def get_franck_condon(self) -> NDArray[np.float64]:
+    @cached_property
+    def franck_condon(self) -> NDArray[np.float64]:
         """Return a table of Franck-Condon factors for the associated electronic transition.
 
         Rows correspond to the upper state vibrational quantum number (v'), while columns correspond
@@ -163,26 +161,35 @@ class Sim:
                 "data",
                 self.molecule.name,
                 "franck-condon",
-                f"{self.state_up.name}_to_{self.state_lo.name}_cheung.csv",
+                f"{self.state_up.name}_to_{self.state_lo.name}.csv",
             ),
             delimiter=",",
         )
 
-    def get_bands(self, bands: list[tuple[int, int]]):
+    @cached_property
+    def bands(self) -> list[Band]:
         """Return the selected vibrational bands within the simulation."""
-        return [Band(sim=self, v_qn_up=band[0], v_qn_lo=band[1]) for band in bands]
+        return [Band(sim=self, v_qn_up=band[0], v_qn_lo=band[1]) for band in self.bands_input]
 
-    def get_vib_partition_fn(self) -> float:
+    @cached_property
+    def vib_partition_fn(self) -> float:
         """Return the vibrational partition function."""
-        # NOTE: 24/10/22 - The maximum vibrational quantum number is dictated by the tabulated data
-        #       available.
+        # NOTE: 25/07/21 - If per-vibrational level data is being used, the maximum vibrational
+        #       quantum number is set by the data available. Otherwise, an arbitrary maximum of 20
+        #       is set when the Dunham expansion is used.
         match self.sim_type:
             case SimType.EMISSION:
                 state = self.state_up
-                v_qn_max = len(self.state_up.constants["G"])
+                if state.constants_type == ConstantsType.PERLEVEL:
+                    v_qn_max = self.state_up.all_constants.height
+                else:
+                    v_qn_max = constants.V_QN_MAX_DUNHAM
             case SimType.ABSORPTION:
                 state = self.state_lo
-                v_qn_max = len(self.state_lo.constants["G"])
+                if state.constants_type == ConstantsType.PERLEVEL:
+                    v_qn_max = self.state_lo.all_constants.height
+                else:
+                    v_qn_max = constants.V_QN_MAX_DUNHAM
 
         q_v: float = 0.0
 
@@ -195,7 +202,7 @@ class Sim:
             #       other vibrational energies are measured. This ensures the state sum begins at a
             #       value of 1 when v = 0.
             q_v += np.exp(
-                -(terms.vibrational_term(state, v_qn) - terms.vibrational_term(state, 0))
+                -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
                 / (constants.BOLTZ * self.temp_vib)
@@ -203,7 +210,8 @@ class Sim:
 
         return q_v
 
-    def get_elc_partition_fn(self) -> float:
+    @cached_property
+    def elc_partition_fn(self) -> float:
         """Return the electronic partition function."""
         energies: list[float] = list(constants.ELECTRONIC_ENERGIES[self.molecule.name].values())
         degeneracies: list[int] = list(
@@ -216,14 +224,15 @@ class Sim:
         #       above the ground state are so high. This means that any contribution to the
         #       electronic partition function from anything other than the ground state is
         #       negligible.
-        for e, g in zip(energies, degeneracies):
-            q_e += g * np.exp(
-                -e * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
+        for energy, degeneracy in zip(energies, degeneracies):
+            q_e += degeneracy * np.exp(
+                -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
             )
 
         return q_e
 
-    def get_elc_boltz_frac(self) -> float:
+    @cached_property
+    def elc_boltz_frac(self) -> float:
         """Return the electronic Boltzmann fraction N_e / N."""
         match self.sim_type:
             case SimType.EMISSION:
@@ -239,5 +248,5 @@ class Sim:
             * np.exp(
                 -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
             )
-            / self.elc_part
+            / self.elc_partition_fn
         )

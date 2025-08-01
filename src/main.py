@@ -1173,9 +1173,9 @@ class GUI(QMainWindow):
         pg.setConfigOption("foreground", "w")
 
         self.setWindowTitle("pyGEONOSIS")
-        self.showMaximized()
         self.resize(1600, 800)
         self.init_ui()
+        self.showMaximized()
 
     def init_ui(self):
         central_widget = QWidget()

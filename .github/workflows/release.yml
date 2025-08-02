@@ -13,6 +13,8 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        toolchain:
+          - {compiler: gcc, version: 13}
         include:
           - os: macos-latest
             archive_ext: "macos.tar.gz"
@@ -26,6 +28,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Fortran
+        uses: fortran-lang/setup-fortran@v1
+        with:
+          compiler: ${{ matrix.toolchain.compiler }}
+          version: ${{ matrix.toolchain.version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5

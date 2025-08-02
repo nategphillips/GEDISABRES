@@ -1,3 +1,4 @@
+# module validate.py
 """Compares the output of pyGEONOSIS to that of PGOPHER for selected molecules."""
 
 # Copyright (C) 2023-2025 Nathan G. Phillips

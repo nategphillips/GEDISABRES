@@ -20,6 +20,8 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
+import numpy as np
 import polars as pl
 import pyqtgraph as pg
 import qdarktheme
@@ -48,6 +50,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QSpinBox,
+    QTabBar,
     QTableView,
     QTabWidget,
     QVBoxLayout,
@@ -66,7 +69,6 @@ from state import State
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import numpy as np
     from numpy.typing import NDArray
 
 DEFAULT_LINES: int = 40
@@ -947,10 +949,23 @@ class CustomTab(QWidget):
         new_table_tab: QWidget = create_dataframe_tab(df, display_name)
         self.table_tab_widget.addTab(new_table_tab, display_name)
 
-        wavenumbers: NDArray[np.float64] = df["wavenumber"].to_numpy()
-        intensities: NDArray[np.float64] = df["intensity"].to_numpy()
+        if "wavenumber" in df.columns:
+            x_values = df["wavenumber"].to_numpy()
+            value_type = "wavenumber"
+        elif "wavelength" in df.columns:
+            x_values = df["wavelength"].to_numpy()
+            value_type = "wavelength"
+        else:
+            QMessageBox.critical(self, "Error", "No 'wavenumber' or 'wavelength' column found.")
+            return
 
-        plot.plot_sample(self.plot_widget, wavenumbers, intensities, display_name)
+        try:
+            intensities = df["intensity"].to_numpy()
+        except pl.ColumnNotFoundError:
+            QMessageBox.critical(self, "Error", "No 'intensity' column found.")
+            return
+
+        plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
         self.plot_widget.autoRange()
 
     def open_parameters_dialog(self):
@@ -958,6 +973,201 @@ class CustomTab(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             self.update_sim_objects()
             self.update_tab_name()
+
+
+class AllSimulationsTab(QWidget):
+    def __init__(self, parent_tab_widget=None):
+        super().__init__()
+
+        self.parent_tab_widget = parent_tab_widget
+
+        main_layout = QVBoxLayout(self)
+
+        controls_widget = QWidget()
+        controls_layout = QHBoxLayout(controls_widget)
+
+        resolution_group = QGroupBox("Resolution")
+        resolution_layout = QHBoxLayout(resolution_group)
+        self.resolution_spinbox = QSpinBox()
+        self.resolution_spinbox.setMaximum(10000000)
+        self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
+        resolution_layout.addWidget(self.resolution_spinbox)
+        controls_layout.addWidget(resolution_group)
+
+        plot_group = QGroupBox("Plot Type")
+        plot_layout = QHBoxLayout(plot_group)
+        self.plot_type_combo = QComboBox()
+        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        plot_layout.addWidget(self.plot_type_combo)
+        controls_layout.addWidget(plot_group)
+
+        broadening_group = QGroupBox("Instrument Broadening [nm]")
+        broadening_layout = QVBoxLayout(broadening_group)
+
+        self.inst_broadening_spinbox = MyDoubleSpinBox()
+        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        broadening_layout.addWidget(self.inst_broadening_spinbox)
+
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument FWHM")
+        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_predissociation = QCheckBox("Predissociation")
+
+        checkboxes = [
+            self.checkbox_instrument,
+            self.checkbox_doppler,
+            self.checkbox_natural,
+            self.checkbox_collisional,
+            self.checkbox_predissociation,
+        ]
+
+        for cb in checkboxes:
+            cb.setChecked(True)
+            checkbox_layout.addWidget(cb)
+
+        broadening_layout.addLayout(checkbox_layout)
+        controls_layout.addWidget(broadening_group)
+
+        actions_group = QGroupBox("Actions")
+        actions_layout = QVBoxLayout(actions_group)
+        self.run_button: QPushButton = QPushButton("Run All Simulations")
+        self.run_button.clicked.connect(self.run_all_simulations)
+        actions_layout.addWidget(self.run_button)
+        controls_layout.addWidget(actions_group)
+
+        main_layout.addWidget(controls_widget)
+
+        self.plot_widget = pg.PlotWidget()
+        self.plot_widget.addLegend(offset=(0, 1))
+        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
+        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setXRange(100, 200)
+        main_layout.addWidget(self.plot_widget, stretch=1)
+
+    def run_all_simulations(self):
+        if self.parent_tab_widget is None:
+            return
+
+        self.plot_widget.clear()
+
+        custom_tabs: list[CustomTab] = []
+        for idx in range(self.parent_tab_widget.count()):
+            tab = self.parent_tab_widget.widget(idx)
+            if isinstance(tab, CustomTab):
+                custom_tabs.append(tab)
+
+        if not custom_tabs:
+            QMessageBox.information(
+                self,
+                "No Simulations",
+                "No simulation tabs found to plot.",
+                QMessageBox.StandardButton.Ok,
+            )
+            return
+
+        map_functions = {
+            "Line": plot.plot_line,
+            "Line Info": plot.plot_line_info,
+            "Convolve Separate": plot.plot_conv_sep,
+            "Convolve All": plot.plot_conv_all,
+        }
+        plot_type = self.plot_type_combo.currentText()
+        plot_function = map_functions.get(plot_type)
+
+        # TODO: 25/08/01 - Broadening parameters should be pulled from each individual tab instead.
+
+        fwhm_selections = {
+            "instrument": self.checkbox_instrument.isChecked(),
+            "doppler": self.checkbox_doppler.isChecked(),
+            "natural": self.checkbox_natural.isChecked(),
+            "collisional": self.checkbox_collisional.isChecked(),
+            "predissociation": self.checkbox_predissociation.isChecked(),
+        }
+
+        def max_intensity_line():
+            intensities_line: NDArray[np.float64] = np.array([])
+
+            for tab in custom_tabs:
+                _, ins = tab.sim.all_line_data()
+                intensities_line = np.concatenate((intensities_line, ins))
+
+            return intensities_line.max()
+
+        def max_intensity_conv_sep(inst_broadening_wl, granularity):
+            convolved_data: list[NDArray[np.float64]] = []
+            max_intensity: float = 0.0
+
+            for tab in custom_tabs:
+                for band in tab.sim.bands:
+                    intensities_conv = band.intensities_conv(
+                        fwhm_selections,
+                        inst_broadening_wl,
+                        band.wavenumbers_conv(inst_broadening_wl, granularity),
+                    )
+
+                    convolved_data.append(intensities_conv)
+
+                    max_intensity = max(max_intensity, intensities_conv.max())
+
+            return max_intensity
+
+        def max_intensity_conv_all():
+            intensities_conv: NDArray[np.float64] = np.array([])
+
+            for tab in custom_tabs:
+                _, ins = tab.sim.all_conv_data(
+                    fwhm_selections,
+                    self.inst_broadening_spinbox.value(),
+                    self.resolution_spinbox.value(),
+                )
+                intensities_conv = np.concatenate((intensities_conv, ins))
+
+            return intensities_conv.max()
+
+        # TODO: 25/08/01 - Convolving all bands together needs to create a new wavenumber axis
+        #       common to all simulations and then add the contributions of all simulations to the
+        #       plot.
+
+        num_tabs = len(custom_tabs)
+        all_sim_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][:num_tabs]
+
+        for idx, tab in enumerate(custom_tabs):
+            if plot_function is not None:
+                if plot_function.__name__ == "plot_conv_sep":
+                    broadening = self.inst_broadening_spinbox.value()
+                    resolution = self.resolution_spinbox.value()
+                    plot_function(
+                        self.plot_widget,
+                        tab.sim,
+                        all_sim_colors,
+                        fwhm_selections,
+                        broadening,
+                        resolution,
+                        max_intensity_conv_sep(broadening, resolution),
+                        idx,
+                    )
+                elif plot_function.__name__ == "plot_conv_all":
+                    plot_function(
+                        self.plot_widget,
+                        tab.sim,
+                        all_sim_colors,
+                        fwhm_selections,
+                        self.inst_broadening_spinbox.value(),
+                        self.resolution_spinbox.value(),
+                        max_intensity_conv_all(),
+                        idx,
+                    )
+                else:
+                    plot_function(
+                        self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
+                    )
+
+        self.plot_widget.autoRange()
 
 
 class GUI(QMainWindow):
@@ -968,9 +1178,9 @@ class GUI(QMainWindow):
         pg.setConfigOption("foreground", "w")
 
         self.setWindowTitle("pyGEONOSIS")
-        self.showMaximized()
         self.resize(1600, 800)
         self.init_ui()
+        self.showMaximized()
 
     def init_ui(self):
         central_widget = QWidget()
@@ -993,6 +1203,11 @@ class GUI(QMainWindow):
     def create_tab_panel(self):
         self.molecule_tab_widget = QTabWidget(movable=True, tabsClosable=True)
 
+        all_sims_tab = AllSimulationsTab(parent_tab_widget=self.molecule_tab_widget)
+        self.molecule_tab_widget.addTab(all_sims_tab, "All Simulations")
+        self.molecule_tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+        self.molecule_tab_widget.tabBar().setMovable(False)
+
         for preset in MOLECULAR_PRESETS[:3]:
             tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
             tab.molecule = preset["molecule"]
@@ -1004,18 +1219,19 @@ class GUI(QMainWindow):
             tab.update_tab_name()
             tab.run_simulation()
 
+        self.molecule_tab_widget.setCurrentIndex(1)
         self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
 
         return self.molecule_tab_widget
 
     def close_tab(self, index):
-        if self.molecule_tab_widget.count() > 1:
+        if self.molecule_tab_widget.count() > 2:
             self.molecule_tab_widget.removeTab(index)
         else:
             QMessageBox.information(
                 self,
                 "Cannot Close Tab",
-                "At least one tab must remain open.",
+                "At least one simulation tab must remain open.",
                 QMessageBox.StandardButton.Ok,
             )
 

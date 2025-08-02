@@ -33,39 +33,57 @@ PEN_WIDTH: int = 1
 
 def plot_sample(
     plot_widget: pg.PlotWidget,
-    wavenumbers: NDArray[np.float64],
+    x_values: NDArray[np.float64],
     intensities: NDArray[np.float64],
     display_name: str,
+    value_type: str,
 ) -> None:
     """Plot sample data.
 
     Args:
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        wavenumbers (NDArray[np.float64]): Sample wavenumbers.
+        x_values (NDArray[np.float64]): Sample wavenumbers.
         intensities (NDArray[np.float64]): Sample intensities.
         display_name (str): The name of the file without directory information.
+        value_type (str): Either wavenumbers or wavelengths.
     """
-    wavelengths: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers)
+    if value_type == "wavenumbers":
+        x_values = utils.wavenum_to_wavelen(x_values)
 
     plot_widget.plot(
-        wavelengths,
+        x_values,
         intensities / intensities.max(),
         pen=pg.mkPen("w", width=PEN_WIDTH),
         name=display_name,
     )
 
 
-def plot_line(plot_widget: pg.PlotWidget, sim: Sim, colors: list[str]) -> None:
+def plot_line(
+    plot_widget: pg.PlotWidget,
+    sim: Sim,
+    colors: list[str],
+    max_intensity: float | None = None,
+    color_index: int | None = None,
+) -> None:
     """Plot each rotational line.
 
     Args:
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
         sim (Sim): The parent simulation.
         colors (list[str]): A list of colors for plotting.
+        max_intensity (float | None, optional): Provided only if multiple simulations are being run
+            together. Defaults to None.
+        color_index (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to None.
     """
-    max_intensity: float = sim.all_line_data()[1].max()
+    if max_intensity is None:
+        max_intensity = sim.all_line_data()[1].max()
+
+    assert max_intensity is not None
 
     for idx, band in enumerate(sim.bands):
+        color_idx = color_index if color_index is not None else idx
+
         wavelengths_line: NDArray[np.float64] = utils.wavenum_to_wavelen(band.wavenumbers_line())
         intensities_line: NDArray[np.float64] = band.intensities_line()
 
@@ -82,24 +100,37 @@ def plot_line(plot_widget: pg.PlotWidget, sim: Sim, colors: list[str]) -> None:
         plot_widget.plot(
             scatter_data[:, 0],
             scatter_data[:, 1],
-            pen=pg.mkPen(colors[idx], width=PEN_WIDTH),
+            pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
             connect="pairs",
             name=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} line",
         )
 
 
-def plot_line_info(plot_widget: pg.PlotWidget, sim: Sim, colors: list[str]) -> None:
+def plot_line_info(
+    plot_widget: pg.PlotWidget,
+    sim: Sim,
+    colors: list[str],
+    max_intensity: float | None = None,
+    color_index: int | None = None,
+) -> None:
     """Plot information about each rotational line.
 
     Args:
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
         sim (Sim): The parent simulation.
         colors (list[str]): A list of colors for plotting.
+        max_intensity (float | None, optional): Provided only if multiple simulations are being run
+            together. Defaults to None.
+        color_index (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to None.
     """
-    # In order to show text, a plot must first exist.
-    plot_line(plot_widget, sim, colors)
+    if max_intensity is None:
+        max_intensity = sim.all_line_data()[1].max()
 
-    max_intensity: float = sim.all_line_data()[1].max()
+    assert max_intensity is not None
+
+    # In order to show text, a plot must first exist.
+    plot_line(plot_widget, sim, colors, max_intensity, color_index)
 
     for band in sim.bands:
         # Only select non-satellite lines to reduce the amount of data on screen.
@@ -124,6 +155,8 @@ def plot_conv_sep(
     fwhm_selections: dict[str, bool],
     inst_broadening_wl: float,
     granularity: int,
+    max_intensity: float | None = None,
+    color_index: int | None = None,
 ) -> None:
     """Plot convolved data for each vibrational band separately.
 
@@ -134,34 +167,37 @@ def plot_conv_sep(
         fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
         inst_broadening_wl (float): Instrument broadening FWHM in [nm].
         granularity (int): Number of points on the wavenumber axis.
+        max_intensity (float | None, optional): Provided only if multiple simulations are being run
+            together. Defaults to None.
     """
+    convolved_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
+    calculated_max_intensity: float = 0.0
+
     # Need to convolve all bands separately, get their maximum intensities, store the largest, and
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
-    max_intensity: float = max(
-        band.intensities_conv(
+    for band in sim.bands:
+        wavenumbers_conv = band.wavenumbers_conv(inst_broadening_wl, granularity)
+        intensities_conv = band.intensities_conv(
             fwhm_selections,
             inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-        ).max()
-        for band in sim.bands
-    )
-
-    for idx, band in enumerate(sim.bands):
-        wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(
-            band.wavenumbers_conv(inst_broadening_wl, granularity)
+            wavenumbers_conv,
         )
-        intensities_conv: NDArray[np.float64] = band.intensities_conv(
-            fwhm_selections,
-            inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-        )
+        wavelengths_conv = utils.wavenum_to_wavelen(wavenumbers_conv)
+        convolved_data.append((wavelengths_conv, intensities_conv))
 
+        if max_intensity is None:
+            calculated_max_intensity = max(calculated_max_intensity, intensities_conv.max())
+
+    normalization_factor = max_intensity if max_intensity is not None else calculated_max_intensity
+
+    for idx, (wavelengths_conv, intensities_conv) in enumerate(convolved_data):
+        color_idx = color_index if color_index is not None else idx
         plot_widget.plot(
             wavelengths_conv,
-            intensities_conv / max_intensity,
-            pen=pg.mkPen(colors[idx], width=PEN_WIDTH),
-            name=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} conv",
+            intensities_conv / normalization_factor,
+            pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
+            name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} conv",
         )
 
 
@@ -172,6 +208,8 @@ def plot_conv_all(
     fwhm_selections: dict[str, bool],
     inst_broadening_wl: float,
     granularity: int,
+    max_intensity: float | None = None,
+    color_idx: int = 0,
 ) -> None:
     """Plot convolved data for all vibrational bands simultaneously.
 
@@ -182,15 +220,24 @@ def plot_conv_all(
         fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
         inst_broadening_wl (float): Instrument broadening FWHM in [nm].
         granularity (int): Number of points on the wavenumber axis.
+        max_intensity (float | None, optional): Provided only if multiple simulations are being run
+            together. Defaults to None.
+        color_idx (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to 0.
     """
     wavenumbers_conv, intensities_conv = sim.all_conv_data(
         fwhm_selections, inst_broadening_wl, granularity
     )
     wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_conv)
 
+    if max_intensity is None:
+        max_intensity = intensities_conv.max()
+
+    assert max_intensity is not None
+
     plot_widget.plot(
         wavelengths_conv,
-        intensities_conv / intensities_conv.max(),
-        pen=pg.mkPen(colors[0], width=PEN_WIDTH),
+        intensities_conv / max_intensity,
+        pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
         name=f"{sim.molecule.name} conv all",
     )

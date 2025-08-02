@@ -1,7 +1,7 @@
 [project]
 name = "pyGEONOSIS"
-version = "0.1.0"
-description = "A tool for simulating the Schumann-Runge (B-X) bands of molecular oxygen, and eventually the A-X transition of nitric oxide."
+version = "0.2.0"
+description = "A tool for simulating the spectra of any diatomic molecule."
 readme = "README.md"
 requires-python = "==3.13.5"
 dependencies = [

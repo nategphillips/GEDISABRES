@@ -20,6 +20,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import pyqtgraph as pg
@@ -1055,8 +1056,8 @@ class AllSimulationsTab(QWidget):
         self.plot_widget.clear()
 
         custom_tabs: list[CustomTab] = []
-        for i in range(self.parent_tab_widget.count()):
-            tab = self.parent_tab_widget.widget(i)
+        for idx in range(self.parent_tab_widget.count()):
+            tab = self.parent_tab_widget.widget(idx)
             if isinstance(tab, CustomTab):
                 custom_tabs.append(tab)
 
@@ -1132,10 +1133,10 @@ class AllSimulationsTab(QWidget):
         #       common to all simulations and then add the contributions of all simulations to the
         #       plot.
 
-        for i, tab in enumerate(custom_tabs):
-            bands = tab.get_current_bands()
-            colors = get_colors(bands)
+        num_tabs = len(custom_tabs)
+        all_sim_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][:num_tabs]
 
+        for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
                 if plot_function.__name__ == "plot_conv_sep":
                     broadening = self.inst_broadening_spinbox.value()
@@ -1143,24 +1144,28 @@ class AllSimulationsTab(QWidget):
                     plot_function(
                         self.plot_widget,
                         tab.sim,
-                        colors,
+                        all_sim_colors,
                         fwhm_selections,
                         broadening,
                         resolution,
                         max_intensity_conv_sep(broadening, resolution),
+                        idx,
                     )
                 elif plot_function.__name__ == "plot_conv_all":
                     plot_function(
                         self.plot_widget,
                         tab.sim,
-                        colors,
+                        all_sim_colors,
                         fwhm_selections,
                         self.inst_broadening_spinbox.value(),
                         self.resolution_spinbox.value(),
                         max_intensity_conv_all(),
+                        idx,
                     )
                 else:
-                    plot_function(self.plot_widget, tab.sim, colors, max_intensity_line())
+                    plot_function(
+                        self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
+                    )
 
         self.plot_widget.autoRange()
 

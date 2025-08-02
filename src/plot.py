@@ -59,7 +59,11 @@ def plot_sample(
 
 
 def plot_line(
-    plot_widget: pg.PlotWidget, sim: Sim, colors: list[str], max_intensity: float | None = None
+    plot_widget: pg.PlotWidget,
+    sim: Sim,
+    colors: list[str],
+    max_intensity: float | None = None,
+    color_index: int | None = None,
 ) -> None:
     """Plot each rotational line.
 
@@ -69,6 +73,8 @@ def plot_line(
         colors (list[str]): A list of colors for plotting.
         max_intensity (float | None, optional): Provided only if multiple simulations are being run
             together. Defaults to None.
+        color_index (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to None.
     """
     if max_intensity is None:
         max_intensity = sim.all_line_data()[1].max()
@@ -76,6 +82,8 @@ def plot_line(
     assert max_intensity is not None
 
     for idx, band in enumerate(sim.bands):
+        color_idx = color_index if color_index is not None else idx
+
         wavelengths_line: NDArray[np.float64] = utils.wavenum_to_wavelen(band.wavenumbers_line())
         intensities_line: NDArray[np.float64] = band.intensities_line()
 
@@ -92,14 +100,18 @@ def plot_line(
         plot_widget.plot(
             scatter_data[:, 0],
             scatter_data[:, 1],
-            pen=pg.mkPen(colors[idx], width=PEN_WIDTH),
+            pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
             connect="pairs",
             name=f"{sim.molecule.name} {band.v_qn_up, band.v_qn_lo} line",
         )
 
 
 def plot_line_info(
-    plot_widget: pg.PlotWidget, sim: Sim, colors: list[str], max_intensity: float | None = None
+    plot_widget: pg.PlotWidget,
+    sim: Sim,
+    colors: list[str],
+    max_intensity: float | None = None,
+    color_index: int | None = None,
 ) -> None:
     """Plot information about each rotational line.
 
@@ -109,6 +121,8 @@ def plot_line_info(
         colors (list[str]): A list of colors for plotting.
         max_intensity (float | None, optional): Provided only if multiple simulations are being run
             together. Defaults to None.
+        color_index (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to None.
     """
     if max_intensity is None:
         max_intensity = sim.all_line_data()[1].max()
@@ -116,7 +130,7 @@ def plot_line_info(
     assert max_intensity is not None
 
     # In order to show text, a plot must first exist.
-    plot_line(plot_widget, sim, colors, max_intensity)
+    plot_line(plot_widget, sim, colors, max_intensity, color_index)
 
     for band in sim.bands:
         # Only select non-satellite lines to reduce the amount of data on screen.
@@ -142,6 +156,7 @@ def plot_conv_sep(
     inst_broadening_wl: float,
     granularity: int,
     max_intensity: float | None = None,
+    color_index: int | None = None,
 ) -> None:
     """Plot convolved data for each vibrational band separately.
 
@@ -177,10 +192,11 @@ def plot_conv_sep(
     normalization_factor = max_intensity if max_intensity is not None else calculated_max_intensity
 
     for idx, (wavelengths_conv, intensities_conv) in enumerate(convolved_data):
+        color_idx = color_index if color_index is not None else idx
         plot_widget.plot(
             wavelengths_conv,
             intensities_conv / normalization_factor,
-            pen=pg.mkPen(colors[idx], width=PEN_WIDTH),
+            pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
             name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} conv",
         )
 
@@ -193,6 +209,7 @@ def plot_conv_all(
     inst_broadening_wl: float,
     granularity: int,
     max_intensity: float | None = None,
+    color_idx: int = 0,
 ) -> None:
     """Plot convolved data for all vibrational bands simultaneously.
 
@@ -205,6 +222,8 @@ def plot_conv_all(
         granularity (int): Number of points on the wavenumber axis.
         max_intensity (float | None, optional): Provided only if multiple simulations are being run
             together. Defaults to None.
+        color_idx (int, optional): Provided only if multiple simulations are being run together.
+            Defaults to 0.
     """
     wavenumbers_conv, intensities_conv = sim.all_conv_data(
         fwhm_selections, inst_broadening_wl, granularity
@@ -219,6 +238,6 @@ def plot_conv_all(
     plot_widget.plot(
         wavelengths_conv,
         intensities_conv / max_intensity,
-        pen=pg.mkPen(colors[0], width=PEN_WIDTH),
+        pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
         name=f"{sim.molecule.name} conv all",
     )

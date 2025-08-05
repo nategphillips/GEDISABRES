@@ -111,7 +111,7 @@ def nuclear_parity_mask(
     if (degeneracy_even == 0) and (degeneracy_odd != 0):
         return n_qn_arr % 2 == 1
     # If odd N values are forbidden, return true only for even values.
-    if (degeneracy_odd == 0) and (degeneracy_even != 0):
+    if (degeneracy_even != 0) and (degeneracy_odd == 0):
         return n_qn_arr % 2 == 0
     # Both nuclear degeneracies being zero within a given electronic state should never happen.
     if (degeneracy_even == 0) and (degeneracy_odd == 0):
@@ -359,7 +359,7 @@ class Band:
                 state = self.sim.state_lo
                 v_qn = self.v_qn_lo
 
-        # TODO: 25/07/10 - For now, use the high-temperature approximation instead of directly
+        # NOTE: 25/07/10 - For now, use the high-temperature approximation instead of directly
         #       computing the sum. Now that rotational term values are directly associated with
         #       rotational lines instead of being computed separately, computing the sum would
         #       require a bit more logic, and I'm not sure it's worth it.
@@ -414,7 +414,7 @@ class Band:
         lambda_basis_up = np.array([lamda for (lamda, _, _) in basis_fns_up])
         lambda_basis_lo = np.array([lamda for (lamda, _, _) in basis_fns_lo])
 
-        # TODO: 25/07/15 - These rules come from "PGOPHER: A program for simulating rotational,
+        # NOTE: 25/07/15 - These rules come from "PGOPHER: A program for simulating rotational,
         #       vibrational and electronic spectra" by Colin M. Western, in which the low quantum
         #       number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
 
@@ -462,14 +462,13 @@ class Band:
             eigenvals_lo_cache[j_qn_lo] = comp_lo.eigenvalues
             unitary_lo_cache[j_qn_lo] = comp_lo.eigenvectors
 
-        # In the case of a 3x3 Hamiltonian, the number of branches will be 3. Since the Hamiltonian
-        # (and therefore unitary matrices) are always square, either dimension can be used.
-        num_branches_up: int = len(basis_fns_up)
-        num_branches_lo: int = len(basis_fns_lo)
+        # Upper and lower Hamiltonian dimensions.
+        dim_up: int = len(basis_fns_up)
+        dim_lo: int = len(basis_fns_lo)
 
         # Branch indices should range from 1 to the dimension of the Hamiltonian.
-        branch_up_range: range = range(1, num_branches_up + 1)
-        branch_lo_range: range = range(1, num_branches_lo + 1)
+        branch_up_range: range = range(1, dim_up + 1)
+        branch_lo_range: range = range(1, dim_lo + 1)
 
         # Each (J', J'') pair will have an associated Hönl-London factor matrix with the dimensions
         # (num_branches_up, branch_branches_lo). For example, each (J', J'') pair for a 3x3
@@ -495,7 +494,7 @@ class Band:
             n_qn_up_vals: list[Fraction] = n_values_for_j(Fraction(j_qn_up), s_qn_up)
 
             # Check if the generated N' values have any zero-valued degeneracies and mask them off
-            # if so, dimension (n_dim_up).
+            # if so.
             allowed_n_qn_up: NDArray[np.bool] = nuclear_parity_mask(
                 n_qn_up_vals, degeneracy_up_even, degeneracy_up_odd
             )
@@ -520,12 +519,7 @@ class Band:
 
                 # Get all allowed N'' values for each J''.
                 n_qn_lo_vals: list[Fraction] = n_qn_lo_cache[j_qn_lo]
-                # NOTE: 25/07/28 - This mask really doesn't need to be made since the nuclear
-                #       degeneracy partition function already enforces these rules. Speed
-                #       improvements are likely marginal since this just prevents the Hönl-London
-                #       factors for the unallowed lines from being computed in the first place.
 
-                # Dimension (n_dim_lo).
                 allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
                 key: tuple[Fraction, Fraction] = (j_qn_up, j_qn_lo)
@@ -552,15 +546,8 @@ class Band:
                     hlf_matrix_cache[key] = hlf_mat
 
                 # Enforce the Hönl-London cutoff and allowed rotational quantum number conditions
-                # for each branch index pair (i, j), has dimensions
-                # (num_branches_up, branch_branches_lo).
-                mask: NDArray[np.bool] = (
-                    hlf_mat > constants.HONL_LONDON_CUTOFF
-                    # Removing these for now since they break for non-symmetric transitions like
-                    # 2Σ-2Π and they're technically redundant. See the note above.
-                    # & allowed_n_qn_up[:, None]
-                    # & allowed_n_qn_lo[None, :]
-                )
+                # for each branch index pair (i, j), dimensions (num_branches_up, num_branches_lo).
+                mask: NDArray[np.bool] = hlf_mat > constants.HONL_LONDON_CUTOFF
                 # Get the row and column (i, j) indices where the mask is true.
                 i_range, j_range = np.nonzero(mask)
 
@@ -570,23 +557,23 @@ class Band:
                 for i, j in zip(i_range.tolist(), j_range.tolist()):
                     branch_idx_up: int = branch_up_range[i]
                     branch_idx_lo: int = branch_lo_range[j]
-                    # NOTE: 25/07/28 - If one of the matrices is larger than the other, like in the
-                    #       case of a 2Σ-2Π transition, then the dimension of the larger matrix
-                    #       will be double that of the smaller one. This *should* be dealt with by
-                    #       simulating the electronic sub-states separately (Π_3/2 and Π_1/2 for
-                    #       example) and then combining their contributions.
-                    dim_up = i_range.max()
-                    dim_lo = j_range.max()
-                    if (
-                        self.sim.state_up.term_symbol != TermSymbol.SIGMA
-                        or self.sim.state_lo.term_symbol != TermSymbol.SIGMA
-                    ):
-                        # If neither state is a Σ, then they're both lambda doubled.
-                        smaller_dim = dim_up // 2
-                    else:
-                        smaller_dim = min(dim_up, dim_lo)
-                    n_qn_up: Fraction = n_qn_up_vals[i % smaller_dim]
-                    n_qn_lo: Fraction = n_qn_lo_vals[j % smaller_dim]
+
+                    mod_up: int = dim_up
+                    mod_lo: int = dim_lo
+
+                    # Account for lambda doubling when labeling N values.
+                    if self.sim.state_up.term_symbol != TermSymbol.SIGMA:
+                        mod_up = dim_up // 2
+                    if self.sim.state_lo.term_symbol != TermSymbol.SIGMA:
+                        mod_lo = dim_lo // 2
+
+                    n_qn_up: Fraction = n_qn_up_vals[i % mod_up]
+                    n_qn_lo: Fraction = n_qn_lo_vals[j % mod_lo]
+
+                    # Discard lines with disallowed nuclear statistics.
+                    if not allowed_n_qn_up[i % mod_up] or not allowed_n_qn_lo[j % mod_lo]:
+                        continue
+
                     hlf: float = float(hlf_mat[i, j])
                     eigenval_up: float = float(eigenvals_up[i])
                     eigenval_lo: float = float(eigenvals_lo[j])

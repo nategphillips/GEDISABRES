@@ -47,7 +47,7 @@ def plot_sample(
         display_name (str): The name of the file without directory information.
         value_type (str): Either wavenumbers or wavelengths.
     """
-    if value_type == "wavenumbers":
+    if value_type == "wavenumber":
         x_values = utils.wavenum_to_wavelen(x_values)
 
     plot_widget.plot(

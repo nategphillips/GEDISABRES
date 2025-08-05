@@ -426,15 +426,13 @@ class Band:
         j_qn_up_max: Fraction = j_qn_up_min + self.sim.j_qn_up_max
 
         def create_j_range(j_qn_up_min: Fraction, j_qn_up_max: Fraction) -> list[Fraction]:
-            step: Fraction = Fraction(1)
-            count: int = int((j_qn_up_max - j_qn_up_min) / step) + 1
-            return [j_qn_up_min + i * step for i in range(count)]
+            count: int = int(j_qn_up_max - j_qn_up_min)
+            return [j_qn_up_min + i for i in range(count + 1)]
 
         j_qn_up_range: list[Fraction] = create_j_range(j_qn_up_min, j_qn_up_max)
-        j_qn_lo_range: list[Fraction] = create_j_range(j_qn_up_min - 1, j_qn_up_max + 1)
-
-        # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
-        j_qn_lo_range = [item for item in j_qn_lo_range if item >= 0]
+        j_qn_lo_range: list[Fraction] = [
+            j for j in create_j_range(j_qn_up_min - 1, j_qn_up_max + 1) if j >= 0
+        ]
 
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
         #       computing them inside the main loop, but this is mainly done to mirror the
@@ -443,6 +441,8 @@ class Band:
         unitary_up_cache: dict[Fraction, NDArray[np.float64]] = {}
 
         for j_qn_up in j_qn_up_range:
+            # FIXME: 25/08/05 - Should make hamilterm automatically compute the max N power and max
+            #        anticommutator power from the constants supplied.
             comp_up = numerics.NumericComputation(
                 term_symbol_up, consts_up, j_qn_up, max_n_power=4, max_acomm_power=2
             )
@@ -495,7 +495,7 @@ class Band:
             n_qn_up_vals: list[Fraction] = n_values_for_j(Fraction(j_qn_up), s_qn_up)
 
             # Check if the generated N' values have any zero-valued degeneracies and mask them off
-            # if so.
+            # if so, dimension (n_dim_up).
             allowed_n_qn_up: NDArray[np.bool] = nuclear_parity_mask(
                 n_qn_up_vals, degeneracy_up_even, degeneracy_up_odd
             )
@@ -505,16 +505,10 @@ class Band:
             # Upper state unitary matrix, dimension (num_branches_up, num_branches_up).
             unitary_up: NDArray[np.float64] = unitary_up_cache[j_qn_up]
 
-            # NOTE: 25/07/10 - From Herzberg p. 169, if Λ = 0 for both electronic states, the Q
-            #       branch transition is forbidden. See also Herzberg p. 243 stating that if Ω = 0
-            #       for both electronic states, the Q branch transition is forbidden. The
-            #       Hönl-London factors should enforce these automatically.
-
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
-            j_qn_lo_list: list[Fraction] = [j_qn_up - 1, j_qn_up, j_qn_up + 1]
-
-            # TODO: 25/07/28 - Use a less hacky way to prevent less than zero qns.
-            j_qn_lo_list = [item for item in j_qn_lo_list if item >= 0]
+            j_qn_lo_list: list[Fraction] = [
+                j for j in [j_qn_up - 1, j_qn_up, j_qn_up + 1] if j >= 0
+            ]
 
             for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
@@ -530,6 +524,8 @@ class Band:
                 #       degeneracy partition function already enforces these rules. Speed
                 #       improvements are likely marginal since this just prevents the Hönl-London
                 #       factors for the unallowed lines from being computed in the first place.
+
+                # Dimension (n_dim_lo).
                 allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
                 key: tuple[Fraction, Fraction] = (j_qn_up, j_qn_lo)

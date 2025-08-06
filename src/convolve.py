@@ -18,7 +18,7 @@
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.special import wofz
+from scipy.special import voigt_profile
 
 from line import Line
 
@@ -91,13 +91,9 @@ def broadening_fn(
     # The FWHM of the Lorentzian PDF is 2 * gamma, where gamma is the half-width at half-maximum.
     lorentzian_hwhm: float = fwhm_lorentzian / 2
 
-    # Otherwise, compute the argument of the complex Faddeeva function and return a Voigt profile.
-    z: NDArray[np.float64] = ((wavenumbers_conv - line.wavenumber) + 1j * lorentzian_hwhm) / (
-        gaussian_stddev * np.sqrt(2)
-    )
-
     # The probability density function for the Voigt profile.
-    return np.real(wofz(z)) / (gaussian_stddev * np.sqrt(2 * np.pi))
+    # real(w(z)) / (sigma * sqrt(2 * pi)), where z = (x + i * gamma) / (sqrt(2) * sigma)
+    return voigt_profile((wavenumbers_conv - line.wavenumber), gaussian_stddev, lorentzian_hwhm)
 
 
 def convolve(

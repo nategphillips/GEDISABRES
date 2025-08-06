@@ -71,7 +71,7 @@ wheels = [
 [[package]]
 name = "hamilterm"
 version = "0.1.0"
-source = { git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d#fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" }
+source = { git = "https://github.com/nategphillips/hamilterm?rev=c3334df9546b9faad4e6476b955f2c2d9f54a718#c3334df9546b9faad4e6476b955f2c2d9f54a718" }
 dependencies = [
     { name = "numpy" },
     { name = "sympy" },
@@ -265,7 +265,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" },
+    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=c3334df9546b9faad4e6476b955f2c2d9f54a718" },
     { name = "matplotlib", specifier = "==3.10.3" },
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },

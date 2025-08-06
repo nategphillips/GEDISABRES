@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import dataclasses
-from fractions import Fraction
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -35,6 +34,8 @@ from enums import ConstantsType, SimType, TermSymbol
 from line import Line
 
 if TYPE_CHECKING:
+    from fractions import Fraction
+
     from numpy.typing import NDArray
 
     from sim import Sim
@@ -65,37 +66,35 @@ def fill_from_dict(table: dict[str, float]) -> hconsts.NumericConstants:
     return numeric_consts
 
 
-def n_values_for_j(j_qn: Fraction, s_qn: Fraction) -> list[Fraction]:
+def n_values_for_j(j_qn: float, s_qn: float) -> list[float]:
     """Computes the possible values of N for a given J, from J - S to J + S.
 
     Args:
-        j_qn (Fraction): Quantum number J.
-        s_qn (Fraction): Quantum number S.
+        j_qn (float): Quantum number J.
+        s_qn (float): Quantum number S.
 
     Returns:
-        list[Fraction]: Valid N for the given J.
+        list[float]: Valid N for the given J.
     """
-    lo: Fraction = j_qn - s_qn
-    hi: Fraction = j_qn + s_qn
+    lo: float = j_qn - s_qn
+    hi: float = j_qn + s_qn
 
-    step_size: Fraction = Fraction(1)
-
-    n_values: list[Fraction] = []
-    current: Fraction = lo
+    n_values: list[float] = []
+    current: float = lo
     while current <= hi:
         n_values.append(current)
-        current += step_size
+        current += 1
 
     return n_values
 
 
 def nuclear_parity_mask(
-    n_qn_vals: list[Fraction], degeneracy_even: Fraction, degeneracy_odd: Fraction
+    n_qn_vals: list[float], degeneracy_even: Fraction, degeneracy_odd: Fraction
 ) -> NDArray[np.bool]:
     """Create a mask of allowed rotational quantum numbers using nuclear degeneracies.
 
     Args:
-        n_qn_vals (list[Fraction]): Quantum numbers N.
+        n_qn_vals (list[float]): Quantum numbers N.
         degeneracy_even (float): Nuclear degeneracy for even values of N.
         degeneracy_odd (float): Nuclear degeneracy for odd values of N.
 
@@ -121,8 +120,8 @@ def nuclear_parity_mask(
 
 
 def honl_london_matrix(
-    j_qn_up: Fraction,
-    j_qn_lo: Fraction,
+    j_qn_up: float,
+    j_qn_lo: float,
     unitary_up: NDArray[np.float64],
     unitary_lo: NDArray[np.float64],
     omega_basis_up: NDArray[np.float64],
@@ -136,8 +135,8 @@ def honl_london_matrix(
     Algorithm based on Equation 22 in Hornkohl, et al.
 
     Args:
-        j_qn_up (Fraction): Upper state rotational quantum number J'.
-        j_qn_lo (Fraction): Lower state rotational quantum number J''.
+        j_qn_up (float): Upper state rotational quantum number J'.
+        j_qn_lo (float): Lower state rotational quantum number J''.
         unitary_up (NDArray[np.float64]): Upper state unitary matrix.
         unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
         omega_basis_up (NDArray[np.float64]): Upper state Ω' quantum numbers.
@@ -400,11 +399,11 @@ class Band:
         consts_lo: hconsts.NumericConstants = fill_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
-        basis_fns_up: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(
+        basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns(
             s_qn_up, lambda_qn_up
         )
         s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol(term_symbol_lo)
-        basis_fns_lo: list[tuple[int, Fraction, Fraction]] = hutils.generate_basis_fns(
+        basis_fns_lo: list[tuple[int, float, float]] = hutils.generate_basis_fns(
             s_qn_lo, lambda_qn_lo
         )
 
@@ -419,26 +418,26 @@ class Band:
         #       number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
 
         n_qn_up_min: int = abs(lambda_qn_up)
-        j_qn_up_min: Fraction = abs(n_qn_up_min - s_qn_up)
+        j_qn_up_min: float = abs(n_qn_up_min - s_qn_up)
         # NOTE: 25/07/18 - For now, the maximum J' input box in the GUI only accepts integer values,
         #       so in the case of a transition with half-integer values, the minimum value will be
         #       half-integer and we simply add the two to prevent truncation.
-        j_qn_up_max: Fraction = j_qn_up_min + self.sim.j_qn_up_max
+        j_qn_up_max: float = j_qn_up_min + self.sim.j_qn_up_max
 
-        def create_j_range(j_qn_up_min: Fraction, j_qn_up_max: Fraction) -> list[Fraction]:
+        def create_j_range(j_qn_up_min: float, j_qn_up_max: float) -> list[float]:
             count: int = int(j_qn_up_max - j_qn_up_min)
             return [j_qn_up_min + i for i in range(count + 1)]
 
-        j_qn_up_range: list[Fraction] = create_j_range(j_qn_up_min, j_qn_up_max)
-        j_qn_lo_range: list[Fraction] = [
+        j_qn_up_range: list[float] = create_j_range(j_qn_up_min, j_qn_up_max)
+        j_qn_lo_range: list[float] = [
             j for j in create_j_range(j_qn_up_min - 1, j_qn_up_max + 1) if j >= 0
         ]
 
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
         #       computing them inside the main loop, but this is mainly done to mirror the
         #       calculations performed for the lower state.
-        eigenvals_up_cache: dict[Fraction, NDArray[np.float64]] = {}
-        unitary_up_cache: dict[Fraction, NDArray[np.float64]] = {}
+        eigenvals_up_cache: dict[float, NDArray[np.float64]] = {}
+        unitary_up_cache: dict[float, NDArray[np.float64]] = {}
 
         for j_qn_up in j_qn_up_range:
             # FIXME: 25/08/05 - Should make hamilterm automatically compute the max N power and max
@@ -452,8 +451,8 @@ class Band:
         # Precompute lower state eigenvalues and eigenvectors since adjacent J' values share 2 out
         # of 3 J'' values. For example, if J' = 1, then J'' = 0, 1, 2; if J' = 2, then J'' = 1, 2, 3
         # and so on.
-        eigenvals_lo_cache: dict[Fraction, NDArray[np.float64]] = {}
-        unitary_lo_cache: dict[Fraction, NDArray[np.float64]] = {}
+        eigenvals_lo_cache: dict[float, NDArray[np.float64]] = {}
+        unitary_lo_cache: dict[float, NDArray[np.float64]] = {}
 
         for j_qn_lo in j_qn_lo_range:
             comp_lo = numerics.NumericComputation(
@@ -475,11 +474,11 @@ class Band:
         # Hamiltonian will have an associated 3x3 HLF matrix. Each entry within the matrix
         # corresponds to a possible (i, j) combination, where i and j are the upper and lower branch
         # index labels, respectively.
-        hlf_matrix_cache: dict[tuple[Fraction, Fraction], NDArray[np.float64]] = {}
+        hlf_matrix_cache: dict[tuple[float, float], NDArray[np.float64]] = {}
         # The allowed values of N'' are cached since each J'' value can be encountered multiple
         # times. For example, J' = 1, J' = 2, and J' = 3 all share J'' = 1.
-        n_qn_lo_cache: dict[Fraction, list[Fraction]] = {}
-        allowed_n_nq_lo_cache: dict[Fraction, NDArray[np.bool]] = {}
+        n_qn_lo_cache: dict[float, list[float]] = {}
+        allowed_n_nq_lo_cache: dict[float, NDArray[np.bool]] = {}
 
         degeneracy_up_even, degeneracy_up_odd = self.sim.state_up.nuclear_degeneracy
         degeneracy_lo_even, degeneracy_lo_odd = self.sim.state_lo.nuclear_degeneracy
@@ -491,7 +490,7 @@ class Band:
             #       non-negative. For now, keep them to make debugging easier.
 
             # Get all possible N' values for each J'.
-            n_qn_up_vals: list[Fraction] = n_values_for_j(Fraction(j_qn_up), s_qn_up)
+            n_qn_up_vals: list[float] = n_values_for_j(j_qn_up, s_qn_up)
 
             # Check if the generated N' values have any zero-valued degeneracies and mask them off
             # if so.
@@ -505,24 +504,22 @@ class Band:
             unitary_up: NDArray[np.float64] = unitary_up_cache[j_qn_up]
 
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
-            j_qn_lo_list: list[Fraction] = [
-                j for j in [j_qn_up - 1, j_qn_up, j_qn_up + 1] if j >= 0
-            ]
+            j_qn_lo_list: list[float] = [j for j in [j_qn_up - 1, j_qn_up, j_qn_up + 1] if j >= 0]
 
             for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
                 if j_qn_lo not in n_qn_lo_cache:
-                    n_qn_lo_cache[j_qn_lo] = n_values_for_j(Fraction(j_qn_lo), s_qn_lo)
+                    n_qn_lo_cache[j_qn_lo] = n_values_for_j(j_qn_lo, s_qn_lo)
                     allowed_n_nq_lo_cache[j_qn_lo] = nuclear_parity_mask(
                         n_qn_lo_cache[j_qn_lo], degeneracy_lo_even, degeneracy_lo_odd
                     )
 
                 # Get all allowed N'' values for each J''.
-                n_qn_lo_vals: list[Fraction] = n_qn_lo_cache[j_qn_lo]
+                n_qn_lo_vals: list[float] = n_qn_lo_cache[j_qn_lo]
 
                 allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
 
-                key: tuple[Fraction, Fraction] = (j_qn_up, j_qn_lo)
+                key: tuple[float, float] = (j_qn_up, j_qn_lo)
                 # Check if the HLFs for the given (J', J'') pair have already been computed.
                 hlf_mat: NDArray[np.float64] | None = hlf_matrix_cache.get(key)
 
@@ -567,8 +564,8 @@ class Band:
                     if self.sim.state_lo.term_symbol != TermSymbol.SIGMA:
                         mod_lo = dim_lo // 2
 
-                    n_qn_up: Fraction = n_qn_up_vals[i % mod_up]
-                    n_qn_lo: Fraction = n_qn_lo_vals[j % mod_lo]
+                    n_qn_up: float = n_qn_up_vals[i % mod_up]
+                    n_qn_lo: float = n_qn_lo_vals[j % mod_lo]
 
                     # Discard lines with disallowed nuclear statistics.
                     if not allowed_n_qn_up[i % mod_up] or not allowed_n_qn_lo[j % mod_lo]:
@@ -590,8 +587,8 @@ class Band:
                             n_qn_lo=n_qn_lo,
                             branch_idx_up=branch_idx_up,
                             branch_idx_lo=branch_idx_lo,
-                            branch_name_j=constants.BRANCH_NAME_MAP[j_qn_up - j_qn_lo],
-                            branch_name_n=constants.BRANCH_NAME_MAP[n_qn_up - n_qn_lo],
+                            branch_name_j=constants.BRANCH_NAME_MAP[int(j_qn_up - j_qn_lo)],
+                            branch_name_n=constants.BRANCH_NAME_MAP[int(n_qn_up - n_qn_lo)],
                             is_satellite=is_satellite,
                             honl_london_factor=hlf,
                             rot_term_value_up=eigenval_up,

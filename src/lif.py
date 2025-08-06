@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, overload
+from typing import overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,9 +32,6 @@ from line import Line
 from molecule import Molecule
 from sim import Sim
 from state import State
-
-if TYPE_CHECKING:
-    from fractions import Fraction
 
 MIN_TIME: float = 0.0
 MAX_TIME: float = 60e-9
@@ -289,7 +286,7 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     v_qn_up: int = sim.bands[0].v_qn_up
     v_qn_lo: int = sim.bands[0].v_qn_lo
 
-    j_qn: Fraction = line.j_qn_lo
+    j_qn: float = line.j_qn_lo
     s_j: float = line.honl_london_factor
     nu_d: float = line.fwhm_predissociation(True)  # [1/cm]
     w_d: float = 2 * np.pi * constants.LIGHT * nu_d  # [1/s]

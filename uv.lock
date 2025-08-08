@@ -71,7 +71,7 @@ wheels = [
 [[package]]
 name = "hamilterm"
 version = "0.1.0"
-source = { git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d#fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" }
+source = { git = "https://github.com/nategphillips/hamilterm?rev=06c7a07d69e243d03db8797b888d8ebf4699379d#06c7a07d69e243d03db8797b888d8ebf4699379d" }
 dependencies = [
     { name = "numpy" },
     { name = "sympy" },
@@ -249,7 +249,7 @@ dependencies = [
 
 [[package]]
 name = "pygeonosis"
-version = "0.1.0"
+version = "0.2.0"
 source = { virtual = "." }
 dependencies = [
     { name = "hamilterm" },
@@ -265,7 +265,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=fa24ee0ed99fcf38fabbd6ebe92618cb4e75463d" },
+    { name = "hamilterm", git = "https://github.com/nategphillips/hamilterm?rev=06c7a07d69e243d03db8797b888d8ebf4699379d" },
     { name = "matplotlib", specifier = "==3.10.3" },
     { name = "numpy", specifier = "==2.3.1" },
     { name = "polars", specifier = "==1.31.0" },

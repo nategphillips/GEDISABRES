@@ -161,6 +161,28 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
+        "name": "NO B-X",
+        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "state_up": State(
+            Molecule("NO", Atom("N"), Atom("O")),
+            "B",
+            2,
+            TermSymbol.PI,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.NONE,
+            ConstantsType.DUNHAM,
+        ),
+        "state_lo": State(
+            Molecule("NO", Atom("N"), Atom("O")),
+            "X",
+            2,
+            TermSymbol.PI,
+            InversionSymmetry.NONE,
+            ReflectionSymmetry.NONE,
+            ConstantsType.DUNHAM,
+        ),
+    },
+    {
         "name": "OH A-X",
         "molecule": Molecule("OH", Atom("O"), Atom("H")),
         "state_up": State(
@@ -1208,7 +1230,7 @@ class GUI(QMainWindow):
         self.molecule_tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
         self.molecule_tab_widget.tabBar().setMovable(False)
 
-        for preset in MOLECULAR_PRESETS[:3]:
+        for preset in MOLECULAR_PRESETS[:1]:
             tab = CustomTab(parent_tab_widget=self.molecule_tab_widget)
             tab.molecule = preset["molecule"]
             tab.state_up = preset["state_up"]

@@ -88,11 +88,14 @@ uv run ./main.py
 - [x] Add the ability to export rotational line data from the built-in spreadsheet
 - [x] Make a custom GUI icon
 - [ ] Improve the interface for adding and removing experimental data
-- [ ] Design and implement a GUI for LIF computations, including estimated fluorescence yield and the ability to search for rotational line overlaps
 
 ### Physics
 
 - [x] Add support for more diatomic molecules, starting with $\text{NO}$
+- [ ] Implement multi-species pressure broadening
+- [ ] Allow for Gaussian, Lorentzian, and Voigt instrument functions
+- [ ] Add Doppler and collisional line shifting mechanisms
+- [ ] Construct a general two-level LIF model
 - [ ] Include support for non-Boltzmann temperature distributions
 
 ## License and Copyright

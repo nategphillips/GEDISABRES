@@ -42,11 +42,11 @@ def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
     Equation (5.16) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
     Args:
-        nuclear_spin (Fraction): Nuclear spin of either atom.
+        nuclear_spin (float): Nuclear spin of either atom.
         sign (Sign): Which sign to use in the computation.
 
     Returns:
-        Fraction: Homonuclear degeneracy.
+        float: Homonuclear degeneracy.
     """
     if sign == Sign.PLUS:
         return Fraction(1, 2) * ((2 * nuclear_spin + 1) ** 2 + (2 * nuclear_spin + 1))
@@ -173,7 +173,7 @@ class State:
         Equation (5.9) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
         Returns:
-            Fraction: Nuclear partition function.
+            float: Nuclear partition function.
         """
         return (2 * self.molecule.atom_1.nuclear_spin + 1) * (
             2 * self.molecule.atom_2.nuclear_spin + 1

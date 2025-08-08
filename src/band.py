@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from sim import Sim
 
 
-def fill_from_dict(table: dict[str, float]) -> hconsts.NumericConstants:
+def fill_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
     """Create filled constant classes for use with hamilterm.
 
     Args:
@@ -50,7 +50,7 @@ def fill_from_dict(table: dict[str, float]) -> hconsts.NumericConstants:
     Returns:
         hconsts.NumericConstants: Constants object for use with hamilterm.
     """
-    numeric_consts: hconsts.NumericConstants = hconsts.NumericConstants()
+    numeric_consts: hconsts.ConstantsNum = hconsts.ConstantsNum()
 
     for field in dataclasses.fields(numeric_consts):
         # Load all constant classes contained in NumericConstants (rotational, spin-orbit,
@@ -395,15 +395,15 @@ class Band:
         table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
         table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        consts_up: hconsts.NumericConstants = fill_from_dict(table_up)
-        consts_lo: hconsts.NumericConstants = fill_from_dict(table_lo)
+        consts_up: hconsts.ConstantsNum = fill_from_dict(table_up)
+        consts_lo: hconsts.ConstantsNum = fill_from_dict(table_lo)
 
-        s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
-        basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns(
+        s_qn_up, lambda_qn_up = hutils.parse_term_symbol_num(term_symbol_up)
+        basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(
             s_qn_up, lambda_qn_up
         )
-        s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol(term_symbol_lo)
-        basis_fns_lo: list[tuple[int, float, float]] = hutils.generate_basis_fns(
+        s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol_num(term_symbol_lo)
+        basis_fns_lo: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(
             s_qn_lo, lambda_qn_lo
         )
 

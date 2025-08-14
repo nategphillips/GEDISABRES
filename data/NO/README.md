@@ -26,4 +26,10 @@
 
 ### A2Σ+ and X2Π
 
+Danielak et al. give the vibrational level term values as $G(v) + Y_00$, while this program uses $G(v)$. To convert, the zero-point energy is found from the equilibrium constants given in the paper as
+
+$$
+Y_00 = \frac{B_e}{4} + \frac{\alpha_e\omega_e}{12B_e} + \frac{\alpha_e^2\omega_e^2}{144B_e^3} - \frac{\omega_ex_e}{4}.
+$$
+
 ["Reinvestigation of the Emission γ Band System (A2Σ+–X2Π) of the NO Molecule" by J. Danielak, U. Domin, R. Ke, M. Rytel, M. Zachwieja](https://doi.org/10.1006/jmsp.1996.7181)

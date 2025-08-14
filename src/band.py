@@ -319,21 +319,23 @@ class Band:
         consts_lo = state_lo.constants_vqn(self.v_qn_lo)
 
         if state_up.constants_type == ConstantsType.PERLEVEL:
+            # TODO: 25/08/14 - All the included per-level constants thus far are for excited to
+            #       ground transitions, meaning the ground state electronic energy is zero. For both
+            #       O2 and NO, the excited electronic energies are given as T_v' - T_0(ground). This
+            #       might require some modification for any transitions that don't involve the
+            #       ground state.
+
             # Since T' = T_v' - T_0'', it represents the energy of the upper state with respect to
             # the v'' = 0 vibrational level of lower state. Therefore, any transitions like 2-1 will
             # require the calculation of an offset G''(v) - G''(0) for the lower state. The band
             # origin is then nu_0 = T'(v) - [T''(0) + G''(v) - G''(0)].
-            return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
+            return consts_up["T"] - (
+                consts_lo["T"] + consts_lo["G"] - state_lo.constants_vqn(0)["G"]
+            )
 
         if state_up.constants_type == ConstantsType.DUNHAM:
-            band_origin_upper = (
-                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_up.name]
-                + consts_up["G"]
-            )
-            band_origin_lower = (
-                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_lo.name]
-                + consts_lo["G"]
-            )
+            band_origin_upper = consts_up["T"] + consts_up["G"]
+            band_origin_lower = consts_lo["T"] + consts_lo["G"]
             # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
             return band_origin_upper - band_origin_lower
 

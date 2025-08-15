@@ -318,7 +318,10 @@ class Band:
         consts_up = state_up.constants_vqn(self.v_qn_up)
         consts_lo = state_lo.constants_vqn(self.v_qn_lo)
 
-        if state_up.constants_type == ConstantsType.PERLEVEL:
+        if (
+            state_up.constants_type == ConstantsType.PERLEVEL
+            and state_lo.constants_type == ConstantsType.PERLEVEL
+        ):
             # TODO: 25/08/14 - All the included per-level constants thus far are for excited to
             #       ground transitions, meaning the ground state electronic energy is zero. For both
             #       O2 and NO, the excited electronic energies are given as T'(v') - T''(0). This
@@ -351,7 +354,10 @@ class Band:
             #               = [T_e' + G'(v')] - [T_e'' + G''(v'')]
             return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
 
-        if state_up.constants_type == ConstantsType.DUNHAM:
+        if (
+            state_up.constants_type == ConstantsType.DUNHAM
+            and state_lo.constants_type == ConstantsType.DUNHAM
+        ):
             band_origin_upper = consts_up["T"] + consts_up["G"]
             band_origin_lower = consts_lo["T"] + consts_lo["G"]
             # nu(v', v'') = nu(v') - nu(v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
@@ -463,7 +469,7 @@ class Band:
             # FIXME: 25/08/05 - Should make hamilterm automatically compute the max N power and max
             #        anticommutator power from the constants supplied.
             comp_up = numerics.NumericComputation(
-                term_symbol_up, consts_up, j_qn_up, max_n_power=4, max_acomm_power=2
+                term_symbol_up, consts_up, j_qn_up, max_n_power=12, max_acomm_power=8
             )
             eigenvals_up_cache[j_qn_up] = comp_up.eigenvalues
             unitary_up_cache[j_qn_up] = comp_up.eigenvectors
@@ -476,7 +482,7 @@ class Band:
 
         for j_qn_lo in j_qn_lo_range:
             comp_lo = numerics.NumericComputation(
-                term_symbol_lo, consts_lo, j_qn_lo, max_n_power=4, max_acomm_power=2
+                term_symbol_lo, consts_lo, j_qn_lo, max_n_power=12, max_acomm_power=8
             )
             eigenvals_lo_cache[j_qn_lo] = comp_lo.eigenvalues
             unitary_lo_cache[j_qn_lo] = comp_lo.eigenvectors

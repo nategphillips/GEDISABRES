@@ -100,7 +100,7 @@ def no_ax(sample_name: str):
         temp_vib=temp,
         temp_rot=temp,
         pressure=101325,
-        bands_input=[(0, 0)],
+        bands_input=[(0, 2)],
     )
 
     plot(sim, sample_name)
@@ -115,7 +115,7 @@ def no_bx(sample_name: str):
         term_symbol=TermSymbol.PI,
         inversion_symmetry=InversionSymmetry.NONE,
         reflection_symmetry=ReflectionSymmetry.NONE,
-        constants_type=ConstantsType.DUNHAM,
+        constants_type=ConstantsType.PERLEVEL,
     )
     state_lo: State = State(
         molecule=molecule,
@@ -124,23 +124,23 @@ def no_bx(sample_name: str):
         term_symbol=TermSymbol.PI,
         inversion_symmetry=InversionSymmetry.NONE,
         reflection_symmetry=ReflectionSymmetry.NONE,
-        constants_type=ConstantsType.DUNHAM,
+        constants_type=ConstantsType.PERLEVEL,
     )
 
-    temp: float = 300.0
+    temp: float = 3000.0
 
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
-        j_qn_up_max=48,
+        j_qn_up_max=120,
         temp_trn=temp,
         temp_elc=temp,
         temp_vib=temp,
         temp_rot=temp,
         pressure=101325,
-        bands_input=[(0, 0)],
+        bands_input=[(4, 1), (5, 1)],
     )
 
     plot(sim, sample_name)
@@ -208,10 +208,10 @@ def plot(sim: Sim, sample_name: str):
 
 def main() -> None:
     """Entry point."""
-    o2("pgopher-o2-bx-20")
-    no_ax("pgopher-no-ax-00")
-    no_bx("pgopher-no-bx-00")
-    oh("pgopher-oh-ax-00")
+    o2("pgopher-o2-bx-20-perlevel")
+    no_ax("pgopher-no-ax-02-perlevel")
+    no_bx("pgopher-no-bx-41_51-perlevel")
+    oh("pgopher-oh-ax-00-dunham")
 
 
 if __name__ == "__main__":

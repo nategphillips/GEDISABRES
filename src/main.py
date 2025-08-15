@@ -148,7 +148,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.SIGMA,
             InversionSymmetry.NONE,
             ReflectionSymmetry.PLUS,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
             Molecule("NO", Atom("N"), Atom("O")),
@@ -157,7 +157,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
     },
     {
@@ -170,7 +170,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
             Molecule("NO", Atom("N"), Atom("O")),
@@ -179,7 +179,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
     },
     {

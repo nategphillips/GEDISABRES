@@ -321,22 +321,40 @@ class Band:
         if state_up.constants_type == ConstantsType.PERLEVEL:
             # TODO: 25/08/14 - All the included per-level constants thus far are for excited to
             #       ground transitions, meaning the ground state electronic energy is zero. For both
-            #       O2 and NO, the excited electronic energies are given as T_v' - T_0(ground). This
+            #       O2 and NO, the excited electronic energies are given as T'(v') - T''(0). This
             #       might require some modification for any transitions that don't involve the
             #       ground state.
 
-            # Since T' = T_v' - T_0'', it represents the energy of the upper state with respect to
-            # the v'' = 0 vibrational level of lower state. Therefore, any transitions like 2-1 will
-            # require the calculation of an offset G''(v) - G''(0) for the lower state. The band
-            # origin is then nu_0 = T'(v) - [T''(0) + G''(v) - G''(0)].
-            return consts_up["T"] - (
-                consts_lo["T"] + consts_lo["G"] - state_lo.constants_vqn(0)["G"]
-            )
+            #   The T column for the upper state represents the energy of the upper state with
+            #   respect to the v'' = 0 vibrational level of the lower state, i.e., T'(v') - T''(0).
+            #   The band origin for a general transition (v', v'') is then
+            #   nu(v', v'') = T'(v') - [T''(0) + G''(v'') - G''(0)] = T - [G''(v'') - G''(0)]. The
+            #   value G''(v'') - G''(0) is the vibrational offset of the lower state. This offset is
+            #   necessary to compute the band origin for transitions that don't involve the v'' = 0
+            #   vibrational level.
+            #
+            #   Some papers give this T'(v') - T''(0) value directly, others give T_e', T_e'',
+            #   G'(v'), and G''(v''). To convert, T'(v') = T_e' + G'(v') and
+            #   T''(0) = T_e'' + G''(0). The T column value for the upper state would then be
+            #   T_e' + G'(v') - [T_e'' + G''(0)]. Often, the lower state is the ground state,
+            #   meaning T_e'' = 0.
+            #
+            #   I realize this convention isn't ideal, but there are papers that report per-level
+            #   constants while not giving T_e values. For this reason, a convention must be chosen,
+            #   and T'(v') - T''(0) works as well as anything else. To demonstrate the common band
+            #   origin formula and the chosen formula are the same, see the following:
+            #
+            #   nu(v', v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
+            #
+            #   nu(v', v'') = T - [G''(v'') - G''(0)] = [T'(v') - T''(0)] - [G''(v'') - G''(0)]
+            #               = [T_e' + G'(v')] - [T_e'' + G''(0)] - [G''(v'') - G''(0)]
+            #               = [T_e' + G'(v')] - [T_e'' + G''(v'')]
+            return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
 
         if state_up.constants_type == ConstantsType.DUNHAM:
             band_origin_upper = consts_up["T"] + consts_up["G"]
             band_origin_lower = consts_lo["T"] + consts_lo["G"]
-            # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
+            # nu(v', v'') = nu(v') - nu(v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
             return band_origin_upper - band_origin_lower
 
         raise ValueError("Band origin calculation failed.")

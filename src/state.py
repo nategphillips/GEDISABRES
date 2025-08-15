@@ -181,6 +181,31 @@ class State:
         #       Often times, the data from papers will report a different electronic energy value
         #       T_e than the NIST values tabulated in constants.py. For this reason, the first
         #       column in each Dunham constants file reports T_e on the first row.
+        #
+        #       The T column for the upper state represents the energy of the upper state with
+        #       respect to the v'' = 0 vibrational level of the lower state, i.e., T'(v') - T''(0).
+        #       The band origin for a general transition (v', v'') is then
+        #       nu(v', v'') = T'(v') - [T''(0) + G''(v'') - G''(0)] = T - [G''(v'') - G''(0)]. The
+        #       value G''(v'') - G''(0) is the vibrational offset of the lower state. This offset is
+        #       necessary to compute the band origin for transitions that don't involve the v'' = 0
+        #       vibrational level.
+        #
+        #       Some papers give this T'(v') - T''(0) value directly, others give T_e', T_e'',
+        #       G'(v'), and G''(v''). To convert, T'(v') = T_e' + G'(v') and
+        #       T''(0) = T_e'' + G''(0). The T column value for the upper state would then be
+        #       T_e' + G'(v') - [T_e'' + G''(0)]. Often, the lower state is the ground state,
+        #       meaning T_e'' = 0.
+        #
+        #       I realize this convention isn't ideal, but there are papers that report per-level
+        #       constants while not giving T_e values. For this reason, a convention must be chosen,
+        #       and T'(v') - T''(0) works as well as anything else. To demonstrate the common band
+        #       origin formula and the chosen formula are the same, see the following:
+        #
+        #       nu(v', v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
+        #
+        #       nu(v', v'') = T - [G''(v'') - G''(0)] = [T'(v') - T''(0)] - [G''(v'') - G''(0)]
+        #                   = [T_e' + G'(v')] - [T_e'' + G''(0)] - [G''(v'') - G''(0)]
+        #                   = [T_e' + G'(v')] - [T_e'' + G''(v'')]
 
         v_plus_half: float = v_qn + 0.5
         coeffs: NDArray[np.float64] = self.all_constants.to_numpy()

@@ -2,7 +2,13 @@
 
 ## Dunham Constants
 
-### A2Σ+ and X2Π
+### X2Π
+
+(PRIMARY) ["Reinvestigation of the Emission γ Band System (A2Σ+–X2Π) of the NO Molecule" by J. Danielak, U. Domin, R. Ke, M. Rytel, M. Zachwieja](https://doi.org/10.1006/jmsp.1996.7181)
+
+["Beta and Gamma Band Systems of Nitric Oxide" by R. Engleman Jr., P. E. Rouse, H. M. Peek, V. D. Baiamonte](https://doi.org/10.2172/4128104)
+
+### A2Σ+
 
 ["Reinvestigation of the Emission γ Band System (A2Σ+–X2Π) of the NO Molecule" by J. Danielak, U. Domin, R. Ke, M. Rytel, M. Zachwieja](https://doi.org/10.1006/jmsp.1996.7181)
 
@@ -33,3 +39,7 @@ Y_00 = \frac{B_e}{4} + \frac{\alpha_e\omega_e}{12B_e} + \frac{\alpha_e^2\omega_e
 $$
 
 ["Reinvestigation of the Emission γ Band System (A2Σ+–X2Π) of the NO Molecule" by J. Danielak, U. Domin, R. Ke, M. Rytel, M. Zachwieja](https://doi.org/10.1006/jmsp.1996.7181)
+
+### B2Π
+
+["Beta and Gamma Band Systems of Nitric Oxide" by R. Engleman Jr., P. E. Rouse, H. M. Peek, V. D. Baiamonte](https://doi.org/10.2172/4128104)

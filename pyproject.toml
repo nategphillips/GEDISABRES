@@ -3,12 +3,12 @@ name = "pyGEONOSIS"
 version = "0.2.0"
 description = "A tool for simulating the spectra of any diatomic molecule."
 readme = "README.md"
-requires-python = "==3.13.5"
+requires-python = "==3.13.7"
 dependencies = [
     "hamilterm",
-    "matplotlib==3.10.3",
-    "numpy==2.3.1",
-    "polars==1.31.0",
+    "matplotlib==3.10.5",
+    "numpy==2.3.2",
+    "polars==1.32.3",
     "py3nj",
     "pyqtdarktheme==2.1.0",
     "pyqtgraph==0.13.7",
@@ -16,7 +16,7 @@ dependencies = [
     # See https://github.com/pyqtgraph/pyqtgraph/issues/3321 and https://bugreports.qt.io/browse/PYSIDE-3115.
     # Fixed in PyQt 6.9.2, just waiting for the release.
     "pyside6-essentials==6.9.0",
-    "scipy==1.16.0",
+    "scipy==1.16.1",
 ]
 
 [tool.basedpyright]
@@ -49,7 +49,7 @@ extend-select = [
 convention = "google"
 
 [tool.uv.sources]
-hamilterm = { git = "https://github.com/nategphillips/hamilterm", rev = "06c7a07d69e243d03db8797b888d8ebf4699379d" }
+hamilterm = { git = "https://github.com/nategphillips/hamilterm", rev = "2dabd565c25ea187d532c1e927f32476fa30ba79" }
 py3nj = { git = "https://github.com/fujiisoup/py3nj", rev = "098e40e433d6c1f32b1b488519bbae40f40b812b" }
 
 [tool.uv]

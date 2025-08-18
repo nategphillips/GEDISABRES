@@ -842,6 +842,7 @@ class CustomTab(QWidget):
             self.sim.temp_rot,
             self.sim.pressure,
             current_bands,
+            inst_broadening_wl=self.inst_broadening_spinbox.value(),
         )
 
     def run_simulation(self) -> None:
@@ -875,7 +876,6 @@ class CustomTab(QWidget):
                     self.sim,
                     colors,
                     fwhm_selections,
-                    self.inst_broadening_spinbox.value(),
                     self.resolution_spinbox.value(),
                 )
             else:
@@ -1126,7 +1126,7 @@ class AllSimulationsTab(QWidget):
 
             return intensities_line.max()
 
-        def max_intensity_conv_sep(inst_broadening_wl, granularity):
+        def max_intensity_conv_sep(granularity):
             convolved_data: list[NDArray[np.float64]] = []
             max_intensity: float = 0.0
 
@@ -1134,8 +1134,7 @@ class AllSimulationsTab(QWidget):
                 for band in tab.sim.bands:
                     intensities_conv = band.intensities_conv(
                         fwhm_selections,
-                        inst_broadening_wl,
-                        band.wavenumbers_conv(inst_broadening_wl, granularity),
+                        band.wavenumbers_conv(granularity),
                     )
 
                     convolved_data.append(intensities_conv)
@@ -1150,7 +1149,6 @@ class AllSimulationsTab(QWidget):
             for tab in custom_tabs:
                 _, ins = tab.sim.all_conv_data(
                     fwhm_selections,
-                    self.inst_broadening_spinbox.value(),
                     self.resolution_spinbox.value(),
                 )
                 intensities_conv = np.concatenate((intensities_conv, ins))
@@ -1167,16 +1165,14 @@ class AllSimulationsTab(QWidget):
         for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
                 if plot_function.__name__ == "plot_conv_sep":
-                    broadening = self.inst_broadening_spinbox.value()
                     resolution = self.resolution_spinbox.value()
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
                         fwhm_selections,
-                        broadening,
                         resolution,
-                        max_intensity_conv_sep(broadening, resolution),
+                        max_intensity_conv_sep(resolution),
                         idx,
                     )
                 elif plot_function.__name__ == "plot_conv_all":
@@ -1185,7 +1181,6 @@ class AllSimulationsTab(QWidget):
                         tab.sim,
                         all_sim_colors,
                         fwhm_selections,
-                        self.inst_broadening_spinbox.value(),
                         self.resolution_spinbox.value(),
                         max_intensity_conv_all(),
                         idx,

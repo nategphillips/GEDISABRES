@@ -231,7 +231,7 @@ class Line:
 
         return 0.0
 
-    def fwhm_instrument(self, is_selected: bool, inst_broadening_wl: float) -> float:
+    def fwhm_instrument(self, is_selected: bool) -> float:
         """Return the instrument broadening FWHM in [1/cm].
 
         The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
@@ -239,7 +239,6 @@ class Line:
 
         Args:
             is_selected (bool): True if instrument broadening should be simulated.
-            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
 
         Returns:
             float: The instrument broadening FWHM in [1/cm].
@@ -251,12 +250,12 @@ class Line:
             #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
             #       wavelength to expand about.
             return utils.bandwidth_wavelen_to_wavenum(
-                utils.wavenum_to_wavelen(self.wavenumber), inst_broadening_wl
+                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broadening_wl
             )
 
         return 0.0
 
-    def fwhm_power(self, is_selected: bool, laser_power_w: float, beam_diameter_mm: float) -> float:
+    def fwhm_power(self, is_selected: bool) -> float:
         """Return the power broadening FWHM in [1/cm].
 
         The power FWHM linewidths are computed using Equation 1.99 in the 2016 book "Spectra of
@@ -272,8 +271,10 @@ class Line:
         """
         if is_selected:
             # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
-            intensity: float = laser_power_w / (np.pi * ((beam_diameter_mm / 1e3) / 2.0) ** 2)
-            # Intensity of a plane wave in air: I = 0.5 * ε * c * E^2. Convert the speed of light
+            intensity: float = self.sim.laser_power_w / (
+                np.pi * ((self.sim.beam_diameter_mm / 1e3) / 2.0) ** 2
+            )
+            # Intensity of a plane wave in air: I = 0.5 * ε_0 * c * E^2. Convert the speed of light
             # from [cm/s] to [m/s] to ensure units work out.
             electric_field: float = np.sqrt(
                 2.0 * intensity / (constants.EPERM * (constants.LIGHT / 1e2))

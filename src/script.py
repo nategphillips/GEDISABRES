@@ -70,6 +70,7 @@ def main() -> None:
         temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
+        inst_broadening_wl=0.004,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(
@@ -82,7 +83,6 @@ def main() -> None:
 
     plt.plot(wns_samp, ins_samp, label="sample")
 
-    inst_broadening_wl: float = 0.004
     granularity: int = int(1e4)
     fwhm_selections: dict[str, bool] = {
         "instrument": True,
@@ -94,29 +94,21 @@ def main() -> None:
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(
-            fwhm_selections,
-            inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-        ).max()
+        band.intensities_conv(fwhm_selections, band.wavenumbers_conv(granularity)).max()
         for band in sim.bands
     )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-            band.intensities_conv(
-                fwhm_selections,
-                inst_broadening_wl,
-                band.wavenumbers_conv(inst_broadening_wl, granularity),
-            )
+            band.wavenumbers_conv(granularity),
+            band.intensities_conv(fwhm_selections, band.wavenumbers_conv(granularity))
             / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
     # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data(fwhm_selections, inst_broadening_wl, granularity)
+    wns, ins = sim.all_conv_data(fwhm_selections, granularity)
     ins /= ins.max()
 
     plt.plot(wns, ins, label="all convolved")

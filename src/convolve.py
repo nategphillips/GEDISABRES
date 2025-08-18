@@ -27,7 +27,6 @@ def broadening_fn(
     wavenumbers_conv: NDArray[np.float64],
     line: Line,
     fwhm_selections: dict[str, bool],
-    inst_broadening_wl: float,
 ) -> NDArray[np.float64]:
     """Return the contribution of a single rotational line to the total spectra.
 
@@ -37,7 +36,6 @@ def broadening_fn(
         wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
         line (Line): A rotational `Line` object.
         fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
 
     Returns:
         NDArray[np.float64]: The Voigt probability density function for a single rotational line.
@@ -46,7 +44,7 @@ def broadening_fn(
     # Note that Gaussian FWHMs must be summed in quadrature: see "Hypersonic Nonequilibrium Flows:
     # Fundamentals and Recent Advances" p. 361.
     fwhm_gaussian: float = np.sqrt(
-        line.fwhm_instrument(fwhm_selections["instrument"], inst_broadening_wl) ** 2
+        line.fwhm_instrument(fwhm_selections["instrument"]) ** 2
         + line.fwhm_doppler(fwhm_selections["doppler"]) ** 2
     )
 
@@ -91,7 +89,6 @@ def convolve(
     lines: list[Line],
     wavenumbers_conv: NDArray[np.float64],
     fwhm_selections: dict[str, bool],
-    inst_broadening_wl: float,
 ) -> NDArray[np.float64]:
     """Convolve a discrete number of spectral lines into a continuous spectra.
 
@@ -99,7 +96,6 @@ def convolve(
         lines (list[Line]): A list of rotational `Line` objects.
         wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
         fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
 
     Returns:
         NDArray[np.float64]: The total intensity spectrum with contributions from all lines.
@@ -112,8 +108,6 @@ def convolve(
     # Add the effects of each line to the continuous spectra by computing its broadening function
     # multiplied by its intensity and adding it to the total intensity.
     for line in lines:
-        intensities_conv += line.intensity * broadening_fn(
-            wavenumbers_conv, line, fwhm_selections, inst_broadening_wl
-        )
+        intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line, fwhm_selections)
 
     return intensities_conv

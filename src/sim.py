@@ -46,6 +46,9 @@ class Sim:
         temp_rot: float,
         pressure: float,
         bands_input: list[tuple[int, int]],
+        inst_broadening_wl: float = 0.0,
+        laser_power_w: float = 0.0,
+        beam_diameter_mm: float = 0.0,
     ) -> None:
         """Initialize class variables.
 
@@ -73,6 +76,9 @@ class Sim:
         self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.bands_input: list[tuple[int, int]] = bands_input
+        self.inst_broadening_wl: float = inst_broadening_wl
+        self.laser_power_w: float = laser_power_w
+        self.beam_diameter_mm: float = beam_diameter_mm
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -86,7 +92,7 @@ class Sim:
         return wavenumbers_line, intensities_line
 
     def all_conv_data(
-        self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
+        self, fwhm_selections: dict[str, bool], granularity: int
     ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the convolved data of all vibrational bands."""
         # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
@@ -103,9 +109,7 @@ class Sim:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
         # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(
-            self.bands[0].lines[0].fwhm_instrument(True, inst_broadening_wl), 2
-        )
+        padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_instrument(True), 2)
 
         grid_min: float = wavenumbers_line.min() - padding
         grid_max: float = wavenumbers_line.max() + padding
@@ -119,9 +123,7 @@ class Sim:
         # The wavelength axis is common to all vibrational bands so that their contributions to the
         # spectra can be summed.
         for band in self.bands:
-            intensities_conv += band.intensities_conv(
-                fwhm_selections, inst_broadening_wl, wavenumbers_conv
-            )
+            intensities_conv += band.intensities_conv(fwhm_selections, wavenumbers_conv)
 
         return wavenumbers_conv, intensities_conv
 

@@ -92,7 +92,7 @@ class Line:
 
         The predissociation FWHM linewidths are computed using a polynomial fit given in the 1985
         paper "Rotational Variation of Predissociation Linewidths in the Schumann-Runge Bands of O2"
-        by B. R. Lewis et al.
+        by B. R. Lewis et al. Homogeneous (Lorentzian).
 
         Args:
             is_selected (bool): True if predissociation broadening should be simulated.
@@ -124,8 +124,8 @@ class Line:
     def fwhm_natural(self, is_selected: bool) -> float:
         """Return the natural broadening FWHM in [1/cm].
 
-        The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book
-        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
+        The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book "Spectroscopy
+        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous (Lorentzian).
 
         Args:
             is_selected (bool): True if natural broadening should be simulated.
@@ -157,7 +157,8 @@ class Line:
         """Return the collisional broadening FWHM in [1/cm].
 
         The collisional FWHM linewidths are computed using Equation 8.18 in the 2016 book
-        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
+        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous
+        (Lorentzian).
 
         Args:
             is_selected (bool): True if collisional broadening should be simulated.
@@ -209,7 +210,7 @@ class Line:
         """Return the Doppler broadening FWHM in [1/cm].
 
         The doppler FWHM linewidths are computed using Equation 8.24 in the 2016 book "Spectroscopy
-        and Optical Diagnostics for Gases" by Ronald K. Hanson et al.
+        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Inhomogeneous (Gaussian).
 
         Args:
             is_selected (bool): True if Doppler broadening should be simulated.
@@ -234,7 +235,7 @@ class Line:
         """Return the instrument broadening FWHM in [1/cm].
 
         The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
-        then converted to units of [1/cm].
+        then converted to units of [1/cm]. Inhomogeneous (Gaussian).
 
         Args:
             is_selected (bool): True if instrument broadening should be simulated.
@@ -243,6 +244,7 @@ class Line:
         Returns:
             float: The instrument broadening FWHM in [1/cm].
         """
+        # TODO: 25/08/18 - Allow for Gaussian and Lorentzian FWHMs to be returned.
         if is_selected:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
@@ -250,6 +252,37 @@ class Line:
             #       wavelength to expand about.
             return utils.bandwidth_wavelen_to_wavenum(
                 utils.wavenum_to_wavelen(self.wavenumber), inst_broadening_wl
+            )
+
+        return 0.0
+
+    def fwhm_power(self, is_selected: bool, laser_power_w: float, beam_diameter_mm: float) -> float:
+        """Return the power broadening FWHM in [1/cm].
+
+        The power FWHM linewidths are computed using Equation 1.99 in the 2016 book "Spectra of
+        Atoms and Molecules, 3rd ed." by Bernath. Homogeneous (Lorentzian).
+
+        Args:
+            is_selected (bool): True if power broadening should be simulated.
+            laser_power_w (float): Laser power in [W].
+            beam_diameter_mm (float): Beam diameter in [mm].
+
+        Returns:
+            float: The power broadening FWHM in [1/cm].
+        """
+        if is_selected:
+            # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
+            intensity: float = laser_power_w / (np.pi * ((beam_diameter_mm / 1e3) / 2.0) ** 2)
+            # Intensity of a plane wave in air: I = 0.5 * ε * c * E^2. Convert the speed of light
+            # from [cm/s] to [m/s] to ensure units work out.
+            electric_field: float = np.sqrt(
+                2.0 * intensity / (constants.EPERM * (constants.LIGHT / 1e2))
+            )
+            # Convert from [1/s] to [1/cm].
+            return utils.freq_to_wavenum(
+                constants.DIPOLE_MOMENT[self.sim.molecule.name]
+                * electric_field
+                / (2.0 * np.pi * constants.PLANC)
             )
 
         return 0.0

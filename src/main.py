@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-DEFAULT_LINES: int = 40
+DEFAULT_J_MAX: int = 40
 DEFAULT_RESOLUTION: int = int(1e4)
 
 DEFAULT_TEMPERATURE: float = 300.0  # [K]
@@ -681,7 +681,7 @@ class CustomTab(QWidget):
         maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
         self.maxj_spinbox: QSpinBox = QSpinBox()
         self.maxj_spinbox.setMaximum(10000)
-        self.maxj_spinbox.setValue(DEFAULT_LINES)
+        self.maxj_spinbox.setValue(DEFAULT_J_MAX)
         self.maxj_spinbox.valueChanged.connect(self.update_sim_objects)
         maxj_layout.addWidget(self.maxj_spinbox)
         controls_layout.addWidget(group_maxj)

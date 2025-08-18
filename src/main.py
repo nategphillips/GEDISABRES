@@ -585,6 +585,8 @@ class CustomTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
 
+        self.is_first_run: bool = True
+
         self.parent_tab_widget = parent_tab_widget
 
         self.molecule = DEFAULT_MOLECULE
@@ -886,7 +888,10 @@ class CustomTab(QWidget):
                 QMessageBox.StandardButton.Ok,
             )
 
-        self.plot_widget.autoRange()
+        # TODO: 25/08/18 - Might want to auto range if the bands are updated.
+        if self.is_first_run:
+            self.plot_widget.autoRange()
+            self.is_first_run = False
 
         while self.table_tab_widget.count() > 0:
             self.table_tab_widget.removeTab(0)
@@ -988,7 +993,6 @@ class CustomTab(QWidget):
             return
 
         plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
-        self.plot_widget.autoRange()
 
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
@@ -1000,6 +1004,8 @@ class CustomTab(QWidget):
 class AllSimulationsTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
+
+        self.is_first_run: bool = True
 
         self.parent_tab_widget = parent_tab_widget
 
@@ -1189,7 +1195,9 @@ class AllSimulationsTab(QWidget):
                         self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
                     )
 
-        self.plot_widget.autoRange()
+        if self.is_first_run:
+            self.plot_widget.autoRange()
+            self.is_first_run = False
 
 
 class GUI(QMainWindow):

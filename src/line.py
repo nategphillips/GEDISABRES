@@ -263,8 +263,6 @@ class Line:
 
         Args:
             is_selected (bool): True if power broadening should be simulated.
-            laser_power_w (float): Laser power in [W].
-            beam_diameter_mm (float): Beam diameter in [mm].
 
         Returns:
             float: The power broadening FWHM in [1/cm].

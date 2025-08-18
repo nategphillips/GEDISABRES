@@ -565,17 +565,17 @@ class ParametersDialog(QDialog):
         )
 
         self.tab.sim = Sim(
-            SimType[self.sim_type.currentText()],
-            self.tab.molecule,
-            self.tab.state_up,
-            self.tab.state_lo,
-            self.tab.maxj_spinbox.value(),
-            float(self.temp_trn.text()),
-            float(self.temp_elc.text()),
-            float(self.temp_vib.text()),
-            float(self.temp_rot.text()),
-            float(self.pressure.text()),
-            self.tab.get_current_bands(),
+            sim_type=SimType[self.sim_type.currentText()],
+            molecule=self.tab.molecule,
+            state_up=self.tab.state_up,
+            state_lo=self.tab.state_lo,
+            j_qn_up_max=self.tab.maxj_spinbox.value(),
+            temp_trn=float(self.temp_trn.text()),
+            temp_elc=float(self.temp_elc.text()),
+            temp_vib=float(self.temp_vib.text()),
+            temp_rot=float(self.temp_rot.text()),
+            pressure=float(self.pressure.text()),
+            bands_input=self.tab.get_current_bands(),
         )
 
         super().accept()
@@ -701,20 +701,46 @@ class CustomTab(QWidget):
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
-        group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
+        group_broadening: QGroupBox = QGroupBox("Broadening")
         broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
+        broadening_params_layout: QHBoxLayout = QHBoxLayout()
 
-        self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
+        inst_broadening_layout = QVBoxLayout()
+        inst_broadening_layout.addWidget(QLabel("Instrument FWHM"))
+        self.inst_broadening_spinbox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broadening_spinbox.setSuffix(" nm")
         self.inst_broadening_spinbox.valueChanged.connect(self.update_sim_objects)
-        broadening_layout.addWidget(self.inst_broadening_spinbox)
+        inst_broadening_layout.addWidget(self.inst_broadening_spinbox)
+        broadening_params_layout.addLayout(inst_broadening_layout)
+
+        laser_power_layout = QVBoxLayout()
+        laser_power_layout.addWidget(QLabel("Laser Power"))
+        self.laser_power_spinbox = MyDoubleSpinBox()
+        self.laser_power_spinbox.setValue(1.0)
+        self.laser_power_spinbox.setSuffix(" W")
+        self.laser_power_spinbox.valueChanged.connect(self.update_sim_objects)
+        laser_power_layout.addWidget(self.laser_power_spinbox)
+        broadening_params_layout.addLayout(laser_power_layout)
+
+        beam_diameter_layout = QVBoxLayout()
+        beam_diameter_layout.addWidget(QLabel("Beam Diameter"))
+        self.beam_diameter_spinbox = MyDoubleSpinBox()
+        self.beam_diameter_spinbox.setValue(1.0)
+        self.beam_diameter_spinbox.setSuffix(" mm")
+        self.beam_diameter_spinbox.valueChanged.connect(self.update_sim_objects)
+        beam_diameter_layout.addWidget(self.beam_diameter_spinbox)
+        broadening_params_layout.addLayout(beam_diameter_layout)
+
+        broadening_layout.addLayout(broadening_params_layout)
 
         checkbox_layout: QHBoxLayout = QHBoxLayout()
-        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument FWHM")
+        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument")
         self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
         self.checkbox_natural: QCheckBox = QCheckBox("Natural")
         self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
         self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
+        self.checkbox_power: QCheckBox = QCheckBox("Power")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -722,6 +748,7 @@ class CustomTab(QWidget):
             self.checkbox_natural,
             self.checkbox_collisional,
             self.checkbox_predissociation,
+            self.checkbox_power,
         ]
 
         for i, cb in enumerate(checkboxes):
@@ -831,18 +858,20 @@ class CustomTab(QWidget):
 
         # Only update the values that are controlled by the tab specifically.
         self.sim = Sim(
-            self.sim.sim_type,
-            self.molecule,
-            self.state_up,
-            self.state_lo,
-            self.maxj_spinbox.value(),
-            self.sim.temp_trn,
-            self.sim.temp_elc,
-            self.sim.temp_vib,
-            self.sim.temp_rot,
-            self.sim.pressure,
-            current_bands,
+            sim_type=self.sim.sim_type,
+            molecule=self.molecule,
+            state_up=self.state_up,
+            state_lo=self.state_lo,
+            j_qn_up_max=self.maxj_spinbox.value(),
+            temp_trn=self.sim.temp_trn,
+            temp_elc=self.sim.temp_elc,
+            temp_vib=self.sim.temp_vib,
+            temp_rot=self.sim.temp_rot,
+            pressure=self.sim.pressure,
+            bands_input=current_bands,
             inst_broadening_wl=self.inst_broadening_spinbox.value(),
+            laser_power_w=self.laser_power_spinbox.value(),
+            beam_diameter_mm=self.beam_diameter_spinbox.value(),
         )
 
     def run_simulation(self) -> None:
@@ -867,6 +896,7 @@ class CustomTab(QWidget):
             "natural": self.checkbox_natural.isChecked(),
             "collisional": self.checkbox_collisional.isChecked(),
             "predissociation": self.checkbox_predissociation.isChecked(),
+            "power": self.checkbox_power.isChecked(),
         }
 
         if plot_function is not None:
@@ -1034,14 +1064,17 @@ class AllSimulationsTab(QWidget):
 
         self.inst_broadening_spinbox = MyDoubleSpinBox()
         self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
+        # TODO: 25/08/18 - User-set broadening doesn't update since the state is tied to the Sim
+        #       class which doesn't get recomputed here.
         broadening_layout.addWidget(self.inst_broadening_spinbox)
 
         checkbox_layout = QHBoxLayout()
-        self.checkbox_instrument = QCheckBox("Instrument FWHM")
+        self.checkbox_instrument = QCheckBox("Instrument")
         self.checkbox_doppler = QCheckBox("Doppler")
         self.checkbox_natural = QCheckBox("Natural")
         self.checkbox_collisional = QCheckBox("Collisional")
         self.checkbox_predissociation = QCheckBox("Predissociation")
+        self.checkbox_power = QCheckBox("Power")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -1049,6 +1082,7 @@ class AllSimulationsTab(QWidget):
             self.checkbox_natural,
             self.checkbox_collisional,
             self.checkbox_predissociation,
+            self.checkbox_power,
         ]
 
         for cb in checkboxes:
@@ -1115,6 +1149,7 @@ class AllSimulationsTab(QWidget):
             "natural": self.checkbox_natural.isChecked(),
             "collisional": self.checkbox_collisional.isChecked(),
             "predissociation": self.checkbox_predissociation.isChecked(),
+            "power": self.checkbox_power.isChecked(),
         }
 
         def max_intensity_line():

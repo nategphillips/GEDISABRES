@@ -58,6 +58,7 @@ def broadening_fn(
         line.fwhm_natural(fwhm_selections["natural"])
         + line.fwhm_collisional(fwhm_selections["collisional"])
         + line.fwhm_predissociation(fwhm_selections["predissociation"])
+        + line.fwhm_power(fwhm_selections["power"])
     )
 
     x: NDArray[np.float64] = wavenumbers_conv - line.wavenumber

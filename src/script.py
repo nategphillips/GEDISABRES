@@ -90,6 +90,7 @@ def main() -> None:
         "natural": True,
         "collisional": True,
         "predissociation": True,
+        "power": True,
     }
 
     # Find the max intensity in all the bands.

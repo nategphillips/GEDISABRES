@@ -48,7 +48,7 @@ class Sim:
         bands_input: list[tuple[int, int]],
         inst_broadening_wl: float = 0.0,
         laser_power_w: float = 0.0,
-        beam_diameter_mm: float = 0.0,
+        beam_diameter_mm: float = 1.0,
     ) -> None:
         """Initialize class variables.
 

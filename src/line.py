@@ -270,7 +270,7 @@ class Line:
         if is_selected:
             # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
             intensity: float = self.sim.laser_power_w / (
-                np.pi * ((self.sim.beam_diameter_mm / 1e3) / 2.0) ** 2
+                np.pi * (1e-3 * 0.5 * self.sim.beam_diameter_mm) ** 2
             )
             # Intensity of a plane wave in air: I = 0.5 * ε_0 * c * E^2. Convert the speed of light
             # from [cm/s] to [m/s] to ensure units work out.
@@ -282,6 +282,35 @@ class Line:
                 constants.DIPOLE_MOMENT[self.sim.molecule.name]
                 * electric_field
                 / (2.0 * np.pi * constants.PLANC)
+            )
+
+        return 0.0
+
+    def fwhm_transit(self, is_selected: bool) -> float:
+        """Return the transit-time broadening FWHM in [1/cm].
+
+        The transit-time FWHM linewidths are computed using Equation 3.63 in the 2008 book "Laser
+        Spectroscopy: Volume 1, 4th ed." by Demtröder. Inhomogeneous (Gaussian).
+
+        Args:
+            is_selected (bool): True if transit-time broadening should be simulated.
+
+        Returns:
+            float: The transit-time broadening FWHM in [1/cm].
+        """
+        if is_selected:
+            # This approximation is only valid for a 90° interaction angle between the molecular
+            # beam and the laser. Furthermore, the laser pulse must be Gaussian in order to produce
+            # a Gaussian line profile, as used here. A flat-top beam will produce a sinc² line
+            # intensity profile instead. See §3.4 in Demtröder for more information.
+
+            # Assume the diameter of the beam is exactly twice the beam waist. Also convert from
+            # [mm] to [m].
+            beam_waist_m: float = 1e-3 * 0.5 * self.sim.beam_diameter_mm
+
+            # Convert from [1/s] to [1/cm].
+            return utils.freq_to_wavenum(
+                2.0 * (self.sim.molecule_velocity_ms / beam_waist_m) * np.sqrt(2.0 * np.log(2))
             )
 
         return 0.0

@@ -46,6 +46,7 @@ def broadening_fn(
     fwhm_gaussian: float = np.sqrt(
         line.fwhm_instrument(fwhm_selections["instrument"]) ** 2
         + line.fwhm_doppler(fwhm_selections["doppler"]) ** 2
+        + line.fwhm_transit(fwhm_selections["transit"]) ** 2
     )
 
     # NOTE: 24/10/25 - Since predissociating repulsive states have no interfering absorption, the

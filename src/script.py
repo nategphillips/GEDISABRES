@@ -91,6 +91,7 @@ def main() -> None:
         "collisional": True,
         "predissociation": True,
         "power": True,
+        "transit": True,
     }
 
     # Find the max intensity in all the bands.

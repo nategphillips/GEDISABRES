@@ -49,6 +49,7 @@ class Sim:
         inst_broadening_wl: float = 0.0,
         laser_power_w: float = 0.0,
         beam_diameter_mm: float = 1.0,
+        molecule_velocity_ms: float = 0.0,
     ) -> None:
         """Initialize class variables.
 
@@ -79,6 +80,7 @@ class Sim:
         self.inst_broadening_wl: float = inst_broadening_wl
         self.laser_power_w: float = laser_power_w
         self.beam_diameter_mm: float = beam_diameter_mm
+        self.molecule_velocity_ms: float = molecule_velocity_ms
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""

@@ -717,7 +717,7 @@ class CustomTab(QWidget):
         laser_power_layout = QVBoxLayout()
         laser_power_layout.addWidget(QLabel("Laser Power"))
         self.laser_power_spinbox = MyDoubleSpinBox()
-        self.laser_power_spinbox.setValue(1.0)
+        self.laser_power_spinbox.setValue(0.0)
         self.laser_power_spinbox.setSuffix(" W")
         self.laser_power_spinbox.valueChanged.connect(self.update_sim_objects)
         laser_power_layout.addWidget(self.laser_power_spinbox)
@@ -732,6 +732,15 @@ class CustomTab(QWidget):
         beam_diameter_layout.addWidget(self.beam_diameter_spinbox)
         broadening_params_layout.addLayout(beam_diameter_layout)
 
+        transit_layout = QVBoxLayout()
+        transit_layout.addWidget(QLabel("Molecule Velocity"))
+        self.transit_spinbox = MyDoubleSpinBox()
+        self.transit_spinbox.setValue(0.0)
+        self.transit_spinbox.setSuffix(" m/s")
+        self.transit_spinbox.valueChanged.connect(self.update_sim_objects)
+        transit_layout.addWidget(self.transit_spinbox)
+        broadening_params_layout.addLayout(transit_layout)
+
         broadening_layout.addLayout(broadening_params_layout)
 
         checkbox_layout: QHBoxLayout = QHBoxLayout()
@@ -741,6 +750,7 @@ class CustomTab(QWidget):
         self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
         self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
         self.checkbox_power: QCheckBox = QCheckBox("Power")
+        self.checkbox_transit: QCheckBox = QCheckBox("Transit")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -749,6 +759,7 @@ class CustomTab(QWidget):
             self.checkbox_collisional,
             self.checkbox_predissociation,
             self.checkbox_power,
+            self.checkbox_transit,
         ]
 
         for i, cb in enumerate(checkboxes):
@@ -872,6 +883,7 @@ class CustomTab(QWidget):
             inst_broadening_wl=self.inst_broadening_spinbox.value(),
             laser_power_w=self.laser_power_spinbox.value(),
             beam_diameter_mm=self.beam_diameter_spinbox.value(),
+            molecule_velocity_ms=self.transit_spinbox.value(),
         )
 
     def run_simulation(self) -> None:
@@ -897,6 +909,7 @@ class CustomTab(QWidget):
             "collisional": self.checkbox_collisional.isChecked(),
             "predissociation": self.checkbox_predissociation.isChecked(),
             "power": self.checkbox_power.isChecked(),
+            "transit": self.checkbox_transit.isChecked(),
         }
 
         if plot_function is not None:
@@ -1075,6 +1088,7 @@ class AllSimulationsTab(QWidget):
         self.checkbox_collisional = QCheckBox("Collisional")
         self.checkbox_predissociation = QCheckBox("Predissociation")
         self.checkbox_power = QCheckBox("Power")
+        self.checkbox_transit = QCheckBox("Transit")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -1083,6 +1097,7 @@ class AllSimulationsTab(QWidget):
             self.checkbox_collisional,
             self.checkbox_predissociation,
             self.checkbox_power,
+            self.checkbox_transit,
         ]
 
         for cb in checkboxes:
@@ -1150,6 +1165,7 @@ class AllSimulationsTab(QWidget):
             "collisional": self.checkbox_collisional.isChecked(),
             "predissociation": self.checkbox_predissociation.isChecked(),
             "power": self.checkbox_power.isChecked(),
+            "transit": self.checkbox_transit.isChecked(),
         }
 
         def max_intensity_line():

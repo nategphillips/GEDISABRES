@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from sim import Sim
 
 
-def fill_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
+def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
     """Create filled constant classes for use with hamilterm.
 
     Args:
@@ -352,10 +352,13 @@ class Band:
         ):
             band_origin_upper = consts_up["T"] + consts_up["G"]
             band_origin_lower = consts_lo["T"] + consts_lo["G"]
+
             # nu(v', v'') = nu(v') - nu(v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
             return band_origin_upper - band_origin_lower
 
-        raise ValueError("Band origin calculation failed.")
+        raise ValueError(
+            f"Mismatched constants: upper is {state_up.constants_type}, lower is {state_lo.constants_type}."
+        )
 
     @cached_property
     def rot_partition_fn(self) -> float:
@@ -413,8 +416,8 @@ class Band:
         table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
         table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        consts_up: hconsts.ConstantsNum = fill_from_dict(table_up)
-        consts_lo: hconsts.ConstantsNum = fill_from_dict(table_lo)
+        consts_up: hconsts.ConstantsNum = fill_consts_from_dict(table_up)
+        consts_lo: hconsts.ConstantsNum = fill_consts_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol_num(term_symbol_up)
         basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(

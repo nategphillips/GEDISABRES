@@ -66,14 +66,16 @@ def broadening_fn(
 
     # The FWHM of the Gaussian PDF is 2 * sigma * sqrt(2 * ln(2)), where sigma is the standard
     # deviation. See https://mathworld.wolfram.com/FullWidthatHalfMaximum.html.
-    gaussian_stddev: float = fwhm_gaussian / (2 * np.sqrt(2 * np.log(2)))
+    gaussian_stddev: float = fwhm_gaussian / (2.0 * np.sqrt(2.0 * np.log(2.0)))
 
     # The FWHM of the Lorentzian PDF is 2 * gamma, where gamma is the half-width at half-maximum.
-    lorentzian_hwhm: float = fwhm_lorentzian / 2
+    lorentzian_hwhm: float = 0.5 * fwhm_lorentzian
 
     # If only Gaussian FWHM parameters are present, then return a Gaussian profile.
     if (fwhm_gaussian > 0.0) and (fwhm_lorentzian == 0.0):
-        return np.exp(-(x**2) / (2 * gaussian_stddev**2)) / np.sqrt(2 * np.pi * gaussian_stddev**2)
+        return np.exp(-(x**2) / (2.0 * gaussian_stddev**2)) / np.sqrt(
+            2.0 * np.pi * gaussian_stddev**2
+        )
 
     # Similarly, if only Lorentzian FWHM parameters exist, then return a Lorentzian profile.
     if (fwhm_gaussian == 0.0) and (fwhm_lorentzian > 0.0):

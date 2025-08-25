@@ -243,7 +243,8 @@ class Band:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
         # simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(self.lines[0].fwhm_instrument(True), 2)
+        inst_broadening: float = max(self.lines[0].fwhm_instrument(True))
+        padding: float = 10.0 * max(inst_broadening, 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.

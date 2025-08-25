@@ -46,7 +46,8 @@ class Sim:
         temp_rot: float,
         pressure: float,
         bands_input: list[tuple[int, int]],
-        inst_broadening_wl: float = 0.0,
+        inst_broad_wl_gauss: float = 0.0,
+        inst_broad_wl_loren: float = 0.0,
         laser_power_w: float = 0.0,
         beam_diameter_mm: float = 1.0,
         molecule_velocity_ms: float = 0.0,
@@ -77,7 +78,8 @@ class Sim:
         self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.bands_input: list[tuple[int, int]] = bands_input
-        self.inst_broadening_wl: float = inst_broadening_wl
+        self.inst_broad_wl_gauss: float = inst_broad_wl_gauss
+        self.inst_broad_wl_loren: float = inst_broad_wl_loren
         self.laser_power_w: float = laser_power_w
         self.beam_diameter_mm: float = beam_diameter_mm
         self.molecule_velocity_ms: float = molecule_velocity_ms
@@ -111,7 +113,8 @@ class Sim:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
         # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(self.bands[0].lines[0].fwhm_instrument(True), 2)
+        inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument(True))
+        padding: float = 10.0 * max(inst_broadening, 2)
 
         grid_min: float = wavenumbers_line.min() - padding
         grid_max: float = wavenumbers_line.max() + padding

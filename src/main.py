@@ -705,14 +705,23 @@ class CustomTab(QWidget):
         broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
         broadening_params_layout: QHBoxLayout = QHBoxLayout()
 
-        inst_broadening_layout = QVBoxLayout()
-        inst_broadening_layout.addWidget(QLabel("Instrument FWHM"))
-        self.inst_broadening_spinbox = MyDoubleSpinBox()
-        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        self.inst_broadening_spinbox.setSuffix(" nm")
-        self.inst_broadening_spinbox.valueChanged.connect(self.update_sim_objects)
-        inst_broadening_layout.addWidget(self.inst_broadening_spinbox)
-        broadening_params_layout.addLayout(inst_broadening_layout)
+        inst_broad_gauss_layout = QVBoxLayout()
+        inst_broad_gauss_layout.addWidget(QLabel("Gauss. FWHM"))
+        self.inst_broad_gauss_spinbox = MyDoubleSpinBox()
+        self.inst_broad_gauss_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broad_gauss_spinbox.setSuffix(" nm")
+        self.inst_broad_gauss_spinbox.valueChanged.connect(self.update_sim_objects)
+        inst_broad_gauss_layout.addWidget(self.inst_broad_gauss_spinbox)
+        broadening_params_layout.addLayout(inst_broad_gauss_layout)
+
+        inst_broad_loren_layout = QVBoxLayout()
+        inst_broad_loren_layout.addWidget(QLabel("Loren. FWHM"))
+        self.inst_broad_loren_spinbox = MyDoubleSpinBox()
+        self.inst_broad_loren_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broad_loren_spinbox.setSuffix(" nm")
+        self.inst_broad_loren_spinbox.valueChanged.connect(self.update_sim_objects)
+        inst_broad_loren_layout.addWidget(self.inst_broad_loren_spinbox)
+        broadening_params_layout.addLayout(inst_broad_loren_layout)
 
         laser_power_layout = QVBoxLayout()
         laser_power_layout.addWidget(QLabel("Laser Power"))
@@ -880,7 +889,8 @@ class CustomTab(QWidget):
             temp_rot=self.sim.temp_rot,
             pressure=self.sim.pressure,
             bands_input=current_bands,
-            inst_broadening_wl=self.inst_broadening_spinbox.value(),
+            inst_broad_wl_gauss=self.inst_broad_gauss_spinbox.value(),
+            inst_broad_wl_loren=self.inst_broad_loren_spinbox.value(),
             laser_power_w=self.laser_power_spinbox.value(),
             beam_diameter_mm=self.beam_diameter_spinbox.value(),
             molecule_velocity_ms=self.transit_spinbox.value(),

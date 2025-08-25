@@ -70,7 +70,7 @@ def main() -> None:
         temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
-        inst_broadening_wl=0.004,
+        inst_broad_wl_gauss=0.004,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(

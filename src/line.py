@@ -231,11 +231,11 @@ class Line:
 
         return 0.0
 
-    def fwhm_instrument(self, is_selected: bool) -> float:
+    def fwhm_instrument(self, is_selected: bool) -> tuple[float, float]:
         """Return the instrument broadening FWHM in [1/cm].
 
         The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
-        then converted to units of [1/cm]. Inhomogeneous (Gaussian).
+        then converted to units of [1/cm]. Inhomogeneous (Gaussian) & homogeneous (Lorentzian).
 
         Args:
             is_selected (bool): True if instrument broadening should be simulated.
@@ -243,17 +243,21 @@ class Line:
         Returns:
             float: The instrument broadening FWHM in [1/cm].
         """
-        # TODO: 25/08/18 - Allow for Gaussian and Lorentzian FWHMs to be returned.
         if is_selected:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
             #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
             #       wavelength to expand about.
-            return utils.bandwidth_wavelen_to_wavenum(
-                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broadening_wl
+            wn_gauss: float = utils.bandwidth_wavelen_to_wavenum(
+                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broad_wl_gauss
+            )
+            wn_loren: float = utils.bandwidth_wavelen_to_wavenum(
+                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broad_wl_loren
             )
 
-        return 0.0
+            return wn_gauss, wn_loren
+
+        return 0.0, 0.0
 
     def fwhm_power(self, is_selected: bool) -> float:
         """Return the power broadening FWHM in [1/cm].

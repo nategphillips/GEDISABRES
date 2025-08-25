@@ -40,11 +40,12 @@ def broadening_fn(
     Returns:
         NDArray[np.float64]: The Voigt probability density function for a single rotational line.
     """
-    # Instrument broadening in [1/cm] is added to thermal broadening to get the full Gaussian FWHM.
+    inst_gauss, inst_loren = line.fwhm_instrument(fwhm_selections["instrument"])
+
     # Note that Gaussian FWHMs must be summed in quadrature: see "Hypersonic Nonequilibrium Flows:
     # Fundamentals and Recent Advances" p. 361.
     fwhm_gaussian: float = np.sqrt(
-        line.fwhm_instrument(fwhm_selections["instrument"]) ** 2
+        inst_gauss**2
         + line.fwhm_doppler(fwhm_selections["doppler"]) ** 2
         + line.fwhm_transit(fwhm_selections["transit"]) ** 2
     )
@@ -52,11 +53,11 @@ def broadening_fn(
     # NOTE: 24/10/25 - Since predissociating repulsive states have no interfering absorption, the
     #       broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
 
-    # Add the effects of natural, collisional, and predissociation broadening to get the full
-    # Lorentzian FWHM. Lorentzian FHWMs are summed linearly: see "Hypersonic Nonequilibrium Flows:
-    # Fundamentals and Recent Advances" p. 361.
+    # Lorentzian FHWMs are summed linearly: see "Hypersonic Nonequilibrium Flows: Fundamentals and
+    # Recent Advances" p. 361.
     fwhm_lorentzian: float = (
-        line.fwhm_natural(fwhm_selections["natural"])
+        inst_loren
+        + line.fwhm_natural(fwhm_selections["natural"])
         + line.fwhm_collisional(fwhm_selections["collisional"])
         + line.fwhm_predissociation(fwhm_selections["predissociation"])
         + line.fwhm_power(fwhm_selections["power"])

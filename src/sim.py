@@ -51,6 +51,10 @@ class Sim:
         laser_power_w: float = 0.0,
         beam_diameter_mm: float = 1.0,
         molecule_velocity_ms: float = 0.0,
+        coll_shift_a: float = 0.0,
+        coll_shift_b: float = 0.0,
+        coll_shift: bool = False,
+        dopp_shift: bool = False,
     ) -> None:
         """Initialize class variables.
 
@@ -83,6 +87,10 @@ class Sim:
         self.laser_power_w: float = laser_power_w
         self.beam_diameter_mm: float = beam_diameter_mm
         self.molecule_velocity_ms: float = molecule_velocity_ms
+        self.coll_shift_a: float = coll_shift_a
+        self.coll_shift_b: float = coll_shift_b
+        self.coll_shift: bool = coll_shift
+        self.dopp_shift: bool = dopp_shift
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""

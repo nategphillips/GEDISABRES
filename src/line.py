@@ -279,7 +279,7 @@ class Line:
             # Intensity of a plane wave in air: I = 0.5 * ε_0 * c * E^2. Convert the speed of light
             # from [cm/s] to [m/s] to ensure units work out.
             electric_field: float = np.sqrt(
-                2.0 * intensity / (constants.EPERM * (constants.LIGHT / 1e2))
+                2.0 * intensity / (constants.EPERM * (1e-2 * constants.LIGHT))
             )
             # Convert from [1/s] to [1/cm].
             return utils.freq_to_wavenum(
@@ -330,7 +330,51 @@ class Line:
         #       pp. 168-169.
 
         # Herzberg p. 168, eq. (IV, 24)
-        return self.band.band_origin + (self.rot_term_value_up - self.rot_term_value_lo)
+        unshifted_wavenumber: float = self.band.band_origin + (
+            self.rot_term_value_up - self.rot_term_value_lo
+        )
+
+        if self.sim.coll_shift and not self.sim.dopp_shift:
+            return unshifted_wavenumber + self.shift_collisional()
+
+        if self.sim.dopp_shift and not self.sim.coll_shift:
+            return unshifted_wavenumber + self.shift_doppler(unshifted_wavenumber)
+
+        if self.sim.coll_shift and self.sim.dopp_shift:
+            return (
+                unshifted_wavenumber
+                + self.shift_collisional()
+                + self.shift_doppler(unshifted_wavenumber)
+            )
+
+        return unshifted_wavenumber
+
+    def shift_doppler(self, wavenumber: float) -> float:
+        """Return the Doppler shift in [1/cm].
+
+        Computed using Eq. 8.40 in the 2016 book "Spectroscopy and Optical Diagnostics for Gases" by
+        Ronald K. Hanson et al.
+
+        Returns:
+            float: The Doppler shift in [1/cm].
+        """
+        # Convert the speed of light from [cm/s] to [m/s].
+        return wavenumber * self.sim.molecule_velocity_ms / (1e-2 * constants.LIGHT)
+
+    def shift_collisional(self) -> float:
+        """Return the collisional shift in [1/cm].
+
+        Computed using Eq. 8.39 in the 2016 book "Spectroscopy and Optical Diagnostics for Gases" by
+        Ronald K. Hanson et al.
+
+        Returns:
+            float: The collisional shift in [1/cm].
+        """
+        return (
+            self.sim.coll_shift_a
+            * (self.sim.pressure / 101325.0)
+            * (300.0 / self.sim.temp_trn) ** self.sim.coll_shift_b
+        )
 
     @cached_property
     def intensity(self) -> float:

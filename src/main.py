@@ -701,6 +701,46 @@ class CustomTab(QWidget):
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
+        group_shift = QGroupBox("Line Shift")
+        shift_layout = QVBoxLayout(group_shift)
+        shift_params_layout = QHBoxLayout()
+
+        coll_shift_a_layout = QVBoxLayout()
+        coll_shift_a_layout.addWidget(QLabel("a"))
+        self.coll_shift_a_spinbox = MyDoubleSpinBox()
+        self.coll_shift_a_spinbox.setValue(0.0)
+        self.coll_shift_a_spinbox.setSuffix(" [cm⁻¹]")
+        self.coll_shift_a_spinbox.valueChanged.connect(self.update_sim_objects)
+        coll_shift_a_layout.addWidget(self.coll_shift_a_spinbox)
+        shift_params_layout.addLayout(coll_shift_a_layout)
+
+        coll_shift_b_layout = QVBoxLayout()
+        coll_shift_b_layout.addWidget(QLabel("b"))
+        self.coll_shift_b_spinbox = MyDoubleSpinBox()
+        self.coll_shift_b_spinbox.setValue(0.0)
+        self.coll_shift_b_spinbox.setSuffix(" [-]")
+        self.coll_shift_b_spinbox.valueChanged.connect(self.update_sim_objects)
+        coll_shift_b_layout.addWidget(self.coll_shift_b_spinbox)
+        shift_params_layout.addLayout(coll_shift_b_layout)
+
+        shift_layout.addLayout(shift_params_layout)
+
+        shift_checkbox_layout = QHBoxLayout()
+        self.checkbox_collisional_shift: QCheckBox = QCheckBox("Collisional")
+        self.checkbox_doppler_shift: QCheckBox = QCheckBox("Doppler")
+
+        checkboxes = [
+            self.checkbox_collisional_shift,
+            self.checkbox_doppler_shift,
+        ]
+
+        for i, cb in enumerate(checkboxes):
+            cb.toggled.connect(self.update_sim_objects)
+            shift_checkbox_layout.addWidget(cb)
+
+        shift_layout.addLayout(shift_checkbox_layout)
+        controls_layout.addWidget(group_shift)
+
         group_broadening: QGroupBox = QGroupBox("Broadening")
         broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
         broadening_params_layout: QHBoxLayout = QHBoxLayout()
@@ -709,7 +749,7 @@ class CustomTab(QWidget):
         inst_broad_gauss_layout.addWidget(QLabel("Gauss. FWHM"))
         self.inst_broad_gauss_spinbox = MyDoubleSpinBox()
         self.inst_broad_gauss_spinbox.setValue(DEFAULT_BROADENING)
-        self.inst_broad_gauss_spinbox.setSuffix(" nm")
+        self.inst_broad_gauss_spinbox.setSuffix(" [nm]")
         self.inst_broad_gauss_spinbox.valueChanged.connect(self.update_sim_objects)
         inst_broad_gauss_layout.addWidget(self.inst_broad_gauss_spinbox)
         broadening_params_layout.addLayout(inst_broad_gauss_layout)
@@ -718,7 +758,7 @@ class CustomTab(QWidget):
         inst_broad_loren_layout.addWidget(QLabel("Loren. FWHM"))
         self.inst_broad_loren_spinbox = MyDoubleSpinBox()
         self.inst_broad_loren_spinbox.setValue(DEFAULT_BROADENING)
-        self.inst_broad_loren_spinbox.setSuffix(" nm")
+        self.inst_broad_loren_spinbox.setSuffix(" [nm]")
         self.inst_broad_loren_spinbox.valueChanged.connect(self.update_sim_objects)
         inst_broad_loren_layout.addWidget(self.inst_broad_loren_spinbox)
         broadening_params_layout.addLayout(inst_broad_loren_layout)
@@ -727,7 +767,7 @@ class CustomTab(QWidget):
         laser_power_layout.addWidget(QLabel("Laser Power"))
         self.laser_power_spinbox = MyDoubleSpinBox()
         self.laser_power_spinbox.setValue(0.0)
-        self.laser_power_spinbox.setSuffix(" W")
+        self.laser_power_spinbox.setSuffix(" [W]")
         self.laser_power_spinbox.valueChanged.connect(self.update_sim_objects)
         laser_power_layout.addWidget(self.laser_power_spinbox)
         broadening_params_layout.addLayout(laser_power_layout)
@@ -736,7 +776,7 @@ class CustomTab(QWidget):
         beam_diameter_layout.addWidget(QLabel("Beam Diameter"))
         self.beam_diameter_spinbox = MyDoubleSpinBox()
         self.beam_diameter_spinbox.setValue(1.0)
-        self.beam_diameter_spinbox.setSuffix(" mm")
+        self.beam_diameter_spinbox.setSuffix(" [mm]")
         self.beam_diameter_spinbox.valueChanged.connect(self.update_sim_objects)
         beam_diameter_layout.addWidget(self.beam_diameter_spinbox)
         broadening_params_layout.addLayout(beam_diameter_layout)
@@ -745,7 +785,7 @@ class CustomTab(QWidget):
         transit_layout.addWidget(QLabel("Molecule Velocity"))
         self.transit_spinbox = MyDoubleSpinBox()
         self.transit_spinbox.setValue(0.0)
-        self.transit_spinbox.setSuffix(" m/s")
+        self.transit_spinbox.setSuffix(" [m/s]")
         self.transit_spinbox.valueChanged.connect(self.update_sim_objects)
         transit_layout.addWidget(self.transit_spinbox)
         broadening_params_layout.addLayout(transit_layout)
@@ -894,6 +934,10 @@ class CustomTab(QWidget):
             laser_power_w=self.laser_power_spinbox.value(),
             beam_diameter_mm=self.beam_diameter_spinbox.value(),
             molecule_velocity_ms=self.transit_spinbox.value(),
+            coll_shift_a=self.coll_shift_a_spinbox.value(),
+            coll_shift_b=self.coll_shift_b_spinbox.value(),
+            coll_shift=self.checkbox_collisional_shift.isChecked(),
+            dopp_shift=self.checkbox_doppler_shift.isChecked(),
         )
 
     def run_simulation(self) -> None:

@@ -22,11 +22,11 @@ This program uses Herzberg's definition of the band origin, i.e. $\nu_0 = \nu_e 
 
 The Hamiltonians in Cheung and Yu are defined slightly differently, which leads to some constants having different values. Since the Cheung Hamiltonian matrix elements are used to solve for the energy eigenvalues, the constants from Yu are changed  to fit the convention used by Cheung. The Cheung convention also matches that of PGOPHER, which is my preferred convention (see <https://pgopher.chm.bris.ac.uk/Help/linham.htm>). The table below details the changes made to Yu's constants:
 
-Cheung  | Yu
---------|------------
-D       | -D
-lamda_D | 2 * lamda_D
-gamma_D | 2 * gamma_D
+|Cheung  | Yu         |
+|--------|------------|
+|D       | -D         |
+|lamda_D | 2 * lamda_D|
+|gamma_D | 2 * gamma_D|
 
 ### X3Σg-
 

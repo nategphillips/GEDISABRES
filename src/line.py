@@ -87,20 +87,17 @@ class Line:
         self.rot_term_value_up: float = rot_term_value_up
         self.rot_term_value_lo: float = rot_term_value_lo
 
-    def fwhm_predissociation(self, is_selected: bool) -> float:
+    def fwhm_predissociation(self) -> float:
         """Return the predissociation broadening FWHM in [1/cm].
 
         The predissociation FWHM linewidths are computed using a polynomial fit given in the 1985
         paper "Rotational Variation of Predissociation Linewidths in the Schumann-Runge Bands of O2"
         by B. R. Lewis et al. Homogeneous (Lorentzian).
 
-        Args:
-            is_selected (bool): True if predissociation broadening should be simulated.
-
         Returns:
             float: The predissociation broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.pred_broad:
             # TODO: 24/10/25 - Using the polynomial fit and coefficients described by Lewis, 1986
             #       for the predissociation of all bands for now. The goal is to use experimental
             #       values when available, and use this fit otherwise. The fit is good up to J = 40
@@ -121,19 +118,16 @@ class Line:
 
         return 0.0
 
-    def fwhm_natural(self, is_selected: bool) -> float:
+    def fwhm_natural(self) -> float:
         """Return the natural broadening FWHM in [1/cm].
 
         The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book "Spectroscopy
         and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous (Lorentzian).
 
-        Args:
-            is_selected (bool): True if natural broadening should be simulated.
-
         Returns:
             float: The natural broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.natr_broad:
             # TODO: 24/10/21 - Look over this, seems weird still.
 
             # The sum of the Einstein A coefficients for all downward transitions from the two
@@ -153,20 +147,17 @@ class Line:
 
         return 0.0
 
-    def fwhm_collisional(self, is_selected: bool) -> float:
+    def fwhm_collisional(self) -> float:
         """Return the collisional broadening FWHM in [1/cm].
 
         The collisional FWHM linewidths are computed using Equation 8.18 in the 2016 book
         "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous
         (Lorentzian).
 
-        Args:
-            is_selected (bool): True if collisional broadening should be simulated.
-
         Returns:
             float: The collisional broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.coll_broad:
             # NOTE: 24/11/05 - In most cases, the amount of electronically excited molecules in the
             #       gas is essentially zero, meaning that most molecules are in the ground state.
             #       Therefore, the ground state radius is used to compute the cross-section. An even
@@ -206,19 +197,16 @@ class Line:
 
         return 0.0
 
-    def fwhm_doppler(self, is_selected: bool) -> float:
+    def fwhm_doppler(self) -> float:
         """Return the Doppler broadening FWHM in [1/cm].
 
         The doppler FWHM linewidths are computed using Equation 8.24 in the 2016 book "Spectroscopy
         and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Inhomogeneous (Gaussian).
 
-        Args:
-            is_selected (bool): True if Doppler broadening should be simulated.
-
         Returns:
             float: The Doppler broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.dopp_broad:
             # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
             # [cm/s] to [m/s] to ensure that the units work out correctly.
             return self.wavenumber * np.sqrt(
@@ -231,19 +219,16 @@ class Line:
 
         return 0.0
 
-    def fwhm_instrument(self, is_selected: bool) -> tuple[float, float]:
+    def fwhm_instrument(self) -> tuple[float, float]:
         """Return the instrument broadening FWHM in [1/cm].
 
         The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
         then converted to units of [1/cm]. Inhomogeneous (Gaussian) & homogeneous (Lorentzian).
 
-        Args:
-            is_selected (bool): True if instrument broadening should be simulated.
-
         Returns:
             float: The instrument broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.inst_broad:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
             #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
@@ -259,19 +244,16 @@ class Line:
 
         return 0.0, 0.0
 
-    def fwhm_power(self, is_selected: bool) -> float:
+    def fwhm_power(self) -> float:
         """Return the power broadening FWHM in [1/cm].
 
         The power FWHM linewidths are computed using Equation 1.99 in the 2016 book "Spectra of
         Atoms and Molecules, 3rd ed." by Bernath. Homogeneous (Lorentzian).
 
-        Args:
-            is_selected (bool): True if power broadening should be simulated.
-
         Returns:
             float: The power broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.powr_broad:
             # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
             intensity: float = self.sim.laser_power_w / (
                 np.pi * (1e-3 * 0.5 * self.sim.beam_diameter_mm) ** 2
@@ -290,19 +272,16 @@ class Line:
 
         return 0.0
 
-    def fwhm_transit(self, is_selected: bool) -> float:
+    def fwhm_transit(self) -> float:
         """Return the transit-time broadening FWHM in [1/cm].
 
         The transit-time FWHM linewidths are computed using Equation 3.63 in the 2008 book "Laser
         Spectroscopy: Volume 1, 4th ed." by Demtröder. Inhomogeneous (Gaussian).
 
-        Args:
-            is_selected (bool): True if transit-time broadening should be simulated.
-
         Returns:
             float: The transit-time broadening FWHM in [1/cm].
         """
-        if is_selected:
+        if self.sim.trns_broad:
             # This approximation is only valid for a 90° interaction angle between the molecular
             # beam and the laser. Furthermore, the laser pulse must be Gaussian in order to produce
             # a Gaussian line profile, as used here. A flat-top beam will produce a sinc² line

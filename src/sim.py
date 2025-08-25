@@ -55,6 +55,13 @@ class Sim:
         coll_shift_b: float = 0.0,
         coll_shift: bool = False,
         dopp_shift: bool = False,
+        inst_broad: bool = False,
+        dopp_broad: bool = False,
+        natr_broad: bool = False,
+        coll_broad: bool = False,
+        pred_broad: bool = False,
+        powr_broad: bool = False,
+        trns_broad: bool = False,
     ) -> None:
         """Initialize class variables.
 
@@ -91,6 +98,13 @@ class Sim:
         self.coll_shift_b: float = coll_shift_b
         self.coll_shift: bool = coll_shift
         self.dopp_shift: bool = dopp_shift
+        self.inst_broad: bool = inst_broad
+        self.dopp_broad: bool = dopp_broad
+        self.natr_broad: bool = natr_broad
+        self.coll_broad: bool = coll_broad
+        self.pred_broad: bool = pred_broad
+        self.powr_broad: bool = powr_broad
+        self.trns_broad: bool = trns_broad
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -103,9 +117,7 @@ class Sim:
 
         return wavenumbers_line, intensities_line
 
-    def all_conv_data(
-        self, fwhm_selections: dict[str, bool], granularity: int
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    def all_conv_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the convolved data of all vibrational bands."""
         # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
         # expressed as a sum over the individual line absorption coefficients. See "Analysis of
@@ -121,7 +133,7 @@ class Sim:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
         # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument(True))
+        inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument())
         padding: float = 10.0 * max(inst_broadening, 2)
 
         grid_min: float = wavenumbers_line.min() - padding
@@ -136,7 +148,7 @@ class Sim:
         # The wavelength axis is common to all vibrational bands so that their contributions to the
         # spectra can be summed.
         for band in self.bands:
-            intensities_conv += band.intensities_conv(fwhm_selections, wavenumbers_conv)
+            intensities_conv += band.intensities_conv(wavenumbers_conv)
 
         return wavenumbers_conv, intensities_conv
 

@@ -26,7 +26,6 @@ from line import Line
 def broadening_fn(
     wavenumbers_conv: NDArray[np.float64],
     line: Line,
-    fwhm_selections: dict[str, bool],
 ) -> NDArray[np.float64]:
     """Return the contribution of a single rotational line to the total spectra.
 
@@ -35,19 +34,16 @@ def broadening_fn(
     Args:
         wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
         line (Line): A rotational `Line` object.
-        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
 
     Returns:
         NDArray[np.float64]: The Voigt probability density function for a single rotational line.
     """
-    inst_gauss, inst_loren = line.fwhm_instrument(fwhm_selections["instrument"])
+    inst_gauss, inst_loren = line.fwhm_instrument()
 
     # Note that Gaussian FWHMs must be summed in quadrature: see "Hypersonic Nonequilibrium Flows:
     # Fundamentals and Recent Advances" p. 361.
     fwhm_gaussian: float = np.sqrt(
-        inst_gauss**2
-        + line.fwhm_doppler(fwhm_selections["doppler"]) ** 2
-        + line.fwhm_transit(fwhm_selections["transit"]) ** 2
+        inst_gauss**2 + line.fwhm_doppler() ** 2 + line.fwhm_transit() ** 2
     )
 
     # NOTE: 24/10/25 - Since predissociating repulsive states have no interfering absorption, the
@@ -57,10 +53,10 @@ def broadening_fn(
     # Recent Advances" p. 361.
     fwhm_lorentzian: float = (
         inst_loren
-        + line.fwhm_natural(fwhm_selections["natural"])
-        + line.fwhm_collisional(fwhm_selections["collisional"])
-        + line.fwhm_predissociation(fwhm_selections["predissociation"])
-        + line.fwhm_power(fwhm_selections["power"])
+        + line.fwhm_natural()
+        + line.fwhm_collisional()
+        + line.fwhm_predissociation()
+        + line.fwhm_power()
     )
 
     x: NDArray[np.float64] = wavenumbers_conv - line.wavenumber
@@ -93,14 +89,12 @@ def broadening_fn(
 def convolve(
     lines: list[Line],
     wavenumbers_conv: NDArray[np.float64],
-    fwhm_selections: dict[str, bool],
 ) -> NDArray[np.float64]:
     """Convolve a discrete number of spectral lines into a continuous spectra.
 
     Args:
         lines (list[Line]): A list of rotational `Line` objects.
         wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
-        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
 
     Returns:
         NDArray[np.float64]: The total intensity spectrum with contributions from all lines.
@@ -113,6 +107,6 @@ def convolve(
     # Add the effects of each line to the continuous spectra by computing its broadening function
     # multiplied by its intensity and adding it to the total intensity.
     for line in lines:
-        intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line, fwhm_selections)
+        intensities_conv += line.intensity * broadening_fn(wavenumbers_conv, line)
 
     return intensities_conv

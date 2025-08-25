@@ -938,6 +938,13 @@ class CustomTab(QWidget):
             coll_shift_b=self.coll_shift_b_spinbox.value(),
             coll_shift=self.checkbox_collisional_shift.isChecked(),
             dopp_shift=self.checkbox_doppler_shift.isChecked(),
+            inst_broad=self.checkbox_instrument.isChecked(),
+            dopp_broad=self.checkbox_doppler.isChecked(),
+            natr_broad=self.checkbox_natural.isChecked(),
+            coll_broad=self.checkbox_collisional.isChecked(),
+            pred_broad=self.checkbox_predissociation.isChecked(),
+            powr_broad=self.checkbox_power.isChecked(),
+            trns_broad=self.checkbox_transit.isChecked(),
         )
 
     def run_simulation(self) -> None:
@@ -956,23 +963,12 @@ class CustomTab(QWidget):
         plot_type: str = self.plot_type_combo.currentText()
         plot_function: Callable | None = map_functions.get(plot_type)
 
-        fwhm_selections: dict[str, bool] = {
-            "instrument": self.checkbox_instrument.isChecked(),
-            "doppler": self.checkbox_doppler.isChecked(),
-            "natural": self.checkbox_natural.isChecked(),
-            "collisional": self.checkbox_collisional.isChecked(),
-            "predissociation": self.checkbox_predissociation.isChecked(),
-            "power": self.checkbox_power.isChecked(),
-            "transit": self.checkbox_transit.isChecked(),
-        }
-
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
                 plot_function(
                     self.plot_widget,
                     self.sim,
                     colors,
-                    fwhm_selections,
                     self.resolution_spinbox.value(),
                 )
             else:
@@ -1030,7 +1026,7 @@ class CustomTab(QWidget):
             )
             return
 
-        model: MyTable = table_view.model()
+        model: MyTable = table_view.model()  # pyright: ignore[reportAssignmentType]
         if not hasattr(model, "df"):
             QMessageBox.information(
                 self,
@@ -1212,16 +1208,6 @@ class AllSimulationsTab(QWidget):
 
         # TODO: 25/08/01 - Broadening parameters should be pulled from each individual tab instead.
 
-        fwhm_selections = {
-            "instrument": self.checkbox_instrument.isChecked(),
-            "doppler": self.checkbox_doppler.isChecked(),
-            "natural": self.checkbox_natural.isChecked(),
-            "collisional": self.checkbox_collisional.isChecked(),
-            "predissociation": self.checkbox_predissociation.isChecked(),
-            "power": self.checkbox_power.isChecked(),
-            "transit": self.checkbox_transit.isChecked(),
-        }
-
         def max_intensity_line():
             intensities_line: NDArray[np.float64] = np.array([])
 
@@ -1238,7 +1224,6 @@ class AllSimulationsTab(QWidget):
             for tab in custom_tabs:
                 for band in tab.sim.bands:
                     intensities_conv = band.intensities_conv(
-                        fwhm_selections,
                         band.wavenumbers_conv(granularity),
                     )
 
@@ -1253,7 +1238,6 @@ class AllSimulationsTab(QWidget):
 
             for tab in custom_tabs:
                 _, ins = tab.sim.all_conv_data(
-                    fwhm_selections,
                     self.resolution_spinbox.value(),
                 )
                 intensities_conv = np.concatenate((intensities_conv, ins))
@@ -1275,7 +1259,6 @@ class AllSimulationsTab(QWidget):
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
-                        fwhm_selections,
                         resolution,
                         max_intensity_conv_sep(resolution),
                         idx,
@@ -1285,7 +1268,6 @@ class AllSimulationsTab(QWidget):
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
-                        fwhm_selections,
                         self.resolution_spinbox.value(),
                         max_intensity_conv_all(),
                         idx,

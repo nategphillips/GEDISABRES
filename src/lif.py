@@ -229,6 +229,10 @@ def get_sim(
         temp_rot=temp,
         pressure=pres,
         bands_input=bands,
+        dopp_broad=True,
+        natr_broad=True,
+        coll_broad=True,
+        pred_broad=True,
     )
 
 
@@ -288,7 +292,7 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
 
     j_qn: float = line.j_qn_lo
     s_j: float = line.honl_london_factor
-    nu_d: float = line.fwhm_predissociation(True)  # [1/cm]
+    nu_d: float = line.fwhm_predissociation()  # [1/cm]
     w_d: float = 2 * np.pi * constants.LIGHT * nu_d  # [1/s]
     a_21: float = a21_coeffs[v_qn_up][v_qn_lo] * s_j / (2 * j_qn + 1)  # [1/s]
     w_f: float = np.sum(a21_coeffs[v_qn_up]) * s_j / (2 * j_qn + 1)  # [1/s]

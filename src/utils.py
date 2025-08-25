@@ -91,7 +91,7 @@ def get_data_path(*relative_path_parts) -> Path:
         Path: A relative path if developing, the absolute path to the bundle folder if Pyinstaller.
     """
     if getattr(sys, "frozen", False):
-        base_path = Path(sys._MEIPASS)
+        base_path = Path(sys._MEIPASS)  # pyright: ignore[reportAttributeAccessIssue]
     else:
         base_path = Path(__file__).resolve().parent.parent
 

@@ -243,7 +243,7 @@ class Band:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
         # simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        inst_broadening: float = max(self.lines[0].fwhm_instrument(True))
+        inst_broadening: float = max(self.lines[0].fwhm_instrument())
         padding: float = 10.0 * max(inst_broadening, 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
@@ -255,7 +255,6 @@ class Band:
 
     def intensities_conv(
         self,
-        fwhm_selections: dict[str, bool],
         wavenumbers_conv: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         """Return an array of convolved intensities.
@@ -267,7 +266,7 @@ class Band:
         Returns:
             NDArray[np.float64]: A continuous range of intensities.
         """
-        return convolve.convolve(self.lines, wavenumbers_conv, fwhm_selections)
+        return convolve.convolve(self.lines, wavenumbers_conv)
 
     @cached_property
     def vib_boltz_frac(self) -> float:

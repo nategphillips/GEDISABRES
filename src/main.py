@@ -1122,41 +1122,6 @@ class AllSimulationsTab(QWidget):
         plot_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(plot_group)
 
-        broadening_group = QGroupBox("Instrument Broadening [nm]")
-        broadening_layout = QVBoxLayout(broadening_group)
-
-        self.inst_broadening_spinbox = MyDoubleSpinBox()
-        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        # TODO: 25/08/18 - User-set broadening doesn't update since the state is tied to the Sim
-        #       class which doesn't get recomputed here.
-        broadening_layout.addWidget(self.inst_broadening_spinbox)
-
-        checkbox_layout = QHBoxLayout()
-        self.checkbox_instrument = QCheckBox("Instrument")
-        self.checkbox_doppler = QCheckBox("Doppler")
-        self.checkbox_natural = QCheckBox("Natural")
-        self.checkbox_collisional = QCheckBox("Collisional")
-        self.checkbox_predissociation = QCheckBox("Predissociation")
-        self.checkbox_power = QCheckBox("Power")
-        self.checkbox_transit = QCheckBox("Transit")
-
-        checkboxes = [
-            self.checkbox_instrument,
-            self.checkbox_doppler,
-            self.checkbox_natural,
-            self.checkbox_collisional,
-            self.checkbox_predissociation,
-            self.checkbox_power,
-            self.checkbox_transit,
-        ]
-
-        for cb in checkboxes:
-            cb.setChecked(True)
-            checkbox_layout.addWidget(cb)
-
-        broadening_layout.addLayout(checkbox_layout)
-        controls_layout.addWidget(broadening_group)
-
         actions_group = QGroupBox("Actions")
         actions_layout = QVBoxLayout(actions_group)
         self.run_button: QPushButton = QPushButton("Run All Simulations")
@@ -1205,8 +1170,6 @@ class AllSimulationsTab(QWidget):
         }
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
-
-        # TODO: 25/08/01 - Broadening parameters should be pulled from each individual tab instead.
 
         def max_intensity_line():
             intensities_line: NDArray[np.float64] = np.array([])

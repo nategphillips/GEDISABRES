@@ -152,8 +152,6 @@ def plot_conv_sep(
     plot_widget: pg.PlotWidget,
     sim: Sim,
     colors: list[str],
-    fwhm_selections: dict[str, bool],
-    inst_broadening_wl: float,
     granularity: int,
     max_intensity: float | None = None,
     color_index: int | None = None,
@@ -164,8 +162,6 @@ def plot_conv_sep(
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
         sim (Sim): The parent simulation.
         colors (list[str]): A list of colors for plotting.
-        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
         granularity (int): Number of points on the wavenumber axis.
         max_intensity (float | None, optional): Provided only if multiple simulations are being run
             together. Defaults to None.
@@ -177,12 +173,8 @@ def plot_conv_sep(
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved
     # together, it would be inaccurate because of vibrational band overlap.
     for band in sim.bands:
-        wavenumbers_conv = band.wavenumbers_conv(inst_broadening_wl, granularity)
-        intensities_conv = band.intensities_conv(
-            fwhm_selections,
-            inst_broadening_wl,
-            wavenumbers_conv,
-        )
+        wavenumbers_conv = band.wavenumbers_conv(granularity)
+        intensities_conv = band.intensities_conv(wavenumbers_conv)
         wavelengths_conv = utils.wavenum_to_wavelen(wavenumbers_conv)
         convolved_data.append((wavelengths_conv, intensities_conv))
 
@@ -205,8 +197,6 @@ def plot_conv_all(
     plot_widget: pg.PlotWidget,
     sim: Sim,
     colors: list[str],
-    fwhm_selections: dict[str, bool],
-    inst_broadening_wl: float,
     granularity: int,
     max_intensity: float | None = None,
     color_idx: int = 0,
@@ -217,17 +207,13 @@ def plot_conv_all(
         plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
         sim (Sim): The parent simulation.
         colors (list[str]): A list of colors for plotting.
-        fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-        inst_broadening_wl (float): Instrument broadening FWHM in [nm].
         granularity (int): Number of points on the wavenumber axis.
         max_intensity (float | None, optional): Provided only if multiple simulations are being run
             together. Defaults to None.
         color_idx (int, optional): Provided only if multiple simulations are being run together.
             Defaults to 0.
     """
-    wavenumbers_conv, intensities_conv = sim.all_conv_data(
-        fwhm_selections, inst_broadening_wl, granularity
-    )
+    wavenumbers_conv, intensities_conv = sim.all_conv_data(granularity)
     wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_conv)
 
     if max_intensity is None:

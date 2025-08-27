@@ -26,6 +26,7 @@ from atom import Atom
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
+from sim_params import BroadeningBools, InstrumentParams
 from state import State
 
 if TYPE_CHECKING:
@@ -56,7 +57,11 @@ def main() -> None:
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
-    temp: float = 300.0
+    broad_bools = BroadeningBools(
+        instrument=True, doppler=True, natural=True, collisional=True, predissociation=True
+    )
+
+    inst_params = InstrumentParams(gauss_fwhm_wl=0.001, loren_fwhm_wl=0.001)
 
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
@@ -64,12 +69,10 @@ def main() -> None:
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=40,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
+        inst_params=inst_params,
+        broad_bools=broad_bools,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(
@@ -82,41 +85,23 @@ def main() -> None:
 
     plt.plot(wns_samp, ins_samp, label="sample")
 
-    inst_broadening_wl: float = 0.004
     granularity: int = int(1e4)
-    fwhm_selections: dict[str, bool] = {
-        "instrument": True,
-        "doppler": True,
-        "natural": True,
-        "collisional": True,
-        "predissociation": True,
-    }
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(
-            fwhm_selections,
-            inst_broadening_wl,
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-        ).max()
-        for band in sim.bands
+        band.intensities_conv(band.wavenumbers_conv(granularity)).max() for band in sim.bands
     )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(inst_broadening_wl, granularity),
-            band.intensities_conv(
-                fwhm_selections,
-                inst_broadening_wl,
-                band.wavenumbers_conv(inst_broadening_wl, granularity),
-            )
-            / max_intensity,
+            band.wavenumbers_conv(granularity),
+            band.intensities_conv(band.wavenumbers_conv(granularity)) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
     # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data(fwhm_selections, inst_broadening_wl, granularity)
+    wns, ins = sim.all_conv_data(granularity)
     ins /= ins.max()
 
     plt.plot(wns, ins, label="all convolved")

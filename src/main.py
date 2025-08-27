@@ -64,6 +64,14 @@ from colors import get_colors
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
+from sim_params import (
+    BroadeningBools,
+    InstrumentParams,
+    LaserParams,
+    ShiftBools,
+    ShiftParams,
+    TemperatureParams,
+)
 from state import State
 
 if TYPE_CHECKING:
@@ -71,16 +79,13 @@ if TYPE_CHECKING:
 
     from numpy.typing import NDArray
 
-DEFAULT_LINES: int = 40
+DEFAULT_J_MAX: int = 40
 DEFAULT_RESOLUTION: int = int(1e4)
 
-DEFAULT_TEMPERATURE: float = 300.0  # [K]
-DEFAULT_PRESSURE: float = 101325.0  # [Pa]
-DEFAULT_BROADENING: float = 0.0  # [nm]
+DEFAULT_PRESSURE: float = 101325.0
+DEFAULT_BROADENING: float = 0.0
 
 DEFAULT_BANDS: str = "0-0"
-DEFAULT_PLOTTYPE: str = "Line"
-DEFAULT_SIMTYPE: str = "Absorption"
 
 DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom("O"), Atom("O"))
 DEFAULT_STATE_UP: State = State(
@@ -102,17 +107,13 @@ DEFAULT_STATE_LO: State = State(
     ConstantsType.PERLEVEL,
 )
 DEFAULT_SIM: Sim = Sim(
-    SimType.ABSORPTION,
-    DEFAULT_MOLECULE,
-    DEFAULT_STATE_UP,
-    DEFAULT_STATE_LO,
-    40,
-    300,
-    300,
-    300,
-    300,
-    101325,
-    [(0, 0)],
+    sim_type=SimType.ABSORPTION,
+    molecule=DEFAULT_MOLECULE,
+    state_up=DEFAULT_STATE_UP,
+    state_lo=DEFAULT_STATE_LO,
+    j_qn_up_max=DEFAULT_J_MAX,
+    pressure=DEFAULT_PRESSURE,
+    bands_input=[(0, 0)],
 )
 
 MOLECULAR_PRESETS = [
@@ -148,7 +149,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.SIGMA,
             InversionSymmetry.NONE,
             ReflectionSymmetry.PLUS,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
             Molecule("NO", Atom("N"), Atom("O")),
@@ -157,7 +158,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
     },
     {
@@ -170,7 +171,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
             Molecule("NO", Atom("N"), Atom("O")),
@@ -179,7 +180,7 @@ MOLECULAR_PRESETS = [
             TermSymbol.PI,
             InversionSymmetry.NONE,
             ReflectionSymmetry.NONE,
-            ConstantsType.DUNHAM,
+            ConstantsType.PERLEVEL,
         ),
     },
     {
@@ -533,18 +534,17 @@ class ParametersDialog(QDialog):
         self.term_symbol_up.setCurrentText(tab.state_up.term_symbol.name)
         self.term_symbol_lo.setCurrentText(tab.state_lo.term_symbol.name)
         self.sim_type.setCurrentText(tab.sim.sim_type.name)
-        self.temp_trn.setText(str(tab.sim.temp_trn))
-        self.temp_elc.setText(str(tab.sim.temp_elc))
-        self.temp_vib.setText(str(tab.sim.temp_vib))
-        self.temp_rot.setText(str(tab.sim.temp_rot))
+        self.temp_trn.setText(str(tab.sim.temp_params.translational))
+        self.temp_elc.setText(str(tab.sim.temp_params.electronic))
+        self.temp_vib.setText(str(tab.sim.temp_params.vibrational))
+        self.temp_rot.setText(str(tab.sim.temp_params.rotational))
         self.pressure.setText(str(tab.sim.pressure))
 
     def accept(self):
-        # TODO: 25/07/31 - Just create completely new objects each time. This is certainly not the
-        #       most efficient thing to do, but it ensures that everything is updated properly.
         self.tab.molecule = Molecule(
             self.name.text(), Atom(self.atom_1.text()), Atom(self.atom_2.text())
         )
+
         self.tab.state_up = State(
             self.tab.molecule,
             self.letter_up.text(),
@@ -554,6 +554,7 @@ class ParametersDialog(QDialog):
             ReflectionSymmetry[self.reflection_symmetry_up.currentText()],
             ConstantsType[self.constants_type_up.currentText()],
         )
+
         self.tab.state_lo = State(
             self.tab.molecule,
             self.letter_lo.text(),
@@ -564,18 +565,27 @@ class ParametersDialog(QDialog):
             ConstantsType[self.constants_type_lo.currentText()],
         )
 
+        temp_params = TemperatureParams(
+            translational=float(self.temp_trn.text()),
+            electronic=float(self.temp_elc.text()),
+            vibrational=float(self.temp_vib.text()),
+            rotational=float(self.temp_rot.text()),
+        )
+
         self.tab.sim = Sim(
-            SimType[self.sim_type.currentText()],
-            self.tab.molecule,
-            self.tab.state_up,
-            self.tab.state_lo,
-            self.tab.maxj_spinbox.value(),
-            float(self.temp_trn.text()),
-            float(self.temp_elc.text()),
-            float(self.temp_vib.text()),
-            float(self.temp_rot.text()),
-            float(self.pressure.text()),
-            self.tab.get_current_bands(),
+            sim_type=SimType[self.sim_type.currentText()],
+            molecule=self.tab.molecule,
+            state_up=self.tab.state_up,
+            state_lo=self.tab.state_lo,
+            j_qn_up_max=self.tab.maxj_spinbox.value(),
+            pressure=float(self.pressure.text()),
+            bands_input=self.tab.get_current_bands(),
+            temp_params=temp_params,
+            laser_params=self.tab.sim.laser_params,
+            inst_params=self.tab.sim.inst_params,
+            shift_params=self.tab.sim.shift_params,
+            shift_bools=self.tab.sim.shift_bools,
+            broad_bools=self.tab.sim.broad_bools,
         )
 
         super().accept()
@@ -584,6 +594,8 @@ class ParametersDialog(QDialog):
 class CustomTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
+
+        self.is_first_run: bool = True
 
         self.parent_tab_widget = parent_tab_widget
 
@@ -679,7 +691,7 @@ class CustomTab(QWidget):
         maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
         self.maxj_spinbox: QSpinBox = QSpinBox()
         self.maxj_spinbox.setMaximum(10000)
-        self.maxj_spinbox.setValue(DEFAULT_LINES)
+        self.maxj_spinbox.setValue(DEFAULT_J_MAX)
         self.maxj_spinbox.valueChanged.connect(self.update_sim_objects)
         maxj_layout.addWidget(self.maxj_spinbox)
         controls_layout.addWidget(group_maxj)
@@ -699,20 +711,105 @@ class CustomTab(QWidget):
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
-        group_broadening: QGroupBox = QGroupBox("Instrument Broadening [nm]")
+        group_shift = QGroupBox("Line Shift")
+        shift_layout = QVBoxLayout(group_shift)
+        shift_params_layout = QHBoxLayout()
+
+        coll_shift_a_layout = QVBoxLayout()
+        coll_shift_a_layout.addWidget(QLabel("a"))
+        self.coll_shift_a_spinbox = MyDoubleSpinBox()
+        self.coll_shift_a_spinbox.setValue(0.0)
+        self.coll_shift_a_spinbox.setSuffix(" [cm⁻¹]")
+        self.coll_shift_a_spinbox.valueChanged.connect(self.update_sim_objects)
+        coll_shift_a_layout.addWidget(self.coll_shift_a_spinbox)
+        shift_params_layout.addLayout(coll_shift_a_layout)
+
+        coll_shift_b_layout = QVBoxLayout()
+        coll_shift_b_layout.addWidget(QLabel("b"))
+        self.coll_shift_b_spinbox = MyDoubleSpinBox()
+        self.coll_shift_b_spinbox.setValue(0.0)
+        self.coll_shift_b_spinbox.setSuffix(" [-]")
+        self.coll_shift_b_spinbox.valueChanged.connect(self.update_sim_objects)
+        coll_shift_b_layout.addWidget(self.coll_shift_b_spinbox)
+        shift_params_layout.addLayout(coll_shift_b_layout)
+
+        shift_layout.addLayout(shift_params_layout)
+
+        shift_checkbox_layout = QHBoxLayout()
+        self.checkbox_collisional_shift = QCheckBox("Collisional")
+        self.checkbox_doppler_shift = QCheckBox("Doppler")
+
+        checkboxes = [
+            self.checkbox_collisional_shift,
+            self.checkbox_doppler_shift,
+        ]
+
+        for i, cb in enumerate(checkboxes):
+            cb.toggled.connect(self.update_sim_objects)
+            shift_checkbox_layout.addWidget(cb)
+
+        shift_layout.addLayout(shift_checkbox_layout)
+        controls_layout.addWidget(group_shift)
+
+        group_broadening: QGroupBox = QGroupBox("Broadening")
         broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
+        broadening_params_layout: QHBoxLayout = QHBoxLayout()
 
-        self.inst_broadening_spinbox: MyDoubleSpinBox = MyDoubleSpinBox()
-        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        self.inst_broadening_spinbox.valueChanged.connect(self.update_sim_objects)
-        broadening_layout.addWidget(self.inst_broadening_spinbox)
+        inst_broad_gauss_layout = QVBoxLayout()
+        inst_broad_gauss_layout.addWidget(QLabel("Gauss. FWHM"))
+        self.inst_broad_gauss_spinbox = MyDoubleSpinBox()
+        self.inst_broad_gauss_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broad_gauss_spinbox.setSuffix(" [nm]")
+        self.inst_broad_gauss_spinbox.valueChanged.connect(self.update_sim_objects)
+        inst_broad_gauss_layout.addWidget(self.inst_broad_gauss_spinbox)
+        broadening_params_layout.addLayout(inst_broad_gauss_layout)
 
-        checkbox_layout: QHBoxLayout = QHBoxLayout()
-        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument FWHM")
-        self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
-        self.checkbox_natural: QCheckBox = QCheckBox("Natural")
-        self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
-        self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
+        inst_broad_loren_layout = QVBoxLayout()
+        inst_broad_loren_layout.addWidget(QLabel("Loren. FWHM"))
+        self.inst_broad_loren_spinbox = MyDoubleSpinBox()
+        self.inst_broad_loren_spinbox.setValue(DEFAULT_BROADENING)
+        self.inst_broad_loren_spinbox.setSuffix(" [nm]")
+        self.inst_broad_loren_spinbox.valueChanged.connect(self.update_sim_objects)
+        inst_broad_loren_layout.addWidget(self.inst_broad_loren_spinbox)
+        broadening_params_layout.addLayout(inst_broad_loren_layout)
+
+        laser_power_layout = QVBoxLayout()
+        laser_power_layout.addWidget(QLabel("Laser Power"))
+        self.laser_power_spinbox = MyDoubleSpinBox()
+        self.laser_power_spinbox.setValue(0.0)
+        self.laser_power_spinbox.setSuffix(" [W]")
+        self.laser_power_spinbox.valueChanged.connect(self.update_sim_objects)
+        laser_power_layout.addWidget(self.laser_power_spinbox)
+        broadening_params_layout.addLayout(laser_power_layout)
+
+        beam_diameter_layout = QVBoxLayout()
+        beam_diameter_layout.addWidget(QLabel("Beam Diameter"))
+        self.beam_diameter_spinbox = MyDoubleSpinBox()
+        self.beam_diameter_spinbox.setValue(1.0)
+        self.beam_diameter_spinbox.setSuffix(" [mm]")
+        self.beam_diameter_spinbox.valueChanged.connect(self.update_sim_objects)
+        beam_diameter_layout.addWidget(self.beam_diameter_spinbox)
+        broadening_params_layout.addLayout(beam_diameter_layout)
+
+        transit_layout = QVBoxLayout()
+        transit_layout.addWidget(QLabel("Molecule Velocity"))
+        self.transit_spinbox = MyDoubleSpinBox()
+        self.transit_spinbox.setValue(0.0)
+        self.transit_spinbox.setSuffix(" [m/s]")
+        self.transit_spinbox.valueChanged.connect(self.update_sim_objects)
+        transit_layout.addWidget(self.transit_spinbox)
+        broadening_params_layout.addLayout(transit_layout)
+
+        broadening_layout.addLayout(broadening_params_layout)
+
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument")
+        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_predissociation = QCheckBox("Predissociation")
+        self.checkbox_power = QCheckBox("Power")
+        self.checkbox_transit = QCheckBox("Transit")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -720,6 +817,8 @@ class CustomTab(QWidget):
             self.checkbox_natural,
             self.checkbox_collisional,
             self.checkbox_predissociation,
+            self.checkbox_power,
+            self.checkbox_transit,
         ]
 
         for i, cb in enumerate(checkboxes):
@@ -827,19 +926,52 @@ class CustomTab(QWidget):
     def update_sim_objects(self) -> None:
         current_bands = self.get_current_bands()
 
+        inst_params = InstrumentParams(
+            gauss_fwhm_wl=self.inst_broad_gauss_spinbox.value(),
+            loren_fwhm_wl=self.inst_broad_loren_spinbox.value(),
+        )
+
+        laser_params = LaserParams(
+            power_w=self.laser_power_spinbox.value(),
+            beam_diameter_mm=self.beam_diameter_spinbox.value(),
+            molecule_velocity_ms=self.transit_spinbox.value(),
+        )
+
+        shift_params = ShiftParams(
+            collisional_a=self.coll_shift_a_spinbox.value(),
+            collisional_b=self.coll_shift_b_spinbox.value(),
+        )
+
+        shift_bools = ShiftBools(
+            collisional=self.checkbox_collisional_shift.isChecked(),
+            doppler=self.checkbox_doppler_shift.isChecked(),
+        )
+
+        broad_bools = BroadeningBools(
+            collisional=self.checkbox_collisional.isChecked(),
+            doppler=self.checkbox_doppler.isChecked(),
+            instrument=self.checkbox_instrument.isChecked(),
+            natural=self.checkbox_natural.isChecked(),
+            power=self.checkbox_power.isChecked(),
+            predissociation=self.checkbox_predissociation.isChecked(),
+            transit=self.checkbox_transit.isChecked(),
+        )
+
         # Only update the values that are controlled by the tab specifically.
         self.sim = Sim(
-            self.sim.sim_type,
-            self.molecule,
-            self.state_up,
-            self.state_lo,
-            self.maxj_spinbox.value(),
-            self.sim.temp_trn,
-            self.sim.temp_elc,
-            self.sim.temp_vib,
-            self.sim.temp_rot,
-            self.sim.pressure,
-            current_bands,
+            sim_type=self.sim.sim_type,
+            molecule=self.molecule,
+            state_up=self.state_up,
+            state_lo=self.state_lo,
+            j_qn_up_max=self.maxj_spinbox.value(),
+            pressure=self.sim.pressure,
+            bands_input=current_bands,
+            temp_params=self.sim.temp_params,
+            laser_params=laser_params,
+            inst_params=inst_params,
+            shift_bools=shift_bools,
+            shift_params=shift_params,
+            broad_bools=broad_bools,
         )
 
     def run_simulation(self) -> None:
@@ -858,22 +990,12 @@ class CustomTab(QWidget):
         plot_type: str = self.plot_type_combo.currentText()
         plot_function: Callable | None = map_functions.get(plot_type)
 
-        fwhm_selections: dict[str, bool] = {
-            "instrument": self.checkbox_instrument.isChecked(),
-            "doppler": self.checkbox_doppler.isChecked(),
-            "natural": self.checkbox_natural.isChecked(),
-            "collisional": self.checkbox_collisional.isChecked(),
-            "predissociation": self.checkbox_predissociation.isChecked(),
-        }
-
         if plot_function is not None:
             if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
                 plot_function(
                     self.plot_widget,
                     self.sim,
                     colors,
-                    fwhm_selections,
-                    self.inst_broadening_spinbox.value(),
                     self.resolution_spinbox.value(),
                 )
             else:
@@ -886,7 +1008,10 @@ class CustomTab(QWidget):
                 QMessageBox.StandardButton.Ok,
             )
 
-        self.plot_widget.autoRange()
+        # TODO: 25/08/18 - Might want to auto range if the bands are updated.
+        if self.is_first_run:
+            self.plot_widget.autoRange()
+            self.is_first_run = False
 
         while self.table_tab_widget.count() > 0:
             self.table_tab_widget.removeTab(0)
@@ -928,7 +1053,7 @@ class CustomTab(QWidget):
             )
             return
 
-        model: MyTable = table_view.model()
+        model: MyTable = table_view.model()  # pyright: ignore[reportAssignmentType]
         if not hasattr(model, "df"):
             QMessageBox.information(
                 self,
@@ -988,7 +1113,6 @@ class CustomTab(QWidget):
             return
 
         plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
-        self.plot_widget.autoRange()
 
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
@@ -1000,6 +1124,8 @@ class CustomTab(QWidget):
 class AllSimulationsTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
+
+        self.is_first_run: bool = True
 
         self.parent_tab_widget = parent_tab_widget
 
@@ -1022,35 +1148,6 @@ class AllSimulationsTab(QWidget):
         self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
         plot_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(plot_group)
-
-        broadening_group = QGroupBox("Instrument Broadening [nm]")
-        broadening_layout = QVBoxLayout(broadening_group)
-
-        self.inst_broadening_spinbox = MyDoubleSpinBox()
-        self.inst_broadening_spinbox.setValue(DEFAULT_BROADENING)
-        broadening_layout.addWidget(self.inst_broadening_spinbox)
-
-        checkbox_layout = QHBoxLayout()
-        self.checkbox_instrument = QCheckBox("Instrument FWHM")
-        self.checkbox_doppler = QCheckBox("Doppler")
-        self.checkbox_natural = QCheckBox("Natural")
-        self.checkbox_collisional = QCheckBox("Collisional")
-        self.checkbox_predissociation = QCheckBox("Predissociation")
-
-        checkboxes = [
-            self.checkbox_instrument,
-            self.checkbox_doppler,
-            self.checkbox_natural,
-            self.checkbox_collisional,
-            self.checkbox_predissociation,
-        ]
-
-        for cb in checkboxes:
-            cb.setChecked(True)
-            checkbox_layout.addWidget(cb)
-
-        broadening_layout.addLayout(checkbox_layout)
-        controls_layout.addWidget(broadening_group)
 
         actions_group = QGroupBox("Actions")
         actions_layout = QVBoxLayout(actions_group)
@@ -1101,16 +1198,6 @@ class AllSimulationsTab(QWidget):
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
 
-        # TODO: 25/08/01 - Broadening parameters should be pulled from each individual tab instead.
-
-        fwhm_selections = {
-            "instrument": self.checkbox_instrument.isChecked(),
-            "doppler": self.checkbox_doppler.isChecked(),
-            "natural": self.checkbox_natural.isChecked(),
-            "collisional": self.checkbox_collisional.isChecked(),
-            "predissociation": self.checkbox_predissociation.isChecked(),
-        }
-
         def max_intensity_line():
             intensities_line: NDArray[np.float64] = np.array([])
 
@@ -1120,16 +1207,14 @@ class AllSimulationsTab(QWidget):
 
             return intensities_line.max()
 
-        def max_intensity_conv_sep(inst_broadening_wl, granularity):
+        def max_intensity_conv_sep(granularity):
             convolved_data: list[NDArray[np.float64]] = []
             max_intensity: float = 0.0
 
             for tab in custom_tabs:
                 for band in tab.sim.bands:
                     intensities_conv = band.intensities_conv(
-                        fwhm_selections,
-                        inst_broadening_wl,
-                        band.wavenumbers_conv(inst_broadening_wl, granularity),
+                        band.wavenumbers_conv(granularity),
                     )
 
                     convolved_data.append(intensities_conv)
@@ -1143,8 +1228,6 @@ class AllSimulationsTab(QWidget):
 
             for tab in custom_tabs:
                 _, ins = tab.sim.all_conv_data(
-                    fwhm_selections,
-                    self.inst_broadening_spinbox.value(),
                     self.resolution_spinbox.value(),
                 )
                 intensities_conv = np.concatenate((intensities_conv, ins))
@@ -1161,16 +1244,13 @@ class AllSimulationsTab(QWidget):
         for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
                 if plot_function.__name__ == "plot_conv_sep":
-                    broadening = self.inst_broadening_spinbox.value()
                     resolution = self.resolution_spinbox.value()
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
-                        fwhm_selections,
-                        broadening,
                         resolution,
-                        max_intensity_conv_sep(broadening, resolution),
+                        max_intensity_conv_sep(resolution),
                         idx,
                     )
                 elif plot_function.__name__ == "plot_conv_all":
@@ -1178,8 +1258,6 @@ class AllSimulationsTab(QWidget):
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
-                        fwhm_selections,
-                        self.inst_broadening_spinbox.value(),
                         self.resolution_spinbox.value(),
                         max_intensity_conv_all(),
                         idx,
@@ -1189,7 +1267,9 @@ class AllSimulationsTab(QWidget):
                         self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
                     )
 
-        self.plot_widget.autoRange()
+        if self.is_first_run:
+            self.plot_widget.autoRange()
+            self.is_first_run = False
 
 
 class GUI(QMainWindow):

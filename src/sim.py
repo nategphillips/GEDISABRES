@@ -27,6 +27,14 @@ import utils
 from band import Band
 from enums import ConstantsType, SimType
 from molecule import Molecule
+from sim_params import (
+    BroadeningBools,
+    InstrumentParams,
+    LaserParams,
+    ShiftBools,
+    ShiftParams,
+    TemperatureParams,
+)
 from state import State
 
 
@@ -40,12 +48,14 @@ class Sim:
         state_up: State,
         state_lo: State,
         j_qn_up_max: int,
-        temp_trn: float,
-        temp_elc: float,
-        temp_vib: float,
-        temp_rot: float,
         pressure: float,
         bands_input: list[tuple[int, int]],
+        temp_params: TemperatureParams = TemperatureParams(),
+        laser_params: LaserParams = LaserParams(),
+        inst_params: InstrumentParams = InstrumentParams(),
+        shift_params: ShiftParams = ShiftParams(),
+        shift_bools: ShiftBools = ShiftBools(),
+        broad_bools: BroadeningBools = BroadeningBools(),
     ) -> None:
         """Initialize class variables.
 
@@ -55,10 +65,6 @@ class Sim:
             state_up (State): Upper electronic state.
             state_lo (State): Lower electronic state.
             j_qn_up_max (int): Maximum J' quantum number.
-            temp_trn (float): Translational temperature.
-            temp_elc (float): Electronic temperature.
-            temp_vib (float): Vibrational temperature.
-            temp_rot (float): Rotational temperature.
             pressure (float): Pressure.
             bands_input (list[tuple[int, int]]): Which vibrational bands to simulate.
         """
@@ -67,12 +73,14 @@ class Sim:
         self.state_up: State = state_up
         self.state_lo: State = state_lo
         self.j_qn_up_max: int = j_qn_up_max
-        self.temp_trn: float = temp_trn
-        self.temp_elc: float = temp_elc
-        self.temp_vib: float = temp_vib
-        self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.bands_input: list[tuple[int, int]] = bands_input
+        self.temp_params: TemperatureParams = temp_params
+        self.laser_params: LaserParams = laser_params
+        self.inst_params: InstrumentParams = inst_params
+        self.shift_params: ShiftParams = shift_params
+        self.shift_bools: ShiftBools = shift_bools
+        self.broad_bools: BroadeningBools = broad_bools
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -85,9 +93,7 @@ class Sim:
 
         return wavenumbers_line, intensities_line
 
-    def all_conv_data(
-        self, fwhm_selections: dict[str, bool], inst_broadening_wl: float, granularity: int
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    def all_conv_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the convolved data of all vibrational bands."""
         # NOTE: 25/02/12 - In the case of overlapping lines, the overall absorption coefficient is
         # expressed as a sum over the individual line absorption coefficients. See "Analysis of
@@ -103,9 +109,8 @@ class Sim:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
         # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(
-            self.bands[0].lines[0].fwhm_instrument(True, inst_broadening_wl), 2
-        )
+        inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument())
+        padding: float = 10.0 * max(inst_broadening, 2)
 
         grid_min: float = wavenumbers_line.min() - padding
         grid_max: float = wavenumbers_line.max() + padding
@@ -119,9 +124,7 @@ class Sim:
         # The wavelength axis is common to all vibrational bands so that their contributions to the
         # spectra can be summed.
         for band in self.bands:
-            intensities_conv += band.intensities_conv(
-                fwhm_selections, inst_broadening_wl, wavenumbers_conv
-            )
+            intensities_conv += band.intensities_conv(wavenumbers_conv)
 
         return wavenumbers_conv, intensities_conv
 
@@ -205,7 +208,7 @@ class Sim:
                 -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
-                / (constants.BOLTZ * self.temp_vib)
+                / (constants.BOLTZ * self.temp_params.vibrational)
             )
 
         return q_v
@@ -226,7 +229,10 @@ class Sim:
         #       negligible.
         for energy, degeneracy in zip(energies, degeneracies):
             q_e += degeneracy * np.exp(
-                -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
+                -energy
+                * constants.PLANC
+                * constants.LIGHT
+                / (constants.BOLTZ * self.temp_params.electronic)
             )
 
         return q_e
@@ -246,7 +252,10 @@ class Sim:
         return (
             degeneracy
             * np.exp(
-                -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
+                -energy
+                * constants.PLANC
+                * constants.LIGHT
+                / (constants.BOLTZ * self.temp_params.electronic)
             )
             / self.elc_partition_fn
         )

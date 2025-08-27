@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from sim import Sim
 
 
-def fill_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
+def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
     """Create filled constant classes for use with hamilterm.
 
     Args:
@@ -230,11 +230,10 @@ class Band:
         """
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self, inst_broadening_wl: float, granularity: int) -> NDArray[np.float64]:
+    def wavenumbers_conv(self, granularity: int) -> NDArray[np.float64]:
         """Return an array of convolved wavenumbers.
 
         Args:
-            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
             granularity (int): Number of points on the wavenumber axis.
 
         Returns:
@@ -244,7 +243,8 @@ class Band:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
         # simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        padding: float = 10.0 * max(self.lines[0].fwhm_instrument(True, inst_broadening_wl), 2)
+        inst_broadening: float = max(self.lines[0].fwhm_instrument())
+        padding: float = 10.0 * max(inst_broadening, 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.
@@ -255,26 +255,18 @@ class Band:
 
     def intensities_conv(
         self,
-        fwhm_selections: dict[str, bool],
-        inst_broadening_wl: float,
         wavenumbers_conv: NDArray[np.float64],
     ) -> NDArray[np.float64]:
         """Return an array of convolved intensities.
 
         Args:
             fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-            inst_broadening_wl (float): Instrument broadening FWHM in [nm].
             wavenumbers_conv (NDArray[np.float64]): The convolved wavelengths to use.
 
         Returns:
             NDArray[np.float64]: A continuous range of intensities.
         """
-        return convolve.convolve(
-            self.lines,
-            wavenumbers_conv,
-            fwhm_selections,
-            inst_broadening_wl,
-        )
+        return convolve.convolve(self.lines, wavenumbers_conv)
 
     @cached_property
     def vib_boltz_frac(self) -> float:
@@ -298,7 +290,7 @@ class Band:
                 -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_vib)
+                / (constants.BOLTZ * self.sim.temp_params.vibrational)
             )
             / self.sim.vib_partition_fn
         )
@@ -318,26 +310,55 @@ class Band:
         consts_up = state_up.constants_vqn(self.v_qn_up)
         consts_lo = state_lo.constants_vqn(self.v_qn_lo)
 
-        if state_up.constants_type == ConstantsType.PERLEVEL:
-            # Since T' = T_v' - T_0'', it represents the energy of the upper state with respect to
-            # the v'' = 0 vibrational level of lower state. Therefore, any transitions like 2-1 will
-            # require the calculation of an offset G''(v) - G''(0) for the lower state. The band
-            # origin is then nu_0 = T'(v) - [T''(0) + G''(v) - G''(0)].
+        if (
+            state_up.constants_type == ConstantsType.PERLEVEL
+            and state_lo.constants_type == ConstantsType.PERLEVEL
+        ):
+            # TODO: 25/08/14 - All the included per-level constants thus far are for excited to
+            #       ground transitions, meaning the ground state electronic energy is zero. For both
+            #       O2 and NO, the excited electronic energies are given as T'(v') - T''(0). This
+            #       might require some modification for any transitions that don't involve the
+            #       ground state.
+
+            #   The T column for the upper state represents the energy of the upper state with
+            #   respect to the v'' = 0 vibrational level of the lower state, i.e., T'(v') - T''(0).
+            #   The band origin for a general transition (v', v'') is then
+            #   nu(v', v'') = T'(v') - [T''(0) + G''(v'') - G''(0)] = T - [G''(v'') - G''(0)]. The
+            #   value G''(v'') - G''(0) is the vibrational offset of the lower state. This offset is
+            #   necessary to compute the band origin for transitions that don't involve the v'' = 0
+            #   vibrational level.
+            #
+            #   Some papers give this T'(v') - T''(0) value directly, others give T_e', T_e'',
+            #   G'(v'), and G''(v''). To convert, T'(v') = T_e' + G'(v') and
+            #   T''(0) = T_e'' + G''(0). The T column value for the upper state would then be
+            #   T_e' + G'(v') - [T_e'' + G''(0)]. Often, the lower state is the ground state,
+            #   meaning T_e'' = 0.
+            #
+            #   I realize this convention isn't ideal, but there are papers that report per-level
+            #   constants while not giving T_e values. For this reason, a convention must be chosen,
+            #   and T'(v') - T''(0) works as well as anything else. To demonstrate the common band
+            #   origin formula and the chosen formula are the same, see the following:
+            #
+            #   nu(v', v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
+            #
+            #   nu(v', v'') = T - [G''(v'') - G''(0)] = [T'(v') - T''(0)] - [G''(v'') - G''(0)]
+            #               = [T_e' + G'(v')] - [T_e'' + G''(0)] - [G''(v'') - G''(0)]
+            #               = [T_e' + G'(v')] - [T_e'' + G''(v'')]
             return consts_up["T"] - (consts_lo["G"] - state_lo.constants_vqn(0)["G"])
 
-        if state_up.constants_type == ConstantsType.DUNHAM:
-            band_origin_upper = (
-                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_up.name]
-                + consts_up["G"]
-            )
-            band_origin_lower = (
-                constants.ELECTRONIC_ENERGIES[self.sim.molecule.name][state_lo.name]
-                + consts_lo["G"]
-            )
-            # nu_0 = nu_0' - nu_0'' = (T_e' + G') - (T_e'' + G'')
+        if (
+            state_up.constants_type == ConstantsType.DUNHAM
+            and state_lo.constants_type == ConstantsType.DUNHAM
+        ):
+            band_origin_upper = consts_up["T"] + consts_up["G"]
+            band_origin_lower = consts_lo["T"] + consts_lo["G"]
+
+            # nu(v', v'') = nu(v') - nu(v'') = [T_e' + G'(v')] - [T_e'' + G''(v'')]
             return band_origin_upper - band_origin_lower
 
-        raise ValueError("Band origin calculation failed.")
+        raise ValueError(
+            f"Mismatched constants: upper is {state_up.constants_type}, lower is {state_lo.constants_type}."
+        )
 
     @cached_property
     def rot_partition_fn(self) -> float:
@@ -369,7 +390,7 @@ class Band:
             constants.PLANC * constants.LIGHT * state.constants_vqn(v_qn)["B"] / constants.BOLTZ
         )
         q_r: float = (
-            self.sim.temp_rot
+            self.sim.temp_params.rotational
             * state.nuclear_partition_fn()
             / (theta_r * self.sim.molecule.symmetry_param)
         )
@@ -395,8 +416,8 @@ class Band:
         table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
         table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        consts_up: hconsts.ConstantsNum = fill_from_dict(table_up)
-        consts_lo: hconsts.ConstantsNum = fill_from_dict(table_lo)
+        consts_up: hconsts.ConstantsNum = fill_consts_from_dict(table_up)
+        consts_lo: hconsts.ConstantsNum = fill_consts_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol_num(term_symbol_up)
         basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(
@@ -443,7 +464,7 @@ class Band:
             # FIXME: 25/08/05 - Should make hamilterm automatically compute the max N power and max
             #        anticommutator power from the constants supplied.
             comp_up = numerics.NumericComputation(
-                term_symbol_up, consts_up, j_qn_up, max_n_power=4, max_acomm_power=2
+                term_symbol_up, consts_up, j_qn_up, max_n_power=12, max_acomm_power=8
             )
             eigenvals_up_cache[j_qn_up] = comp_up.eigenvalues
             unitary_up_cache[j_qn_up] = comp_up.eigenvectors
@@ -456,7 +477,7 @@ class Band:
 
         for j_qn_lo in j_qn_lo_range:
             comp_lo = numerics.NumericComputation(
-                term_symbol_lo, consts_lo, j_qn_lo, max_n_power=4, max_acomm_power=2
+                term_symbol_lo, consts_lo, j_qn_lo, max_n_power=12, max_acomm_power=8
             )
             eigenvals_lo_cache[j_qn_lo] = comp_lo.eigenvalues
             unitary_lo_cache[j_qn_lo] = comp_lo.eigenvectors

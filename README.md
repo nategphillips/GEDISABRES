@@ -1,6 +1,6 @@
 # pyGEONOSIS
 
-Python GEnerated Oxygen and Nitric Oxide SImulated Spectra (pyGEONOSIS) is a general-purpose tool for simulating diatomic spectra. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
+pyGEONOSIS is a general-purpose tool for simulating the rovibronic spectra of diatomic molecules. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 
@@ -16,18 +16,23 @@ Convolutions include the effects of both Gaussian and Lorentzian broadening mech
 
 #### Gaussian
 
-- Thermal Doppler broadening
-- Instrument broadening
+- Doppler broadening
+- Transit time broadening
 
 #### Lorentzian
 
-- Pressure broadening
+- Collisional broadening
 - Natural broadening
+- Power broadening
 - Predissociation broadening (only O2 is supported for now)
+
+#### Voigt
+
+- Instrument broadening
 
 ### Equilibrium & Non-equilibrium
 
-The translational, electronic, vibrational, and rotational temperatures can be specified separately. Boltzmann population distributions are assumed for now.
+The translational, electronic, vibrational, and rotational temperatures can be specified separately. Boltzmann population distributions are assumed.
 
 ### Plot Types
 
@@ -44,15 +49,11 @@ Four plot types are currently implemented:
 
 ## Validation with Experimental Data
 
-Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. Data for the Schumann–Runge bands is available [here](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) at 300 K. The (2, 0) and (6, 0) experimental band data were chosen since they contain lines belonging to multiple vibrational bands. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
+Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. In particular, data for the [Schumann–Runge bands](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) is used at 300 K. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
 
 ### (2, 0) Band Validation
 
 ![(2, 0) Band Validation](img/example_20.webp)
-
-### (6, 0) Band Validation
-
-![(6, 0) Band Validation](img/example_60.webp)
 
 ## Installation
 
@@ -86,15 +87,14 @@ uv run ./main.py
 
 - [x] Switch to PyQtGraph instead of Matplotlib for improved plot performance
 - [x] Add the ability to export rotational line data from the built-in spreadsheet
-- [x] Make a custom GUI icon
 - [ ] Improve the interface for adding and removing experimental data
 
 ### Physics
 
 - [x] Add support for more diatomic molecules, starting with $\text{NO}$
+- [x] Allow for Gaussian, Lorentzian, and Voigt instrument functions
+- [x] Add Doppler and collisional line shifting mechanisms
 - [ ] Implement multi-species pressure broadening
-- [ ] Allow for Gaussian, Lorentzian, and Voigt instrument functions
-- [ ] Add Doppler and collisional line shifting mechanisms
 - [ ] Construct a general two-level LIF model
 - [ ] Include support for non-Boltzmann temperature distributions
 

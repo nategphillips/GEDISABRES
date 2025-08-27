@@ -20,6 +20,7 @@ from fractions import Fraction
 
 from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
 
+# Data from NIST CODATA - <https://physics.nist.gov/cuu/Constants/index.html>
 # Avodagro constant [1/mol]
 AVOGD: float = 6.02214076e23
 # Boltzmann constant [J/K]
@@ -28,9 +29,11 @@ BOLTZ: float = 1.380649e-23
 LIGHT: float = 2.99792458e10
 # Planck constant [J*s]
 PLANC: float = 6.62607015e-34
+# Vacuum electric permittivity [F/m]
+EPERM: float = 8.8541878188e-12
 
 # Atomic masses [g/mol]
-# Data from IUPAC - Atomic Weights of The Elements 2023 <https://iupac.qmul.ac.uk/AtWt/>
+# Data from IUPAC: Atomic Weights of The Elements 2023 - <https://iupac.qmul.ac.uk/AtWt/>
 ATOMIC_MASSES: dict[str, float] = {"H": 1.008, "N": 14.007, "O": 15.999}
 
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
@@ -41,8 +44,15 @@ BRANCH_NAME_MAP: dict[int, str] = {-3: "N", -2: "O", -1: "P", 0: "Q", +1: "R", +
 #       should also contain the atomic mass number.
 
 # Nuclear spin [-]
-# Data from the NUBASE 2012 database contained in JANIS
+# Data from NUBASE 2020 - <https://doi.org/10.1088/1674-1137/abddae>
 NUCLEAR_SPIN: dict[str, Fraction] = {"H": Fraction(1, 2), "N": Fraction(1), "O": Fraction(0)}
+
+# Electric dipole moment [C*m]
+# Data from NIST Diatomic Spectral Database Holdings - <https://physics.nist.gov/cgi-bin/MolSpec/diperiodic.pl>
+# If available, the ground state electric dipole moment is used. See also
+# <https://cccbdb.nist.gov/diplistx.asp>. Note that homonuclear diatomics have no permanent dipole
+# moment.
+DIPOLE_MOMENT: dict[str, float] = {"O2": 0.0, "NO": 0.52943e-30, "OH": 5.56245e-30}
 
 # Mappings from enums to strings for use with the dictionaries below.
 TERM_SYMBOL_MAP: dict[TermSymbol, str] = {
@@ -62,7 +72,7 @@ REFLECTION_SYMMETRY_MAP: dict[ReflectionSymmetry, str] = {
 }
 
 # Internuclear distance [m]
-# Data from NIST Chemistry WebBook
+# Data from NIST Chemistry WebBook - <https://webbook.nist.gov/chemistry/>
 INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
     "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10},
     "NO": {"X2P": 1.15077e-10, "A2S+": 1.06434e-10},
@@ -70,7 +80,7 @@ INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
 }
 
 # Electronic energies [1/cm]
-# Data from NIST Chemistry WebBook
+# Data from NIST Chemistry WebBook - <https://webbook.nist.gov/chemistry/>
 ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
     "O2": {
         "X3Sg-": 0.0,
@@ -100,7 +110,8 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
 }
 
 # Electronic degeneracies [-]
-# Data from Table 1.4 of "Nonequilibrium Hypersonic Aerodynamics" by Park
+# Data from Table 1.4 of "Nonequilibrium Hypersonic Aerodynamics" by Chul Park - <https://ntrs.nasa.gov/citations/19910029860>
+# (Degeneracies are also directly calculable from the term symbols themselves.)
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
     "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3},
     "NO": {"X2P": 4, "a4P": 8, "A2S+": 2, "B2P": 4, "b4S-": 4, "C2P": 4, "D2S+": 2},

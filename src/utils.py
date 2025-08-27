@@ -23,6 +23,8 @@ from typing import overload
 import numpy as np
 from numpy.typing import NDArray
 
+import constants
+
 
 @overload
 def wavenum_to_wavelen(wavenumber: float) -> float: ...
@@ -35,6 +37,8 @@ def wavenum_to_wavelen(wavenumber: NDArray[np.float64]) -> NDArray[np.float64]: 
 def wavenum_to_wavelen(wavenumber: float | NDArray[np.float64]) -> float | NDArray[np.float64]:
     """Convert wavenumbers to wavelengths.
 
+    Not valid for bandwidth conversions since there is an inverse relationship.
+
     Args:
         wavenumber (float | NDArray[np.float64]): Wavenumber(s) in [1/cm].
 
@@ -44,11 +48,25 @@ def wavenum_to_wavelen(wavenumber: float | NDArray[np.float64]) -> float | NDArr
     return 1.0 / wavenumber * 1e7
 
 
+def freq_to_wavenum(freq: float) -> float:
+    """Convert frequency to wavenumber.
+
+    Valid for bandwidth conversions since there is no inverse relationship.
+
+    Args:
+        freq (float): Frequency in [1/s].
+
+    Returns:
+        float: The corresponding wavenumber in [1/cm].
+    """
+    return freq / constants.LIGHT
+
+
 def bandwidth_wavelen_to_wavenum(center_wl: float, fwhm_wl: float) -> float:
     """Convert a FWHM bandwidth from [nm] to [1/cm] given a center wavelength.
 
     Note that this is not a linear approximation, so it is accurate for large FWHM parameters. See
-    https://toolbox.lightcon.com/tools/bandwidthconverter for details.
+    https://www.lasercalculator.com/spectral-bandwidth-converter/ for details.
 
     Args:
         center_wl (float): Center wavelength in [nm] around which the bandwidth is defined.
@@ -57,7 +75,13 @@ def bandwidth_wavelen_to_wavenum(center_wl: float, fwhm_wl: float) -> float:
     Returns:
         float: The FWHM bandwidth in [1/cm].
     """
-    return 1e7 * fwhm_wl / (center_wl**2 - fwhm_wl**2 / 4)
+    wl_min: float = center_wl - 0.5 * fwhm_wl
+    wl_max: float = center_wl + 0.5 * fwhm_wl
+    wn_min: float = 1.0 / wl_max
+    wn_max: float = 1.0 / wl_min
+
+    # Convert from [1/nm] to [1/cm].
+    return 1e7 * (wn_max - wn_min)
 
 
 def get_data_path(*relative_path_parts) -> Path:
@@ -67,7 +91,7 @@ def get_data_path(*relative_path_parts) -> Path:
         Path: A relative path if developing, the absolute path to the bundle folder if Pyinstaller.
     """
     if getattr(sys, "frozen", False):
-        base_path = Path(sys._MEIPASS)
+        base_path = Path(sys._MEIPASS)  # pyright: ignore[reportAttributeAccessIssue]
     else:
         base_path = Path(__file__).resolve().parent.parent
 

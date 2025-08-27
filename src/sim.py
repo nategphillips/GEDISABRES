@@ -27,6 +27,14 @@ import utils
 from band import Band
 from enums import ConstantsType, SimType
 from molecule import Molecule
+from sim_params import (
+    BroadeningBools,
+    InstrumentParams,
+    LaserParams,
+    ShiftBools,
+    ShiftParams,
+    TemperatureParams,
+)
 from state import State
 
 
@@ -40,28 +48,14 @@ class Sim:
         state_up: State,
         state_lo: State,
         j_qn_up_max: int,
-        temp_trn: float,
-        temp_elc: float,
-        temp_vib: float,
-        temp_rot: float,
         pressure: float,
         bands_input: list[tuple[int, int]],
-        inst_broad_wl_gauss: float = 0.0,
-        inst_broad_wl_loren: float = 0.0,
-        laser_power_w: float = 0.0,
-        beam_diameter_mm: float = 1.0,
-        molecule_velocity_ms: float = 0.0,
-        coll_shift_a: float = 0.0,
-        coll_shift_b: float = 0.0,
-        coll_shift: bool = False,
-        dopp_shift: bool = False,
-        inst_broad: bool = False,
-        dopp_broad: bool = False,
-        natr_broad: bool = False,
-        coll_broad: bool = False,
-        pred_broad: bool = False,
-        powr_broad: bool = False,
-        trns_broad: bool = False,
+        temp_params: TemperatureParams = TemperatureParams(),
+        laser_params: LaserParams = LaserParams(),
+        inst_params: InstrumentParams = InstrumentParams(),
+        shift_params: ShiftParams = ShiftParams(),
+        shift_bools: ShiftBools = ShiftBools(),
+        broad_bools: BroadeningBools = BroadeningBools(),
     ) -> None:
         """Initialize class variables.
 
@@ -71,10 +65,6 @@ class Sim:
             state_up (State): Upper electronic state.
             state_lo (State): Lower electronic state.
             j_qn_up_max (int): Maximum J' quantum number.
-            temp_trn (float): Translational temperature.
-            temp_elc (float): Electronic temperature.
-            temp_vib (float): Vibrational temperature.
-            temp_rot (float): Rotational temperature.
             pressure (float): Pressure.
             bands_input (list[tuple[int, int]]): Which vibrational bands to simulate.
         """
@@ -83,28 +73,14 @@ class Sim:
         self.state_up: State = state_up
         self.state_lo: State = state_lo
         self.j_qn_up_max: int = j_qn_up_max
-        self.temp_trn: float = temp_trn
-        self.temp_elc: float = temp_elc
-        self.temp_vib: float = temp_vib
-        self.temp_rot: float = temp_rot
         self.pressure: float = pressure
         self.bands_input: list[tuple[int, int]] = bands_input
-        self.inst_broad_wl_gauss: float = inst_broad_wl_gauss
-        self.inst_broad_wl_loren: float = inst_broad_wl_loren
-        self.laser_power_w: float = laser_power_w
-        self.beam_diameter_mm: float = beam_diameter_mm
-        self.molecule_velocity_ms: float = molecule_velocity_ms
-        self.coll_shift_a: float = coll_shift_a
-        self.coll_shift_b: float = coll_shift_b
-        self.coll_shift: bool = coll_shift
-        self.dopp_shift: bool = dopp_shift
-        self.inst_broad: bool = inst_broad
-        self.dopp_broad: bool = dopp_broad
-        self.natr_broad: bool = natr_broad
-        self.coll_broad: bool = coll_broad
-        self.pred_broad: bool = pred_broad
-        self.powr_broad: bool = powr_broad
-        self.trns_broad: bool = trns_broad
+        self.temp_params: TemperatureParams = temp_params
+        self.laser_params: LaserParams = laser_params
+        self.inst_params: InstrumentParams = inst_params
+        self.shift_params: ShiftParams = shift_params
+        self.shift_bools: ShiftBools = shift_bools
+        self.broad_bools: BroadeningBools = broad_bools
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -232,7 +208,7 @@ class Sim:
                 -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
-                / (constants.BOLTZ * self.temp_vib)
+                / (constants.BOLTZ * self.temp_params.vibrational)
             )
 
         return q_v
@@ -253,7 +229,10 @@ class Sim:
         #       negligible.
         for energy, degeneracy in zip(energies, degeneracies):
             q_e += degeneracy * np.exp(
-                -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
+                -energy
+                * constants.PLANC
+                * constants.LIGHT
+                / (constants.BOLTZ * self.temp_params.electronic)
             )
 
         return q_e
@@ -273,7 +252,10 @@ class Sim:
         return (
             degeneracy
             * np.exp(
-                -energy * constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_elc)
+                -energy
+                * constants.PLANC
+                * constants.LIGHT
+                / (constants.BOLTZ * self.temp_params.electronic)
             )
             / self.elc_partition_fn
         )

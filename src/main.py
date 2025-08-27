@@ -64,6 +64,14 @@ from colors import get_colors
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
+from sim_params import (
+    BroadeningBools,
+    InstrumentParams,
+    LaserParams,
+    ShiftBools,
+    ShiftParams,
+    TemperatureParams,
+)
 from state import State
 
 if TYPE_CHECKING:
@@ -74,13 +82,10 @@ if TYPE_CHECKING:
 DEFAULT_J_MAX: int = 40
 DEFAULT_RESOLUTION: int = int(1e4)
 
-DEFAULT_TEMPERATURE: float = 300.0  # [K]
-DEFAULT_PRESSURE: float = 101325.0  # [Pa]
-DEFAULT_BROADENING: float = 0.0  # [nm]
+DEFAULT_PRESSURE: float = 101325.0
+DEFAULT_BROADENING: float = 0.0
 
 DEFAULT_BANDS: str = "0-0"
-DEFAULT_PLOTTYPE: str = "Line"
-DEFAULT_SIMTYPE: str = "Absorption"
 
 DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom("O"), Atom("O"))
 DEFAULT_STATE_UP: State = State(
@@ -102,17 +107,13 @@ DEFAULT_STATE_LO: State = State(
     ConstantsType.PERLEVEL,
 )
 DEFAULT_SIM: Sim = Sim(
-    SimType.ABSORPTION,
-    DEFAULT_MOLECULE,
-    DEFAULT_STATE_UP,
-    DEFAULT_STATE_LO,
-    40,
-    300,
-    300,
-    300,
-    300,
-    101325,
-    [(0, 0)],
+    sim_type=SimType.ABSORPTION,
+    molecule=DEFAULT_MOLECULE,
+    state_up=DEFAULT_STATE_UP,
+    state_lo=DEFAULT_STATE_LO,
+    j_qn_up_max=DEFAULT_J_MAX,
+    pressure=DEFAULT_PRESSURE,
+    bands_input=[(0, 0)],
 )
 
 MOLECULAR_PRESETS = [
@@ -533,18 +534,17 @@ class ParametersDialog(QDialog):
         self.term_symbol_up.setCurrentText(tab.state_up.term_symbol.name)
         self.term_symbol_lo.setCurrentText(tab.state_lo.term_symbol.name)
         self.sim_type.setCurrentText(tab.sim.sim_type.name)
-        self.temp_trn.setText(str(tab.sim.temp_trn))
-        self.temp_elc.setText(str(tab.sim.temp_elc))
-        self.temp_vib.setText(str(tab.sim.temp_vib))
-        self.temp_rot.setText(str(tab.sim.temp_rot))
+        self.temp_trn.setText(str(tab.sim.temp_params.translational))
+        self.temp_elc.setText(str(tab.sim.temp_params.electronic))
+        self.temp_vib.setText(str(tab.sim.temp_params.vibrational))
+        self.temp_rot.setText(str(tab.sim.temp_params.rotational))
         self.pressure.setText(str(tab.sim.pressure))
 
     def accept(self):
-        # TODO: 25/07/31 - Just create completely new objects each time. This is certainly not the
-        #       most efficient thing to do, but it ensures that everything is updated properly.
         self.tab.molecule = Molecule(
             self.name.text(), Atom(self.atom_1.text()), Atom(self.atom_2.text())
         )
+
         self.tab.state_up = State(
             self.tab.molecule,
             self.letter_up.text(),
@@ -554,6 +554,7 @@ class ParametersDialog(QDialog):
             ReflectionSymmetry[self.reflection_symmetry_up.currentText()],
             ConstantsType[self.constants_type_up.currentText()],
         )
+
         self.tab.state_lo = State(
             self.tab.molecule,
             self.letter_lo.text(),
@@ -564,18 +565,27 @@ class ParametersDialog(QDialog):
             ConstantsType[self.constants_type_lo.currentText()],
         )
 
+        temp_params = TemperatureParams(
+            translational=float(self.temp_trn.text()),
+            electronic=float(self.temp_elc.text()),
+            vibrational=float(self.temp_vib.text()),
+            rotational=float(self.temp_rot.text()),
+        )
+
         self.tab.sim = Sim(
             sim_type=SimType[self.sim_type.currentText()],
             molecule=self.tab.molecule,
             state_up=self.tab.state_up,
             state_lo=self.tab.state_lo,
             j_qn_up_max=self.tab.maxj_spinbox.value(),
-            temp_trn=float(self.temp_trn.text()),
-            temp_elc=float(self.temp_elc.text()),
-            temp_vib=float(self.temp_vib.text()),
-            temp_rot=float(self.temp_rot.text()),
             pressure=float(self.pressure.text()),
             bands_input=self.tab.get_current_bands(),
+            temp_params=temp_params,
+            laser_params=self.tab.sim.laser_params,
+            inst_params=self.tab.sim.inst_params,
+            shift_params=self.tab.sim.shift_params,
+            shift_bools=self.tab.sim.shift_bools,
+            broad_bools=self.tab.sim.broad_bools,
         )
 
         super().accept()
@@ -726,8 +736,8 @@ class CustomTab(QWidget):
         shift_layout.addLayout(shift_params_layout)
 
         shift_checkbox_layout = QHBoxLayout()
-        self.checkbox_collisional_shift: QCheckBox = QCheckBox("Collisional")
-        self.checkbox_doppler_shift: QCheckBox = QCheckBox("Doppler")
+        self.checkbox_collisional_shift = QCheckBox("Collisional")
+        self.checkbox_doppler_shift = QCheckBox("Doppler")
 
         checkboxes = [
             self.checkbox_collisional_shift,
@@ -792,14 +802,14 @@ class CustomTab(QWidget):
 
         broadening_layout.addLayout(broadening_params_layout)
 
-        checkbox_layout: QHBoxLayout = QHBoxLayout()
-        self.checkbox_instrument: QCheckBox = QCheckBox("Instrument")
-        self.checkbox_doppler: QCheckBox = QCheckBox("Doppler")
-        self.checkbox_natural: QCheckBox = QCheckBox("Natural")
-        self.checkbox_collisional: QCheckBox = QCheckBox("Collisional")
-        self.checkbox_predissociation: QCheckBox = QCheckBox("Predissociation")
-        self.checkbox_power: QCheckBox = QCheckBox("Power")
-        self.checkbox_transit: QCheckBox = QCheckBox("Transit")
+        checkbox_layout = QHBoxLayout()
+        self.checkbox_instrument = QCheckBox("Instrument")
+        self.checkbox_doppler = QCheckBox("Doppler")
+        self.checkbox_natural = QCheckBox("Natural")
+        self.checkbox_collisional = QCheckBox("Collisional")
+        self.checkbox_predissociation = QCheckBox("Predissociation")
+        self.checkbox_power = QCheckBox("Power")
+        self.checkbox_transit = QCheckBox("Transit")
 
         checkboxes = [
             self.checkbox_instrument,
@@ -916,6 +926,37 @@ class CustomTab(QWidget):
     def update_sim_objects(self) -> None:
         current_bands = self.get_current_bands()
 
+        inst_params = InstrumentParams(
+            gauss_fwhm_wl=self.inst_broad_gauss_spinbox.value(),
+            loren_fwhm_wl=self.inst_broad_loren_spinbox.value(),
+        )
+
+        laser_params = LaserParams(
+            power_w=self.laser_power_spinbox.value(),
+            beam_diameter_mm=self.beam_diameter_spinbox.value(),
+            molecule_velocity_ms=self.transit_spinbox.value(),
+        )
+
+        shift_params = ShiftParams(
+            collisional_a=self.coll_shift_a_spinbox.value(),
+            collisional_b=self.coll_shift_b_spinbox.value(),
+        )
+
+        shift_bools = ShiftBools(
+            collisional=self.checkbox_collisional_shift.isChecked(),
+            doppler=self.checkbox_doppler_shift.isChecked(),
+        )
+
+        broad_bools = BroadeningBools(
+            collisional=self.checkbox_collisional.isChecked(),
+            doppler=self.checkbox_doppler.isChecked(),
+            instrument=self.checkbox_instrument.isChecked(),
+            natural=self.checkbox_natural.isChecked(),
+            power=self.checkbox_power.isChecked(),
+            predissociation=self.checkbox_predissociation.isChecked(),
+            transit=self.checkbox_transit.isChecked(),
+        )
+
         # Only update the values that are controlled by the tab specifically.
         self.sim = Sim(
             sim_type=self.sim.sim_type,
@@ -923,28 +964,14 @@ class CustomTab(QWidget):
             state_up=self.state_up,
             state_lo=self.state_lo,
             j_qn_up_max=self.maxj_spinbox.value(),
-            temp_trn=self.sim.temp_trn,
-            temp_elc=self.sim.temp_elc,
-            temp_vib=self.sim.temp_vib,
-            temp_rot=self.sim.temp_rot,
             pressure=self.sim.pressure,
             bands_input=current_bands,
-            inst_broad_wl_gauss=self.inst_broad_gauss_spinbox.value(),
-            inst_broad_wl_loren=self.inst_broad_loren_spinbox.value(),
-            laser_power_w=self.laser_power_spinbox.value(),
-            beam_diameter_mm=self.beam_diameter_spinbox.value(),
-            molecule_velocity_ms=self.transit_spinbox.value(),
-            coll_shift_a=self.coll_shift_a_spinbox.value(),
-            coll_shift_b=self.coll_shift_b_spinbox.value(),
-            coll_shift=self.checkbox_collisional_shift.isChecked(),
-            dopp_shift=self.checkbox_doppler_shift.isChecked(),
-            inst_broad=self.checkbox_instrument.isChecked(),
-            dopp_broad=self.checkbox_doppler.isChecked(),
-            natr_broad=self.checkbox_natural.isChecked(),
-            coll_broad=self.checkbox_collisional.isChecked(),
-            pred_broad=self.checkbox_predissociation.isChecked(),
-            powr_broad=self.checkbox_power.isChecked(),
-            trns_broad=self.checkbox_transit.isChecked(),
+            temp_params=self.sim.temp_params,
+            laser_params=laser_params,
+            inst_params=inst_params,
+            shift_bools=shift_bools,
+            shift_params=shift_params,
+            broad_bools=broad_bools,
         )
 
     def run_simulation(self) -> None:

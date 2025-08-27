@@ -26,6 +26,7 @@ from atom import Atom
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
+from sim_params import BroadeningBools, InstrumentParams
 from state import State
 
 if TYPE_CHECKING:
@@ -56,7 +57,11 @@ def main() -> None:
 
     bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
 
-    temp: float = 300.0
+    broad_bools = BroadeningBools(
+        instrument=True, doppler=True, natural=True, collisional=True, predissociation=True
+    )
+
+    inst_params = InstrumentParams(gauss_fwhm_wl=0.001, loren_fwhm_wl=0.001)
 
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
@@ -64,18 +69,10 @@ def main() -> None:
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=40,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=101325.0,
         bands_input=bands,
-        inst_broad_wl_gauss=0.004,
-        inst_broad=True,
-        dopp_broad=True,
-        natr_broad=True,
-        coll_broad=True,
-        pred_broad=True,
+        inst_params=inst_params,
+        broad_bools=broad_bools,
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(

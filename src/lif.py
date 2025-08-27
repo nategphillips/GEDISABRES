@@ -63,7 +63,7 @@ class RateParams:
 
 
 @dataclass
-class LaserParams:
+class LIFLaserParams:
     """Holds parameters related to the laser.
 
     Attributes:
@@ -78,15 +78,17 @@ class LaserParams:
 
 
 @overload
-def laser_intensity(t: float, laser_params: LaserParams) -> float: ...
+def laser_intensity(t: float, laser_params: LIFLaserParams) -> float: ...
 
 
 @overload
-def laser_intensity(t: NDArray[np.float64], laser_params: LaserParams) -> NDArray[np.float64]: ...
+def laser_intensity(
+    t: NDArray[np.float64], laser_params: LIFLaserParams
+) -> NDArray[np.float64]: ...
 
 
 def laser_intensity(
-    t: float | NDArray[np.float64], laser_params: LaserParams
+    t: float | NDArray[np.float64], laser_params: LIFLaserParams
 ) -> float | NDArray[np.float64]:
     """Return the laser intensity for a given time point or array of time points.
 
@@ -96,7 +98,7 @@ def laser_intensity(
 
     Args:
         t (float | NDArray[np.float64]): Time point(s) at which to calculate the intensity.
-        laser_params (LaserParams): Parameters defining the laser beam properties.
+        laser_params (LIFLaserParams): Parameters defining the laser beam properties.
 
     Returns:
         float | NDArray[np.float64]: Laser intensity at the specified time point(s).
@@ -113,7 +115,7 @@ def rate_equations(
     n: list[float],
     t: float,
     rate_params: RateParams,
-    laser_params: LaserParams,
+    laser_params: LIFLaserParams,
     line: Line,
 ) -> list[float]:
     """Return the rate equations governing the three-level LIF system.
@@ -122,7 +124,7 @@ def rate_equations(
         n (list[float]): Nondimensional population density of N1, N2, and N3 at a point in time.
         t (float): Current time in [s].
         rate_params (RateParams): Rate parameters and Einstein coefficients for the system.
-        laser_params (LaserParams): Laser parameters.
+        laser_params (LIFLaserParams): Laser parameters.
         line (Line): The rotational `Line` object of interest.
 
     Returns:
@@ -149,14 +151,14 @@ def rate_equations(
 
 
 def simulate(
-    t: NDArray[np.float64], rate_params: RateParams, laser_params: LaserParams, line: Line
+    t: NDArray[np.float64], rate_params: RateParams, laser_params: LIFLaserParams, line: Line
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
     """Return the population densities of the three states as functions of time.
 
     Args:
         t (NDArray[np.float64]): The time domain to simulate over in [s].
         rate_params (RateParams): Rate parameters and Einstein coefficients for the system.
-        laser_params (LaserParams): Laser parameters.
+        laser_params (LIFLaserParams): Laser parameters.
         line (Line): The rotational `Line` object of interest.
 
     Returns:
@@ -223,16 +225,8 @@ def get_sim(
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=40,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=pres,
         bands_input=bands,
-        dopp_broad=True,
-        natr_broad=True,
-        coll_broad=True,
-        pred_broad=True,
     )
 
 
@@ -304,8 +298,12 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
 
     # These two use pressure in [atm]. Additionally, use rotational temperature here since that's
     # what's measured with LIF.
-    w_c: float = 7.78e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_rot)  # [1/s]
-    w_q: float = 7.8e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_rot)  # [1/s]
+    w_c: float = (
+        7.78e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_params.rotational)
+    )  # [1/s]
+    w_q: float = (
+        7.8e9 * (sim.pressure / 101325) * np.sqrt(300 / sim.temp_params.rotational)
+    )  # [1/s]
 
     return RateParams(a_21, b_12, b_21, w_c, w_d, w_f, w_q)
 
@@ -345,7 +343,7 @@ def run_simulation(
     sim: Sim = get_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
     line: Line = get_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
     rate_params: RateParams = get_rates(sim, line)
-    laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
+    laser_params: LIFLaserParams = LIFLaserParams(pulse_center, pulse_width, fluence)
     t: NDArray[np.float64] = np.linspace(MIN_TIME, MAX_TIME, N_TIME, dtype=np.float64)
 
     n1, n2, n3 = simulate(t, rate_params, laser_params, line)
@@ -420,7 +418,7 @@ def scan_fluences(
     signals: NDArray[np.float64] = np.zeros_like(fluences)
 
     for idx, fluence in enumerate(fluences):
-        laser_params = LaserParams(pulse_center, pulse_width, fluence)
+        laser_params = LIFLaserParams(pulse_center, pulse_width, fluence)
 
         _, n2, _ = simulate(t, rate_params, laser_params, line)
 
@@ -475,7 +473,7 @@ def n2_vs_time_and_fluence(
     n2_populations: NDArray[np.float64] = np.zeros((len(fluences), len(t)))
 
     for idx, fluence in enumerate(fluences):
-        laser_params: LaserParams = LaserParams(pulse_center, pulse_width, fluence)
+        laser_params: LIFLaserParams = LIFLaserParams(pulse_center, pulse_width, fluence)
         _, n2, _ = simulate(t, rate_params, laser_params, line)
         n2_populations[idx, :] = n2
 

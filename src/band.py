@@ -290,7 +290,7 @@ class Band:
                 -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                 * constants.PLANC
                 * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_vib)
+                / (constants.BOLTZ * self.sim.temp_params.vibrational)
             )
             / self.sim.vib_partition_fn
         )
@@ -390,7 +390,7 @@ class Band:
             constants.PLANC * constants.LIGHT * state.constants_vqn(v_qn)["B"] / constants.BOLTZ
         )
         q_r: float = (
-            self.sim.temp_rot
+            self.sim.temp_params.rotational
             * state.nuclear_partition_fn()
             / (theta_r * self.sim.molecule.symmetry_param)
         )

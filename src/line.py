@@ -97,7 +97,7 @@ class Line:
         Returns:
             float: The predissociation broadening FWHM in [1/cm].
         """
-        if self.sim.pred_broad:
+        if self.sim.broad_bools.predissociation:
             # TODO: 24/10/25 - Using the polynomial fit and coefficients described by Lewis, 1986
             #       for the predissociation of all bands for now. The goal is to use experimental
             #       values when available, and use this fit otherwise. The fit is good up to J = 40
@@ -127,7 +127,7 @@ class Line:
         Returns:
             float: The natural broadening FWHM in [1/cm].
         """
-        if self.sim.natr_broad:
+        if self.sim.broad_bools.natural:
             # TODO: 24/10/21 - Look over this, seems weird still.
 
             # The sum of the Einstein A coefficients for all downward transitions from the two
@@ -157,7 +157,7 @@ class Line:
         Returns:
             float: The collisional broadening FWHM in [1/cm].
         """
-        if self.sim.coll_broad:
+        if self.sim.broad_bools.collisional:
             # NOTE: 24/11/05 - In most cases, the amount of electronically excited molecules in the
             #       gas is essentially zero, meaning that most molecules are in the ground state.
             #       Therefore, the ground state radius is used to compute the cross-section. An even
@@ -191,7 +191,10 @@ class Line:
             return (
                 self.sim.pressure
                 * cross_section
-                * np.sqrt(8 / (np.pi * reduced_mass * constants.BOLTZ * self.sim.temp_trn))
+                * np.sqrt(
+                    8
+                    / (np.pi * reduced_mass * constants.BOLTZ * self.sim.temp_params.translational)
+                )
                 / np.pi
             ) / constants.LIGHT
 
@@ -206,13 +209,13 @@ class Line:
         Returns:
             float: The Doppler broadening FWHM in [1/cm].
         """
-        if self.sim.dopp_broad:
+        if self.sim.broad_bools.doppler:
             # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
             # [cm/s] to [m/s] to ensure that the units work out correctly.
             return self.wavenumber * np.sqrt(
                 8
                 * constants.BOLTZ
-                * self.sim.temp_trn
+                * self.sim.temp_params.translational
                 * np.log(2)
                 / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
             )
@@ -228,16 +231,16 @@ class Line:
         Returns:
             float: The instrument broadening FWHM in [1/cm].
         """
-        if self.sim.inst_broad:
+        if self.sim.broad_bools.instrument:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
             #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
             #       wavelength to expand about.
             wn_gauss: float = utils.bandwidth_wavelen_to_wavenum(
-                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broad_wl_gauss
+                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_params.gauss_fwhm_wl
             )
             wn_loren: float = utils.bandwidth_wavelen_to_wavenum(
-                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_broad_wl_loren
+                utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_params.loren_fwhm_wl
             )
 
             return wn_gauss, wn_loren
@@ -253,10 +256,10 @@ class Line:
         Returns:
             float: The power broadening FWHM in [1/cm].
         """
-        if self.sim.powr_broad:
+        if self.sim.broad_bools.power:
             # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
-            intensity: float = self.sim.laser_power_w / (
-                np.pi * (1e-3 * 0.5 * self.sim.beam_diameter_mm) ** 2
+            intensity: float = self.sim.laser_params.power_w / (
+                np.pi * (1e-3 * 0.5 * self.sim.laser_params.beam_diameter_mm) ** 2
             )
             # Intensity of a plane wave in air: I = 0.5 * ε_0 * c * E^2. Convert the speed of light
             # from [cm/s] to [m/s] to ensure units work out.
@@ -281,7 +284,7 @@ class Line:
         Returns:
             float: The transit-time broadening FWHM in [1/cm].
         """
-        if self.sim.trns_broad:
+        if self.sim.broad_bools.transit:
             # This approximation is only valid for a 90° interaction angle between the molecular
             # beam and the laser. Furthermore, the laser pulse must be Gaussian in order to produce
             # a Gaussian line profile, as used here. A flat-top beam will produce a sinc² line
@@ -289,11 +292,13 @@ class Line:
 
             # Assume the diameter of the beam is exactly twice the beam waist. Also convert from
             # [mm] to [m].
-            beam_waist_m: float = 1e-3 * 0.5 * self.sim.beam_diameter_mm
+            beam_waist_m: float = 1e-3 * 0.5 * self.sim.laser_params.beam_diameter_mm
 
             # Convert from [1/s] to [1/cm].
             return utils.freq_to_wavenum(
-                2.0 * (self.sim.molecule_velocity_ms / beam_waist_m) * np.sqrt(2.0 * np.log(2))
+                2.0
+                * (self.sim.laser_params.molecule_velocity_ms / beam_waist_m)
+                * np.sqrt(2.0 * np.log(2))
             )
 
         return 0.0
@@ -313,13 +318,13 @@ class Line:
             self.rot_term_value_up - self.rot_term_value_lo
         )
 
-        if self.sim.coll_shift and not self.sim.dopp_shift:
+        if self.sim.shift_bools.collisional and not self.sim.shift_bools.doppler:
             return unshifted_wavenumber + self.shift_collisional()
 
-        if self.sim.dopp_shift and not self.sim.coll_shift:
+        if self.sim.shift_bools.doppler and not self.sim.shift_bools.collisional:
             return unshifted_wavenumber + self.shift_doppler(unshifted_wavenumber)
 
-        if self.sim.coll_shift and self.sim.dopp_shift:
+        if self.sim.shift_bools.collisional and self.sim.shift_bools.doppler:
             return (
                 unshifted_wavenumber
                 + self.shift_collisional()
@@ -338,7 +343,7 @@ class Line:
             float: The Doppler shift in [1/cm].
         """
         # Convert the speed of light from [cm/s] to [m/s].
-        return wavenumber * self.sim.molecule_velocity_ms / (1e-2 * constants.LIGHT)
+        return wavenumber * self.sim.laser_params.molecule_velocity_ms / (1e-2 * constants.LIGHT)
 
     def shift_collisional(self) -> float:
         """Return the collisional shift in [1/cm].
@@ -350,9 +355,9 @@ class Line:
             float: The collisional shift in [1/cm].
         """
         return (
-            self.sim.coll_shift_a
+            self.sim.shift_params.collisional_a
             * (self.sim.pressure / 101325.0)
-            * (300.0 / self.sim.temp_trn) ** self.sim.coll_shift_b
+            * (300.0 / self.sim.temp_params.translational) ** self.sim.shift_params.collisional_b
         )
 
     @cached_property
@@ -421,7 +426,7 @@ class Line:
                 -rot_term_value
                 * constants.PLANC
                 * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_rot)
+                / (constants.BOLTZ * self.sim.temp_params.rotational)
             )
             / self.band.rot_partition_fn
         )

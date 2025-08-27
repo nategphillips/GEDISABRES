@@ -23,6 +23,7 @@ from atom import Atom
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
+from sim_params import TemperatureParams
 from state import State
 
 
@@ -47,18 +48,12 @@ def o2(sample_name: str):
         constants_type=ConstantsType.PERLEVEL,
     )
 
-    temp: float = 300.0
-
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=48,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=101325,
         bands_input=[(2, 0)],
     )
@@ -87,18 +82,12 @@ def no_ax(sample_name: str):
         constants_type=ConstantsType.DUNHAM,
     )
 
-    temp: float = 300.0
-
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=48,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=101325,
         bands_input=[(0, 2)],
     )
@@ -127,18 +116,13 @@ def no_bx(sample_name: str):
         constants_type=ConstantsType.PERLEVEL,
     )
 
-    temp: float = 3000.0
-
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=120,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
+        temp_params=TemperatureParams(3000.0, 3000.0, 3000.0, 3000.0),
         pressure=101325,
         bands_input=[(4, 1), (5, 1)],
     )
@@ -167,18 +151,12 @@ def oh(sample_name: str):
         constants_type=ConstantsType.DUNHAM,
     )
 
-    temp: float = 300.0
-
     sim: Sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
         state_lo=state_lo,
         j_qn_up_max=48,
-        temp_trn=temp,
-        temp_elc=temp,
-        temp_vib=temp,
-        temp_rot=temp,
         pressure=101325,
         bands_input=[(0, 0)],
     )

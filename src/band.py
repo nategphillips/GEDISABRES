@@ -30,6 +30,7 @@ from py3nj import clebsch_gordan
 
 import constants
 import convolve
+import utils
 from enums import ConstantsType, SimType, TermSymbol
 from line import Line
 
@@ -239,6 +240,13 @@ class Band:
         Returns:
             NDArray[np.float64]: A continuous range of wavenumbers.
         """
+        if self.sim.plot_bools.limits:
+            return np.linspace(
+                utils.wavenum_to_wavelen(self.sim.plot_params.limit_min),
+                utils.wavenum_to_wavelen(self.sim.plot_params.limit_max),
+                granularity,
+            )
+
         # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things

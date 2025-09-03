@@ -73,7 +73,7 @@ class Line:
         self.sim: Sim = sim
         self.band: Band = band
         # NOTE: 25/07/18 - J (and therefore N) can both be half-integer valued, see "The Spectra and
-        # Dynamics of Diatomics Molecules" by Brion, p. 3.
+        # Dynamics of Diatomic Molecules" by Brion, p. 3.
         self.j_qn_up: float = j_qn_up
         self.j_qn_lo: float = j_qn_lo
         self.n_qn_up: float = n_qn_up

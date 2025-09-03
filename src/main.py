@@ -68,6 +68,8 @@ from sim_params import (
     BroadeningBools,
     InstrumentParams,
     LaserParams,
+    PlotBools,
+    PlotParams,
     ShiftBools,
     ShiftParams,
     TemperatureParams,
@@ -711,6 +713,37 @@ class CustomTab(QWidget):
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
+        group_limits = QGroupBox("Plot Limits")
+        limits_layout = QVBoxLayout(group_limits)
+        limit_params_layout = QVBoxLayout()
+
+        limit_min_layout = QHBoxLayout()
+        limit_min_layout.addWidget(QLabel("Minimum:"))
+        self.limit_min_spinbox = MyDoubleSpinBox()
+        self.limit_min_spinbox.setValue(0.0)
+        self.limit_min_spinbox.setSuffix(" [nm]")
+        self.limit_min_spinbox.valueChanged.connect(self.update_sim_objects)
+        limit_min_layout.addWidget(self.limit_min_spinbox)
+        limit_params_layout.addLayout(limit_min_layout)
+
+        limit_max_layout = QHBoxLayout()
+        limit_max_layout.addWidget(QLabel("Maximum:"))
+        self.limit_max_spinbox = MyDoubleSpinBox()
+        self.limit_max_spinbox.setValue(10000.0)
+        self.limit_max_spinbox.setSuffix(" [nm]")
+        self.limit_max_spinbox.valueChanged.connect(self.update_sim_objects)
+        limit_max_layout.addWidget(self.limit_max_spinbox)
+        limit_params_layout.addLayout(limit_max_layout)
+
+        limit_checkbox_layout = QHBoxLayout()
+        self.checkbox_plot_limits = QCheckBox("Enabled")
+        self.checkbox_plot_limits.toggled.connect(self.update_sim_objects)
+        limit_checkbox_layout.addWidget(self.checkbox_plot_limits)
+
+        limits_layout.addLayout(limit_params_layout)
+        limits_layout.addLayout(limit_checkbox_layout)
+        controls_layout.addWidget(group_limits)
+
         group_shift = QGroupBox("Line Shift")
         shift_layout = QVBoxLayout(group_shift)
         shift_params_layout = QHBoxLayout()
@@ -957,6 +990,12 @@ class CustomTab(QWidget):
             transit=self.checkbox_transit.isChecked(),
         )
 
+        plot_bools = PlotBools(limits=self.checkbox_plot_limits.isChecked())
+
+        plot_params = PlotParams(
+            limit_min=self.limit_min_spinbox.value(), limit_max=self.limit_max_spinbox.value()
+        )
+
         # Only update the values that are controlled by the tab specifically.
         self.sim = Sim(
             sim_type=self.sim.sim_type,
@@ -972,6 +1011,8 @@ class CustomTab(QWidget):
             shift_bools=shift_bools,
             shift_params=shift_params,
             broad_bools=broad_bools,
+            plot_bools=plot_bools,
+            plot_params=plot_params,
         )
 
     def run_simulation(self) -> None:

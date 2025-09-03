@@ -73,3 +73,18 @@ class BroadeningBools:
     power: bool = False
     predissociation: bool = False
     transit: bool = False
+
+
+@dataclass
+class PlotBools:
+    """Switches for plot parameters."""
+
+    limits: bool = False
+
+
+@dataclass
+class PlotParams:
+    """Minimum and maximum wavelength limits for plotting."""
+
+    limit_min: float = 0.0
+    limit_max: float = 10000.0

@@ -31,6 +31,7 @@ from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType,
 from line import Line
 from molecule import Molecule
 from sim import Sim
+from sim_params import BroadeningBools, TemperatureParams
 from state import State
 
 MIN_TIME: float = 0.0
@@ -227,6 +228,10 @@ def get_sim(
         j_qn_up_max=40,
         pressure=pres,
         bands_input=bands,
+        temp_params=TemperatureParams(temp, temp, temp, temp),
+        broad_bools=BroadeningBools(
+            collisional=True, doppler=True, natural=True, predissociation=True
+        ),
     )
 
 

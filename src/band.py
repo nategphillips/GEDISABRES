@@ -125,10 +125,12 @@ def honl_london_matrix(
     j_qn_lo: float,
     unitary_up: NDArray[np.float64],
     unitary_lo: NDArray[np.float64],
-    omega_basis_up: NDArray[np.float64],
-    omega_basis_lo: NDArray[np.float64],
     lambda_basis_up: NDArray[np.float64],
     lambda_basis_lo: NDArray[np.float64],
+    sigma_basis_up: NDArray[np.float64],
+    sigma_basis_lo: NDArray[np.float64],
+    omega_basis_up: NDArray[np.float64],
+    omega_basis_lo: NDArray[np.float64],
     transition_order: int = 1,
 ) -> NDArray[np.float64]:
     """Computes the Hönl-London factor of a rotational line.
@@ -160,18 +162,25 @@ def honl_london_matrix(
     #       that GFortran and Ninja are installed via the appropriate package manager and you're
     #       good to go.
 
+    lambda_matrix_up = lambda_basis_up[None, :]
+    lambda_matrix_lo = lambda_basis_lo[:, None]
+    sigma_matrix_up = sigma_basis_up[None, :]
+    sigma_matrix_lo = sigma_basis_lo[:, None]
+    omega_matrix_up = omega_basis_up[None, :]
+    omega_matrix_lo = omega_basis_lo[:, None]
+
     two_j1: int = int(2 * j_qn_up)
     two_j2: int = int(2 * transition_order)
     two_j3: int = int(2 * j_qn_lo)
 
     # (m, 1) matrix containing all lower state Ω'' values
-    two_m1: NDArray[np.int64] = (2 * omega_basis_up).astype(int)[None, :]
-    # (1, n) matrix containing all upper state Ω' values
-    two_m3: NDArray[np.int64] = (2 * omega_basis_lo).astype(int)[:, None]
+    two_m1: NDArray[np.int64] = (2 * omega_matrix_up).astype(int)
     # (m, n) matrix containing all (Λ'', Λ') pairs
-    two_m2: NDArray[np.int64] = (2 * lambda_basis_lo).astype(int)[:, None] - (
-        2 * lambda_basis_up
-    ).astype(int)[None, :]
+    two_m2: NDArray[np.int64] = (2 * lambda_matrix_lo).astype(int) - (2 * lambda_matrix_up).astype(
+        int
+    )
+    # (1, n) matrix containing all upper state Ω' values
+    two_m3: NDArray[np.int64] = (2 * omega_matrix_lo).astype(int)
 
     # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ can be
     #       half-integers, Ω = Λ + Σ is generally a half-integer. The arguments passed to the CG
@@ -179,7 +188,7 @@ def honl_london_matrix(
     #       https://py3nj.readthedocs.io/en/master/examples.html for details.
 
     # Clebsch-Gordan coefficients for all (Ω'', Ω') pairs, has dimension (m, n)
-    cg: NDArray = clebsch_gordan(
+    cg: NDArray[np.float64] = clebsch_gordan(
         two_j1=two_j1,
         two_j2=two_j2,
         two_j3=two_j3,
@@ -189,14 +198,28 @@ def honl_london_matrix(
         ignore_invalid=True,
     )
 
-    # NOTE: 25/07/29 - The above Clebsch-Gordan coefficient is adapted from "Spectroscopy of Low
-    #       Temperature Plasma" by Ochkin (Appendix E).
+    # NOTE: 25/07/29 - The above Clebsch-Gordan coefficient is adapted from the Wigner 3j
+    #       coefficient given in eq. (E.60) in "Spectroscopy of Low Temperature Plasma" by Ochkin
+    #       (Appendix E). See eq. 2.28 in "Angular Momentum" by Zare for the conversion between
+    #       Clebsch-Gordan and Wigner 3j symbols.
 
     # Compute the matrix of all possible transitions for a given (J', J'') pair. This results in an
     # (m, n) dimensional matrix, with one HLF for each (i, j) branch index pair.
     transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg.T @ unitary_lo
 
-    return (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
+    hlf: NDArray[np.float64] = (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
+
+    mask_up: NDArray[np.bool] = (
+        (lambda_matrix_up == 0) & (sigma_matrix_up == 0) & (lambda_matrix_lo == 1)
+    )
+    mask_lo: NDArray[np.bool] = (
+        (lambda_matrix_lo == 0) & (sigma_matrix_lo == 0) & (lambda_matrix_up == 1)
+    )
+
+    # Implement the H1 function from Ochkin.
+    hlf[mask_up.T | mask_lo.T] *= 2
+
+    return hlf
 
 
 class Band:
@@ -436,11 +459,14 @@ class Band:
             s_qn_lo, lambda_qn_lo
         )
 
-        omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
-        omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
-
         lambda_basis_up = np.array([lamda for (lamda, _, _) in basis_fns_up])
         lambda_basis_lo = np.array([lamda for (lamda, _, _) in basis_fns_lo])
+
+        sigma_basis_up = np.array([sigma for (_, sigma, _) in basis_fns_up])
+        sigma_basis_lo = np.array([sigma for (_, sigma, _) in basis_fns_lo])
+
+        omega_basis_up = np.array([omega for (_, _, omega) in basis_fns_up])
+        omega_basis_lo = np.array([omega for (_, _, omega) in basis_fns_lo])
 
         # NOTE: 25/07/15 - These rules come from "PGOPHER: A program for simulating rotational,
         #       vibrational and electronic spectra" by Colin M. Western, in which the low quantum
@@ -563,10 +589,12 @@ class Band:
                         j_qn_lo=j_qn_lo,
                         unitary_up=unitary_up,
                         unitary_lo=unitary_lo,
-                        omega_basis_up=omega_basis_up,
-                        omega_basis_lo=omega_basis_lo,
                         lambda_basis_up=lambda_basis_up,
                         lambda_basis_lo=lambda_basis_lo,
+                        sigma_basis_up=sigma_basis_up,
+                        sigma_basis_lo=sigma_basis_lo,
+                        omega_basis_up=omega_basis_up,
+                        omega_basis_lo=omega_basis_lo,
                         transition_order=1,
                     )
                     hlf_matrix_cache[key] = hlf_mat

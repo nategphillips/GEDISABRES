@@ -378,14 +378,22 @@ class Line:
                 j_qn = self.j_qn_lo
                 wavenumber_factor = self.wavenumber
 
+        b: float = (
+            8.0
+            * np.pi**3
+            / (3.0 * constants.PLANC**2 * constants.LIGHT)
+            * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
+            * self.honl_london_factor
+            / (2 * j_qn + 1)
+            / (constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][self.sim.state_lo.name])
+        )
+
         return (
             wavenumber_factor
+            * b
             * self.rot_boltz_frac
             * self.band.vib_boltz_frac
             * self.sim.elc_boltz_frac
-            * self.honl_london_factor
-            / (2 * j_qn + 1)
-            * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
         )
 
     @cached_property

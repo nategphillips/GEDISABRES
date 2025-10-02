@@ -367,34 +367,48 @@ class Line:
         Returns:
             float: The intensity of the rotational line.
         """
-        # NOTE: 24/10/18 - Before going any further make sure to read Herzberg pp. 20-21,
-        #       pp. 126-127, pp. 200-201, and pp. 382-383.
+        # The Einstein A coefficient for each rotational line is the product of the vibronic
+        # component A^{e'v'}_{e''v''} and the rotational component A^{r'}_{r''}. See SPARK
+        # documentation, pg. 19.
+        # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
+
+        spontaneous_emission: float = (
+            self.sim.einstein[self.band.v_qn_up][self.band.v_qn_lo]
+            * self.honl_london_factor
+            / (2.0 * self.j_qn_up + 1.0)
+        )
+
+        # Upper and lower state degeneracies g are the product of the electronic, vibrational, and
+        # rotational degeneracies. Since g_v is simply one, it does not contribute to the product.
+        # g_evr = g_e * g_v * g_r = g_e * (2J + 1)
+
+        degeneracy_up: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+            self.sim.state_up.name
+        ] * (2.0 * self.j_qn_up + 1.0)
+        degeneracy_lo: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+            self.sim.state_lo.name
+        ] * (2.0 * self.j_qn_lo + 1.0)
+
+        # The conversion from A_ul to B_lu including degeneracies is given in Herzberg, pg. 21.
+
+        spontaneous_absorption: float = (
+            spontaneous_emission
+            * (degeneracy_up / degeneracy_lo)
+            / (8.0 * np.pi * constants.PLANC * constants.LIGHT * self.wavenumber**3)
+        )
+
+        # The total state population is given as the product of the individual Boltzmann fractions
+        # times the initial population (set to one for now). See SPARK documentation, pg. 58.
+
+        population: float = self.sim.elc_boltz_frac * self.band.vib_boltz_frac * self.rot_boltz_frac
 
         match self.sim.sim_type:
             case SimType.EMISSION:
-                j_qn = self.j_qn_up
-                wavenumber_factor = self.wavenumber**4
+                transition_probability = spontaneous_emission
             case SimType.ABSORPTION:
-                j_qn = self.j_qn_lo
-                wavenumber_factor = self.wavenumber
+                transition_probability = spontaneous_absorption
 
-        b: float = (
-            8.0
-            * np.pi**3
-            / (3.0 * constants.PLANC**2 * constants.LIGHT)
-            * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
-            * self.honl_london_factor
-            / (2 * j_qn + 1)
-            / (constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][self.sim.state_lo.name])
-        )
-
-        return (
-            wavenumber_factor
-            * b
-            * self.rot_boltz_frac
-            * self.band.vib_boltz_frac
-            * self.sim.elc_boltz_frac
-        )
+        return self.wavenumber * population * transition_probability / (4.0 * np.pi)
 
     @cached_property
     def rot_boltz_frac(self) -> float:

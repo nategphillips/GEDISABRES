@@ -122,29 +122,27 @@ class Line:
     def fwhm_natural(self) -> float:
         """Return the natural broadening FWHM in [1/cm].
 
-        The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book "Spectroscopy
-        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous (Lorentzian).
+        Homogeneous (Lorentzian).
 
         Returns:
             float: The natural broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.natural:
-            # TODO: 24/10/21 - Look over this, seems weird still.
+            # The Einstein A coefficient for each rotational line is the product of the vibronic
+            # component A^{e'v'}_{e''v''} and the rotational component A^{r'}_{r''}. See SPARK
+            # documentation, pg. 19.
+            # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
 
-            # The sum of the Einstein A coefficients for all downward transitions from the two
-            # levels of the transitions i and j.
-            i: int = self.band.v_qn_up
-            a_ik: float = 0.0
-            for k in range(0, i):
-                a_ik += self.sim.einstein[i][k]
-
-            j: int = self.band.v_qn_lo
-            a_jk: float = 0.0
-            for k in range(0, j):
-                a_jk += self.sim.einstein[j][k]
+            # The sum of the Einstein A coefficients for all downward transitions from the upper
+            # state.
+            sum_spontaneous_emission: float = (
+                self.sim.einstein[self.band.v_qn_up].sum()
+                * self.honl_london_factor
+                / (2.0 * self.j_qn_up + 1.0)
+            )
 
             # Natural broadening in [1/cm].
-            return ((a_ik + a_jk) / (2 * np.pi)) / constants.LIGHT
+            return sum_spontaneous_emission / (2.0 * np.pi * constants.LIGHT)
 
         return 0.0
 

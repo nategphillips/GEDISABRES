@@ -33,6 +33,7 @@ import convolve
 import utils
 from enums import ConstantsType, SimType, TermSymbol
 from line import Line
+from state import State
 
 if TYPE_CHECKING:
     from fractions import Fraction
@@ -300,31 +301,27 @@ class Band:
         return convolve.convolve(self.lines, wavenumbers_conv)
 
     @cached_property
-    def vib_boltz_frac(self) -> float:
-        """Return the vibrational Boltzmann fraction N_v / N.
-
-        Returns:
-            float: The vibrational Boltzmann fraction, N_v / N.
-        """
-        match self.sim.sim_type:
-            case SimType.EMISSION:
-                state = self.sim.state_up
-                v_qn = self.v_qn_up
-            case SimType.ABSORPTION:
-                state = self.sim.state_lo
-                v_qn = self.v_qn_lo
+    def vib_boltz_frac(self) -> tuple[float, float]:
+        """Return the vibrational Boltzmann fraction N_v / N."""
+        temperature_factor: float = (
+            constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.sim.temp_params.vibrational)
+        )
 
         # NOTE: 24/10/25 - Calculates the vibrational Boltzmann fraction with respect to the
         #       zero-point vibrational energy to match the vibrational partition function.
-        return (
-            np.exp(
-                -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
-                * constants.PLANC
-                * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_params.vibrational)
+        def boltzmann_fraction(state: State, v_qn: int) -> float:
+            return (
+                np.exp(
+                    -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
+                    * temperature_factor
+                )
+                / self.sim.vib_partition_fn
             )
-            / self.sim.vib_partition_fn
-        )
+
+        vibrational_fraction_up: float = boltzmann_fraction(self.sim.state_up, self.v_qn_up)
+        vibrational_fraction_lo: float = boltzmann_fraction(self.sim.state_lo, self.v_qn_lo)
+
+        return vibrational_fraction_up, vibrational_fraction_lo
 
     @cached_property
     def band_origin(self) -> float:

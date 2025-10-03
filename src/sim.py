@@ -246,24 +246,23 @@ class Sim:
         return q_e
 
     @cached_property
-    def elc_boltz_frac(self) -> float:
+    def elc_boltz_frac(self) -> tuple[float, float]:
         """Return the electronic Boltzmann fraction N_e / N."""
-        match self.sim_type:
-            case SimType.EMISSION:
-                state = self.state_up.name
-            case SimType.ABSORPTION:
-                state = self.state_lo.name
+        energies: dict[str, float] = constants.ELECTRONIC_ENERGIES[self.molecule.name]
+        degeneracies: dict[str, int] = constants.ELECTRONIC_DEGENERACIES[self.molecule.name]
 
-        energy: float = constants.ELECTRONIC_ENERGIES[self.molecule.name][state]
-        degeneracy: int = constants.ELECTRONIC_DEGENERACIES[self.molecule.name][state]
-
-        return (
-            degeneracy
-            * np.exp(
-                -energy
-                * constants.PLANC
-                * constants.LIGHT
-                / (constants.BOLTZ * self.temp_params.electronic)
-            )
-            / self.elc_partition_fn
+        temperature_factor: float = (
+            constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_params.electronic)
         )
+
+        def boltzmann_fraction(state_name: str) -> float:
+            return (
+                degeneracies[state_name]
+                * np.exp(-energies[state_name] * temperature_factor)
+                / self.elc_partition_fn
+            )
+
+        electronic_fraction_up: float = boltzmann_fraction(self.state_up.name)
+        electronic_fraction_lo: float = boltzmann_fraction(self.state_lo.name)
+
+        return electronic_fraction_up, electronic_fraction_lo

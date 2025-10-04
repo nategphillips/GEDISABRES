@@ -598,14 +598,16 @@ class Band:
 
                 # Enforce the Hönl-London cutoff and allowed rotational quantum number conditions
                 # for each branch index pair (i, j), dimensions (num_branches_up, num_branches_lo).
-                mask: NDArray[np.bool] = hlf_mat > constants.HONL_LONDON_CUTOFF
+                nonzero_indices = np.where(hlf_mat > constants.HONL_LONDON_CUTOFF)
                 # Get the row and column (i, j) indices where the mask is true.
-                i_range, j_range = np.nonzero(mask)
+                ij_pairs: zip[tuple[NDArray[np.int64], NDArray[np.int64]]] = zip(
+                    nonzero_indices[0], nonzero_indices[1]
+                )
 
                 # Upper state eigenvalues, dimension (1, num_branches_lo).
                 eigenvals_lo: NDArray[np.float64] = eigenvals_lo_cache[j_qn_lo]
 
-                for i, j in zip(i_range.tolist(), j_range.tolist()):
+                for i, j in ij_pairs:
                     branch_idx_up: int = branch_up_range[i]
                     branch_idx_lo: int = branch_lo_range[j]
 

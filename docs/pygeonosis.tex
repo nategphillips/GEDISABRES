@@ -785,33 +785,44 @@ The units of $\adif{\nu}_D$ using the formula given are inverse centimeters, as 
 
 \section{Transition Intensities}
 
-The general formulae for spectral line intensities are given in \cite{herzbergMolecularSpectraMolecular1950} p. 20.
-\begin{align*}
-    I_{nm} & = N_nhc\nu_{nm}A_{nm}                  \\
-    I_{nm} & = \rho_{nm}N_mhc\nu_{nm}B_{mn}\adif{x}
-\end{align*}
+In terms of the spectral radiance $I_\nu$, the amount of radiant energy $\odif{E_\nu}$ transmitted across an element of area $\odif{\sigma}$ over solid angle $\odif{\Omega}$ in a wavenumber interval $\odif{\nu}$ during a time $\odif{t}$ is \cite{chandrasekharRadiativeTransfer2016}
+\begin{equation*}
+    \odif{E_\nu} = I_\nu\cos\theta\odif{\nu}\odif{\sigma}\odif{\Omega}\odif{t},
+\end{equation*}
+where the units of spectral radiance are \unit{W.m^{-2}.sr^{-1}.1/cm^{-1}}.
+Define the absorption coefficient $\alpha_\nu$ such that \cite{rybickiRadiativeProcessesAstrophysics2004}
+\begin{equation*}
+    \odif{I_\nu} = -\alpha_\nu I_\nu\odif{s},
+\end{equation*}
+with units \unit{m^{-1}}.
+In terms of Einstein coefficients, this can be expressed as
+\begin{equation*}
+    \alpha_\nu = \frac{hc\nu_0}{4\pi}(N_1B_{12} - N_2B_{21})\phi(\nu).
+\end{equation*}
+Similarly, define the emission coefficient $j_\nu$ such that \cite{rybickiRadiativeProcessesAstrophysics2004}
+\begin{equation*}
+    \odif{I_\nu} = j_\nu\odif{s},
+\end{equation*}
+with units \unit{W.m^{-3}.sr^{-1}.1/cm^{-1}}.
+In terms of Einstein coefficients, this can be expressed as
+\begin{equation*}
+    j_\nu = \frac{hc\nu_0}{4\pi}N_2A_{21}\phi(\nu).
+\end{equation*}
 
 \subsection{Einstein Coefficients}
 
 The Einstein transition probability of spontaneous emission is
 \begin{equation*}
-    A_{nm} = \frac{64\pi^4\nu_{nm}^3}{3h}\abs{\vb{R}_{nm}}^2.
+    A_{nm} = \frac{64\pi^4\nu_{nm}^3}{3h}\frac{\sum\abs{\vb{R}_{n_im_k}}^2}{d_n}.
 \end{equation*}
 Similarly, the Einstein transition probability of absorption is
 \begin{equation*}
-    B_{mn} = \frac{8\pi^3}{3h^2c}\abs{\vb{R}_{nm}}^2.
+    B_{mn} = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}_{n_im_k}}^2}{d_m}.
 \end{equation*}
 These two equations are related by
 \begin{equation*}
-    B_{mn} = \frac{1}{8\pi hc\nu_{nm}^3}A_{nm}
+    B_{mn} = \frac{1}{8\pi hc\nu_{nm}^3}\frac{d_n}{d_m}A_{nm}.
 \end{equation*}
-
-For transitions between degenerate levels, the above formulae must be modified as such:
-\begin{align*}
-    A_{nm} & = \frac{64\pi^4\nu_{nm}^3}{3h}\frac{\sum\abs{\vb{R}_{n_im_i}}^2}{d_n} \\
-    B_{mn} & = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}_{n_im_i}}^2}{d_m}         \\
-    B_{mn} & = \frac{1}{8\pi hc\nu_{nm}^3}\frac{d_n}{d_m}A_{nm}
-\end{align*}
 
 \subsection{Transition Moment}
 
@@ -823,21 +834,25 @@ From \cite{herzbergMolecularSpectraMolecular1950}, Eq. (VI, 58): (non-degenerate
 \begin{equation*}
     \vb{R} = \vb{R}_e^{nm}\vb{R}_v^{v'v''}\vb{R}_r^{J'J''}
 \end{equation*}
-The transition probability for absorption is given by \cite{herzbergMolecularSpectraMolecular1950} p. 382 as
+The transition probability for absorption is approximately (assuming the dipole moment integrals can be separated via the Born--Oppenheimer \& Franck--Condon principles) \cite{herzbergMolecularSpectraMolecular1950} p. 382
 \begin{equation*}
-    B_{evr} = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}}^2}{2J'' + 1} = \frac{8\pi^3}{3h^2c}\abs{\vb{R}_e}^2\abs{\vb{R}_v}^2\frac{\sum\abs{\vb{R}_r}^2}{2J'' + 1},
+    B_{evr} = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}}^2}{g_eg_vg_r} = \frac{8\pi^3}{3h^2c}\frac{\abs{\vb{R}_e^{nm}}^2}{g_e}\frac{\abs{\vb{R}_v^{v'v''}}^2}{g_v}\frac{\sum\abs{\vb{R}_r^{J'J''}}^2}{g_r}.
 \end{equation*}
-where
+The electronic-vibrational transition moment is calculated directly as \cite{lauxArraysRadiativeTransition1992}
 \begin{equation*}
-    \abs{\vb{R}_v}^2 = q_v,
+    \ev{R_e^{v'v''}}^2 = \ab(\int \psi_{v'}(r)R_e(r)\psi_{v''}(r) \odif{r})^2.
 \end{equation*}
-and
+The line strength of a rovibronic transition can be written as the product of the vibronic transition moment and the H\"onl--London factor \cite{schadeeUniqueDefinitionsBand1978}
 \begin{equation*}
-    \abs{\vb{R}_r}^2 = S_J.
+    S^{e'v'J'}_{e''v''J''} = \ev{R_e^{v'v''}}^2S^{J'}_{J''}.
 \end{equation*}
-Using these two substitutions,
+The electronic-vibrational Einstein coefficient for spontaneous emission is \cite{schadeeUniqueDefinitionsBand1978}
 \begin{equation*}
-    B_{evr} = B_eq_v\frac{S_J}{2J'' + 1}.
+    A^{e'v'}_{e''v''} = \frac{64\pi^4\nu^3}{3h}\frac{(2 - \delta_{0, \Lambda' + \Lambda''})}{(2 - \delta_{0, \Lambda'})}\ev{R_e^{v'v''}}^2.
+\end{equation*}
+Writing the total Einstein coefficient for spontaneous emission gives
+\begin{equation*}
+    A_{ul} = A^{e'v'}_{e''v''}A^{J'}_{J''} = \frac{64\pi^4\nu^3}{3h}\frac{(2 - \delta_{0, \Lambda' + \Lambda''})}{(2 - \delta_{0, \Lambda'})}\ev{R_e^{v'v''}}^2\frac{S^{J'}_{J''}}{(2J' + 1)}.
 \end{equation*}
 
 \section{Partition Functions}

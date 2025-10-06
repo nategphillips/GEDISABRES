@@ -134,15 +134,20 @@ class Line:
             # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
 
             # The sum of the Einstein A coefficients for all downward transitions from the upper
-            # state.
-            sum_spontaneous_emission: float = (
-                self.sim.einstein[self.band.v_qn_up].sum()
+            # rovibronic state. Array slicing gets all elements with an index less than v'. We
+            # don't have coefficients for downward transitions from the lower state since the
+            # Einstein coefficients include the electronic transition moment, i.e., they are only
+            # valid for transitions from some v' in an upper electronic state to some v'' in a
+            # lower electronic state. They cannot be used for a transition from v'' to a lower
+            # manifold within the lower electronic state.
+            sum_upper: float = (
+                self.sim.einstein[self.band.v_qn_up][: self.band.v_qn_up].sum()
                 * self.honl_london_factor
                 / (2.0 * self.j_qn_up + 1.0)
             )
 
             # Natural broadening in [1/cm].
-            return sum_spontaneous_emission / (2.0 * np.pi * constants.LIGHT)
+            return sum_upper / (2.0 * np.pi * constants.LIGHT)
 
         return 0.0
 

@@ -7,7 +7,8 @@
 \usepackage[colorlinks]{hyperref}
 \usepackage[version=4]{mhchem}
 \usepackage[parfill, skip=1em]{parskip}
-\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, microtype, natex, pgfplots, physics2, siunitx, tikz}
+\usepackage[para]{threeparttable}
+\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, microtype, multirow, natex, pgfplots, physics2, siunitx, tikz}
 % Must be loaded after amsmath.
 \usepackage[capitalize, nameinlink]{cleveref}
 % Must be loaded after xcolor.
@@ -20,7 +21,6 @@
 \setlength{\headheight}{14pt}
 \renewcommand{\chaptermark}[1]{\markboth{\thechapter\ #1}{}}
 \renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
-\renewcommand{\footrulewidth}{0.4pt}
 \fancypagestyle{mystyle}{
     \fancyfoot{}
     \fancyfoot[C]{\thepage}
@@ -115,13 +115,13 @@
 
 \pagestyle{mystyle}
 
-\input{chapters/approximations}
-
 \input{chapters/numbers}
 
 \input{chapters/hund}
 
 \input{chapters/energy}
+
+\input{chapters/hamiltonian}
 
 \input{chapters/intensity}
 

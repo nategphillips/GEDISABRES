@@ -1,0 +1,90 @@
+\chapter{Hamiltonians}
+
+\begin{table}[H]
+    \centering
+    \caption{Inherent angular momenta and their quantum numbers \cite[72]{lefebvre-brionSpectraDynamicsDiatomic2004}.}
+    \begin{threeparttable}
+        \begin{tabular}{lcccc}
+            \toprule
+            \multirow{2}{*}{\textbf{Type}}          & \multicolumn{2}{c}{\textbf{Total}} & \multicolumn{2}{c}{\textbf{Projection onto INA}\tnote{\dag}}                                                    \\
+            \cmidrule(lr){2-3} \cmidrule(lr){4-5}
+            & \textbf{Operator}                  & \textbf{QN}\tnote{\ddag}                             & \textbf{Operator} & \textbf{QN}                  \\
+            \midrule
+            Nuclear spin of A                       & $\vop{I}_A$                        & $I_A$                                   & $\sop{I}_{Az}$    & no standard                  \\
+            Nuclear spin of B                       & $\vop{I}_B$                        & $I_B$                                   & $\sop{I}_{Bz}$    & no standard                  \\
+            Orbital ang. mom. of the $i$th electron & $\vop{l}_i$                        & $l_i$                                   & $\sop{l}_{iz}$    & $\lambda_i = 0, 1, 2, \dots$ \\
+            Spin of the $i$th electron              & $\vop{s}_i$                        & $s_i$                                   & $\sop{s}_{iz}$    & $\sigma_i = \pm\frac{1}{2}$  \\
+            Rotational ang. mom.                    & $\vop{R}$                          & $R$                                     & $\sop{R}_z$       & zero                         \\
+            \bottomrule
+        \end{tabular}
+        \begin{tablenotes}
+        \item [\dag] internuclear axis
+        \item [\ddag] quantum number
+        \end{tablenotes}
+    \end{threeparttable}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Coupled angular momenta and their quantum numbers \cite[72]{lefebvre-brionSpectraDynamicsDiatomic2004}.}
+    \begin{tabular}{lcccc}
+        \toprule
+        \multirow{2}{*}{\textbf{Type}}        & \multicolumn{2}{c}{\textbf{Total}}                & \multicolumn{2}{c}{\textbf{Projection onto INA}}                                                         \\
+        \cmidrule(lr){2-3} \cmidrule(lr){4-5}
+        & \textbf{Operator}                                 & \textbf{QN}                             & \textbf{Operator} & \textbf{QN}                       \\
+        \midrule
+        Total nuclear spin                    & $\vop{I} = \vop{I}_A + \vop{I}_B$                 & $I$                                     & $\sop{I}_z$       & no standard                       \\
+        Total ang. mom. of the $i$th electron & $\vop{j}_i = \vop{l}_i + \vop{s}_i$               & $j_i$                                   & $\sop{j}_i$       & $\omega_i = \lambda_i + \sigma_i$ \\
+        Total electron orbital ang. mom.      & $\vop{L} = \sum_i\vop{l}_i$                       & $L$                                     & $\sop{L}_z$       & $\Lambda = 0, 1, 2, \dots$        \\
+        Total electron spin ang. mom.         & $\vop{S} = \sum_s\vop{s}_i$                       & $S$                                     & $\sop{S}_z$       & $\Sigma$                          \\
+        Total ang. mom. w/o any spin          & $\vop{N} = \vop{R} + \vop{L}$                     & $N$                                     & $\sop{N}_z$       & $\Lambda$                         \\
+        Total ang. mom. w/o nuclear spin      & $\vop{J} = \vop{R} + \vop{L} + \vop{S}$           & $J$                                     & $\sop{J}_z$       & $\Omega = \Lambda + \Sigma$       \\
+        Total ang. mom.                       & $\vop{F} = \vop{R} + \vop{L} + \vop{S} + \vop{I}$ & $F$                                     & $\sop{F}_z$       & no standard                       \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Hund's coupling cases and their respective descriptions \cite[2]{hougenCalculationRotationalEnergy1970} and \cite[103]{lefebvre-brionSpectraDynamicsDiatomic2004}.}
+    \begin{tabular}{cccc}
+        \toprule
+        \textbf{Hund's Case} & \textbf{Rotational Energy} & \textbf{Good Quantum Numbers}                 & \textbf{Degeneracy}     \\
+        \midrule
+        (a)                  & $BJ(J + 1)$                & $\ket{JS\Omega\Lambda\Sigma}$                 & 2 or 1                  \\
+        (b)                  & $BN(N + 1)$                & $\ket{JNS\Lambda(S_R)}$                       & $2(2S + 1)$ or $2S + 1$ \\
+        (c)                  & $BJ(J + 1)$                & $\ket{J[J_a]\Omega}$                          & 2 or 1                  \\
+        (d)                  & $BR(R + 1)$                & $\ket{JNS(S_R)J_+N_+S_+\Lambda_+l(l_R, s_R)}$ & $(2L + 1)(2S + 1)$      \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.5}
+    \caption{First-order terms in the diatomic Hamiltonian \cite[232-233]{westernPGOPHERProgramSimulating2017}.}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Operator} & \textbf{Equation}                                                                                         & \textbf{Condition}      \\
+        \midrule
+        Rotation          & $B\vop{N}^2$                                                                                              & always                  \\
+        \cmidrule{2-3}
+        \multirow{2}{*}{Spin-Rotation}
+        & $\gamma\ab(\vop{N}\vdot\vop{S})$                                                                          & $S > 0$                 \\
+        & $-\sqrt{70/3}\gamma_ST_0^2\acomm*{T^1(\vop{J})}{T^3(\vop{S})}$                                            & $S > 1$                 \\
+        \cmidrule{2-3}
+        \multirow{2}{*}{Spin-Orbit}
+        & $A\ab(\vop{L}\vdot\vop{S})$                                                                               & $\Lambda > 0$, $S > 0$  \\
+        & $\eta\sop{L}_z\sop{S}_z\ab[\sop{S}_z^2 - \frac{1}{5}\ab(3\vop{S}^2 - 1)]$                                 & $\Lambda > 0$, $S > 1$  \\
+        \cmidrule{2-3}
+        \multirow{2}{*}{Spin-Spin}
+        & $\frac{2}{3}\lambda\ab(3\sop{S}_z^2 - \vop{S}^2)$                                                         & $S > 1/2$               \\
+        & $\frac{1}{12}\theta\ab(35\sop{S}_z^4 - 30\vop{S}^2\sop{S}_z^2 + 25\sop{S}_z^2 - 6\vop{S}^2 + 3\vop{S}^4)$ & $S > 3/2$               \\
+        \cmidrule{2-3}
+        \multirow{3}{*}{$\Lambda$ Doubling}
+        & $\frac{1}{2}q\ab(\sop{N}_+^2e^{-2i\phi} + \sop{N}_-^2e^{2i\phi})$                                         & $\Pi$ states            \\
+        & $-\frac{1}{2}p\ab(\sop{N}_+\sop{S}_+e^{-2i\phi} + \sop{N}_-\sop{S}_-e^{2i\phi})$                          & $\Pi$ states, $S > 0$   \\
+        & $\frac{1}{2}o\ab(\sop{S}_+^2e^{-2i\phi} + \sop{S}_-^2e^{2i\phi})$                                         & $\Pi$ states, $S > 1/2$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}

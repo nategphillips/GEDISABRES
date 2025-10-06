@@ -59,6 +59,152 @@
     \end{tabular}
 \end{table}
 
+\section{Angular Momentum Commutation Rules}
+
+\subsection{Space-Fixed Coordinates}
+
+The commutation rules are \cite[73]{lefebvre-brionSpectraDynamicsDiatomic2004}
+\begin{equation*}
+    \comm{\sop{A}_I}{\sop{A}_J} = i\hbar\varepsilon_{IJK}\sop{A}_K.
+\end{equation*}
+From this, the matrix elements can be derived as
+\begin{align*}
+    \mel{A'\alpha'M_A'}{\vop{A}^2}{A\alpha M_A}   & = \hbar^2A(A + 1)\delta_{A'A}\delta_{\alpha'\alpha}\delta_{M_A'M_A}                                                                        \\
+    \mel{A'\alpha'M_A'}{\sop{A}_Z}{A\alpha M_A}   & = \hbar M_A\delta_{A'A}\delta_{\alpha'\alpha}\delta_{M_A'M_A}                                                                              \\
+    \mel{A'\alpha'M_A'}{\sop{A}^\pm}{A\alpha M_A} & = \hbar\exp[i(\theta_{M_A} - \theta_{M_A \pm 1})]\sqrt{A(A + 1) - M_A(M_A \pm 1)}\delta_{A'A}\delta_{\alpha'\alpha}\delta_{M_A'M_A \pm 1}.
+\end{align*}
+
+\subsection{Molecule-Fixed Coordinates}
+
+\subsubsection{Normal Commutation Rules}
+
+Normal commutation rules followed by the angular momentum operators $\vop{I}$, $\vop{L}$, $\vop{S}$, and $\vop{J}_a$ are \cite[74]{lefebvre-brionSpectraDynamicsDiatomic2004}
+\begin{equation*}
+    \comm{\sop{A}_i}{\sop{A}_j} = i\hbar\varepsilon_{ijk}\sop{A}_k.
+\end{equation*}
+For normal commutation, the molecule-fixed matrix elements for $\sop{A}_i$ are analogous to those for $\sop{A}_I$,
+\begin{align*}
+    \mel{A'\alpha'M_A'}{\vop{A}^2}{A\alpha M_A}   & = \hbar^2A(A + 1)\delta_{A'A}\delta_{\alpha'\alpha}\delta_{M_A'M_A}                                                                                \\
+    \mel{A'\alpha'M_A'}{\sop{A}_z}{A\alpha M_A}   & = \hbar\alpha\delta_{A'A}\delta_{\alpha'\alpha}\delta_{M_A'M_A}                                                                                    \\
+    \mel{A'\alpha'M_A'}{\sop{A}_\pm}{A\alpha M_A} & = \hbar\exp[i(\phi_{\alpha} - \phi_{\alpha \pm 1})]\sqrt{A(A + 1) - \alpha(\alpha \pm 1)}\delta_{A'A}\delta_{\alpha'\alpha \pm 1}\delta_{M_A'M_A}.
+\end{align*}
+
+\subsubsection{Anomalous Commutation Rules}
+
+Anomalous commutation rules followed by the angular momentum operators $\vop{R}$, $\vop{F}$, $\vop{J}$, $\vop{N}$, and $\vop{O}$ are \cite[74]{lefebvre-brionSpectraDynamicsDiatomic2004}
+\begin{equation*}
+    \comm{\sop{A}_i}{\sop{A}_j} = -i\hbar\varepsilon_{ijk}\sop{A}_k.
+\end{equation*}
+For anomalously commuting operators, the diagonal matrix elements for $\vop{A}^2$ and $\sop{A}_z$ are identical to those for the normal case, but the off-diagonal elements are
+\begin{equation*}
+    \mel{A'\alpha'M_A'}{\sop{A}_\pm}{A\alpha M_A} = \hbar\exp[i(\phi_{\alpha} - \phi_{\alpha \mp 1})]\sqrt{A(A + 1) - \alpha(\alpha \mp 1)}\delta_{A'A}\delta_{\alpha'\alpha \mp 1}\delta_{M_A'M_A}.
+\end{equation*}
+
+\subsection{Useful Commutation Relations}
+
+The following relations can be proven for any \textbf{normally commuting} angular momentum operator $\vop{A}$ using the commutation rules outlined above:
+\begin{align*}
+    \comm{\vop{A}^2}{\sop{A}_x}   & = \comm{\vop{A}^2}{\sop{A}_y} = \comm{\vop{A}^2}{\sop{A}_z} = 0 \\
+    \comm{\sop{A}_z}{\sop{A}_\pm} & = \pm\hbar\sop{A}_\pm                                           \\
+    \comm{\sop{A}_+}{\sop{A}_-}   & = 2\hbar\sop{A}_z.
+\end{align*}
+
+\section{Matrix Elements for Common Angular Momenta}
+
+The matrix elements for the common angular momenta $\vop{J}$, $\vop{L}$, and $\vop{S}$ can be found as follows \cite[8]{hougenCalculationRotationalEnergy1970}.
+Total angular momentum excluding nuclear spin $\vop{J}$:
+\begin{align*}
+    \mel{J\Omega}{\vop{J}^2}{J\Omega}         & = \hbar^2J(J + 1)                                                                        \\
+    \mel{J\Omega}{\sop{J}_z}{J\Omega}         & = \hbar\Omega                                                                            \\
+    \mel{J\Omega \pm 1}{\sop{J}_\mp}{J\Omega} & = \hbar\exp[i(\phi_\Omega - \phi_{\Omega \mp 1})]\sqrt{J(J + 1) - \Omega(\Omega \pm 1)}.
+\end{align*}
+Total electron orbital angular momentum $\vop{L}$:
+\begin{align*}
+    \mel{L\Lambda}{\vop{L}^2}{L\Lambda}         & = \hbar^2L(L + 1)                                                                            \\
+    \mel{L\Lambda}{\sop{L}_z}{L\Lambda}         & = \hbar\Lambda                                                                               \\
+    \mel{L\Lambda \pm 1}{\sop{L}_\pm}{L\Lambda} & = \hbar\exp[i(\phi_\Lambda - \phi_{\Lambda \pm 1})]\sqrt{L(L + 1) - \Lambda(\Lambda \pm 1)}.
+\end{align*}
+Total electron spin angular momentum $\vop{S}$:
+\begin{align*}
+    \mel{S\Sigma}{\vop{S}^2}{S\Sigma}         & = \hbar^2S(S + 1)                                                                        \\
+    \mel{S\Sigma}{\sop{S}_z}{S\Sigma}         & = \hbar\Sigma                                                                            \\
+    \mel{S\Sigma \pm 1}{\sop{S}_\pm}{S\Sigma} & = \hbar\exp[i(\phi_\Sigma - \phi_{\Sigma \pm 1})]\sqrt{S(S + 1) - \Sigma(\Sigma \pm 1)}.
+\end{align*}
+Following the Condon and Shortley phase convention \cite[48]{condonTheoryAtomicSpectra1935}, we require the $\sop{A}_x$ matrix elements for both normal and anomalous $\vop{A}$ to be both real and positive, thereby requiring the $\phi_\alpha$ phase factors for all $2A + 1$ basis functions to be equal.
+Applying this convention simplifies the matrix elements for the ladder operators to
+\begin{align*}
+    \mel{J\Omega \pm 1}{\sop{J}_\mp}{J\Omega}   & = \hbar\sqrt{J(J + 1) - \Omega(\Omega \pm 1)}   \\
+    \mel{L\Lambda \pm 1}{\sop{L}_\pm}{L\Lambda} & = \hbar\sqrt{L(L + 1) - \Lambda(\Lambda \pm 1)} \\
+    \mel{S\Sigma \pm 1}{\sop{S}_\pm}{S\Sigma}   & = \hbar\sqrt{S(S + 1) - \Sigma(\Sigma \pm 1)}.
+\end{align*}
+
+\section{The Molecular Hamiltonian}
+
+The molecular Hamiltonian is \cite[341]{brownRotationalSpectroscopyDiatomic2003}
+\begin{equation*}
+    \sop{H} = \sop{H}_{ev} + \sop{H}_r + \sop{H}_{so} + \sop{H}_{ss} + \sop{H}_{sr} + \sop{H}_{ld}.
+\end{equation*}
+When possible, IUPAC recommendations \cite{hirotaSymbolsFineHyperfine1994} are followed.
+
+\subsection{Rotation Operator}
+
+For all diatomic molecules, the rotation operator is
+\begin{equation*}
+    \sop{H}_r = B\vop{N}^2 - D\vop{N}^4 + H\vop{N}^6 + L\vop{N}^8 + M\vop{N}^{10} + P\vop{N}^{12} + \dotsb.
+\end{equation*}
+
+\subsection{Spin-Orbit Operator}
+
+For $\Lambda > 0$ states with $S > 0$, the spin-orbit operator is
+\begin{equation*}
+    \sop{H}_{so} = A\ab(\vop{L}\vdot\vop{S}) + \frac{A_D}{2}\acomm*{\vop{N}^2}{\vop{L}\vdot\vop{S}} + \frac{A_H}{2}\acomm*{\vop{N}^4}{\vop{L}\vdot\vop{S}} + \frac{A_L}{2}\acomm*{\vop{N}^6}{\vop{L}\vdot\vop{S}} + \frac{A_M}{2}\acomm*{\vop{N}^8}{\vop{L}\vdot\vop{S}}.
+\end{equation*}
+For $\Lambda > 0$ states with $S > 1$, the additional term
+\begin{equation*}
+    \eta\sop{L}_z\sop{S}_z\ab[\sop{S}_z^2 - \frac{1}{5}\ab(3\vop{S}^2 - 1)]
+\end{equation*}
+is required \cite[140]{brownHigherOrderFineStructure1981}.
+
+\subsection{Spin-Spin Operator}
+
+For states with $S > 1/2$, the spin-spin operator is
+\begin{equation*}
+    \sop{H}_{ss} = \frac{2}{3}\lambda\ab(3\sop{S}_z^2 - \vop{S}^2) + \frac{1}{2}\lambda_D\acomm*{\frac{2}{3}\ab(3\sop{S}_z^2 - \vop{S}^2)}{\vop{N}^2} + \frac{1}{2}\lambda_H\acomm*{\frac{2}{3}\ab(3\sop{S}_z^2 - \vop{S}^2)}{\vop{N}^4}.
+\end{equation*}
+When $S > 3/2$, the term
+\begin{equation*}
+    \frac{1}{12}\theta\ab(35\sop{S}_z^4 - 30\vop{S}^2\sop{S}_z^2 + 25\sop{S}_z^2 - 6\vop{S}^2 + 3\vop{S}^4)
+\end{equation*}
+must also be included \cite[472]{brownLTypeDoublingParameters1987}.
+
+\subsection{Spin-Rotation Operator}
+
+When $S > 0$, the spin-rotation operator is
+\begin{equation*}
+    \sop{H}_{sr} = \gamma\ab(\vop{N}\vdot\vop{S}) + \frac{1}{2}\gamma_D\acomm*{\vop{N}\vdot\vop{S}}{\vop{N}^2} + \frac{1}{2}\gamma_H\acomm*{\vop{N}\vdot\vop{S}}{\vop{N}^4} + \frac{1}{2}\gamma_L\acomm*{\vop{N}\vdot\vop{S}}{\vop{N}^6}.
+\end{equation*}
+For states with $S > 1$, the additional term
+\begin{equation*}
+    -\sqrt{70/3}\gamma_ST_0^2\acomm*{T^1(\vop{J})}{T^3(\vop{S})}
+\end{equation*}
+is required \cite[320]{cheungFourierTransformSpectroscopy1984}.
+
+\subsection{\texorpdfstring{$\Lambda$}{Λ} Doubling Operator for \texorpdfstring{$\Pi$}{Π} States}
+
+For any $\Pi$ state, the $\Lambda$ doubling operator is \cite[488]{brownLambdaTypeDoublingParameters1979}
+\begin{equation*}
+    \sop{H}_{ld} = \frac{1}{2}q\ab(\sop{N}_+^2e^{-2i\phi} + \sop{N}_-^2e^{2i\phi}) + \frac{1}{4}\acomm*{\sop{N}_+^2e^{-2i\phi} + \sop{N}_-^2e^{2i\phi}}{q_D\vop{N}^2 + q_H\vop{N}^4 + q_L\vop{N}^6}.
+\end{equation*}
+For $\Pi$ states with $S > 0$, the term
+\begin{equation*}
+    -\frac{1}{2}p\ab(\sop{N}_+\sop{S}_+e^{-2i\phi} + \sop{N}_-\sop{S}_-e^{2i\phi}) - \frac{1}{4}\acomm*{\sop{N}_+\sop{S}_+e^{-2i\phi} + \sop{N}_-\sop{S}_-e^{2i\phi}}{p_D\vop{N}^2 + p_H\vop{N}^4 + p_L\vop{N}^6}
+\end{equation*}
+is added. When $S > 1/2$, the extra term
+\begin{equation*}
+    \frac{1}{2}o\ab(\sop{S}_+^2e^{-2i\phi} + \sop{S}_-^2e^{2i\phi}) + \frac{1}{4}\acomm*{\sop{S}_+^2e^{-2i\phi} + \sop{S}_-^2e^{2i\phi}}{o_D\vop{N}^2 + o_H\vop{N}^4 + o_L\vop{N}^6}
+\end{equation*}
+is also required.
+
 \begin{table}[H]
     \centering
     \renewcommand{\arraystretch}{1.5}
@@ -88,3 +234,43 @@
         \bottomrule
     \end{tabular}
 \end{table}
+
+\section{Matrix Form of Operators}
+
+The rotational operator $\vop{N}^2$ can be expressed as a matrix for any given state. For a $\state{2}{\Sigma}$ state, the first two matrices are
+\begin{equation*}
+    \vop{N}^2 =
+    \begin{bmatrix}
+        x + \frac{1}{4}         & -\sqrt{x + \frac{1}{4}} \\
+        -\sqrt{x + \frac{1}{4}} & x + \frac{1}{4}
+    \end{bmatrix}
+\end{equation*}
+and
+\begin{equation*}
+    \vop{N}^4 = \vop{N}^2\vop{N}^2 =
+    \begin{bmatrix}
+        \ab(x + \frac{1}{4})^2 + x + \frac{1}{4} & -2\ab(x + \frac{1}{4})^{3/2}             \\
+        -2\ab(x + \frac{1}{4})^{3/2}             & \ab(x + \frac{1}{4})^2 + x + \frac{1}{4}
+    \end{bmatrix}.
+\end{equation*}
+Higher powers can be formed as such:
+\begin{equation*}
+    \vop{N}^{2k} = \vop{N}^{2k - 1}\vop{N}^2.
+\end{equation*}
+
+\subsection{Matrix Elements of Linear Operators}
+
+The matrix elements of any general linear operator $\vop{\Omega}$ can be written as
+\begin{equation*}
+    \mel{i}{\vop{\Omega}}{j} = \vop{\Omega}_{ij}.
+\end{equation*}
+For products of operators, the matrix elements are \cite[25]{shankarPrinciplesQuantumMechanics1994}
+\begin{equation*}
+    \mel{i}{\vop{\Omega}\vop{\Lambda}}{j} = \mel{i}{\vop{\Omega}I\vop{\Lambda}}{j} = \sum_k\mel{i}{\vop{\Omega}}{k}\mel{k}{\vop{\Lambda}}{j} = \sum_k\vop{\Omega}_{ik}\vop{\Lambda}_{kj}.
+\end{equation*}
+A more complex case can now be evaluated:
+\begin{align*}
+    \mel{i}{\acomm{\vop{N}\vdot\vop{S}}{\vop{N}^2}}{j} & = \mel{i}{(\vop{N}\vdot\vop{S})\vop{N}^2}{j} + \mel{i}{\vop{N}^2(\vop{N}\vdot\vop{S})}{j}                                 \\
+    & = \sum_k\mel{i}{\vop{N}\vdot\vop{S}}{k}\mel{k}{\vop{N}^2}{j} + \sum_k\mel{i}{\vop{N}^2}{k}\mel{k}{\vop{N}\vdot\vop{S}}{j} \\
+    & = \sum_k(\vop{N}\vdot\vop{S})_{ik}\vop{N}^2_{kj} + \sum_k\vop{N}^2_{ik}(\vop{N}\vdot\vop{S})_{kj}
+\end{align*}

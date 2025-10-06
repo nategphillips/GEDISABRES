@@ -1,13 +1,72 @@
 \chapter{Laser-Induced Fluorescence}
-\label{c:laser-induced_fluorescence}
 
-Laser-induced fluorescence is a method of spectroscopy that excites a molecule into a higher electronic state via the absorption of laser radiation. A single ro-vibrational band is isolated and excited. Next, the molecule relaxes back into the original electronics state, filling multiple lower vibrational states in the process. These vibrational states are filled according to the known Franck-Condon factors.
-
-Figure \ref{f:laser-induced_fluorescence_in_iodine} below shows the jump from the ground state to the excited state via laser excitation. Subsequently, the molecule relaxes to fill multiple vibrational states within the original electronic state.
+\section{Rate Equations}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{img/lif_bands}
-    \caption{Laser-induced fluorescence in Iodine.}
-    \label{f:laser-induced_fluorescence_in_iodine}
+    \begin{tikzpicture}
+        \draw[thick] (6,0) -- (0,0) node[left] {$X\state{3}{\Sigma}_g^{-}(v'', J'') \quad N_1$};
+        \draw[thick] (6,6) -- (0,6) node[left] {$B\state{3}{\Sigma}_u^{-}(v', J') \quad N_2$};
+
+        \draw[->,ultra thick] (1,6) -- (1,0) node[midway,fill=base] {$W_e$};
+        \draw[->,ultra thick] (1.5,6) -- (2,7) node[midway,fill=base] {$W_d$};
+        \node at(2,7.2) {\ce{O2 -> 2O}};
+        \draw[->,ultra thick] (2,0) -- (2,6) node[midway,fill=base] {$W_a$};
+        \draw[->,ultra thick,decorate,decoration={snake,segment length=5mm}] (3,6) -- (3,0) node[midway,fill=base] {$W_{21}$};
+        \draw[->,ultra thick] (4,6) -- (4,1) node[midway,fill=base] {$W_q$};
+        \draw[thick] (3.5,1) -- (4.5,1) node[right] {$v \neq v''$};
+        \draw[->,ultra thick,decorate,decoration={snake, segment length=5mm}] (5,6) -- (5,2) node[midway,fill=base] {$W_f$};
+        \draw[thick] (4.5,2) -- (5.5,2) node[right] {$v \neq v''$};
+
+        \draw[<-,ultra thick] (6.2,6.1) -- (7.8,6.4) node[midway,fill=base] {$R_{32}$};
+        \draw[thick] (8,6.4) -- (10,6.4);
+        \draw[thick] (8,6) -- (10,6) node[right] {$N_3$};
+        \draw[thick] (8,5.6) -- (10,5.6);
+        \draw[->,ultra thick] (6.2,5.9) -- (7.8,5.6) node[midway,fill=base] {$R_{23}$};
+
+        \draw[->,ultra thick,decorate,decoration={snake,segment length=5mm}] (9,6) -- (9,2) node[midway,fill=base] {$W_f$};
+        \draw[thick] (8.5,2) -- (9.5,2) node[right] {$v \neq v''$};
+
+        \draw[<-,ultra thick] (6.2,0.1) -- (7.8,0.4) node[midway,fill=base] {$R_{41}$};
+        \draw[thick] (8,0.4) -- (10,0.4);
+        \draw[thick] (8,0) -- (10,0) node[right] {$N_4$};
+        \draw[thick] (8,-0.4) -- (10,-0.4);
+        \draw[->,ultra thick] (6.2,-0.1) -- (7.8,-0.4) node[midway,fill=base] {$R_{14}$};
+    \end{tikzpicture}
+    \caption{Four-level LIF model for the Schumann--Runge bands of molecular oxygen.}
 \end{figure}
+
+\subsection{Four-level LIF}
+
+The four-level equations are \cite[18]{grinsteadTemperatureMeasurementHighTemperature1995}
+\begin{align*}
+    \odv{N_1}{t} & = -(W_a + R_{14})N_1 + (W_e + W_{21})N_2 + R_{41}N_4                      \\
+    \odv{N_2}{t} & = W_aN_1 - (W_f + W_d + W_q + W_e + W_{21} + R_{23})N_2 + R_{32}N_3 \\
+    \odv{N_3}{t} & = R_{23}N_2 - (W_f + R_{32})N_3                                               \\
+    \odv{N_4}{t} & = R_{14}N_1 - R_{41}N_4
+\end{align*}
+$W_a$ is the laser-stimulated absorption rate, $W_e$ the laser-stimulated emission rate, $W_{21}$ the spontaneous emission rate, $W_d$ the predissociation rate, $W_q$ the collisional quenching rate, $W_f$ the fluorescent radiative decay rate, and $R_{ij}$ the rotational energy transfer rates.
+
+\subsection{Three-level LIF}
+
+The three-level equations are \cite[2]{diskin3LevelModelSchumann1996}
+\begin{align*}
+    \odv{N_1}{t} & = -W_aN_1 + (W_e + W_{21})N_2 + W_c\ab(\frac{f_b}{1 - f_b}N_3 - N_1) \\
+    \odv{N_2}{t} & = W_aN_1 - (W_e + W_d + W_{21} + W_f + W_q)N_2                           \\
+    \odv{N_3}{t} & = -W_c\ab(\frac{f_b}{1 - f_b}N_3 - N_1)
+\end{align*}
+where $f_b$ is the rotational Boltzmann fraction for the lower state.
+Here, the laser rates are given by
+\begin{align*}
+    W_a & = I_l(t)B_{12}\phi(\nu) \\
+    W_e & = I_l(t)B_{21}\phi(\nu),
+\end{align*}
+where $\phi(\nu)$ is the overlap integral between the transition and laser lineshapes, given as
+\begin{equation*}
+    \phi(\nu_t, \nu_l) = \int \phi_t(\nu)\phi_l(\nu) \odif{\nu}.
+\end{equation*}
+$I_l$ is the laser intensity, which can be modeled as a Gaussian distribution in time
+\begin{equation*}
+    I_l(t) = \frac{2\Phi}{\adif{t}}\sqrt{\frac{\ln{2}}{\pi}}\exp\ab[-4\ln{2}\ab(\frac{t - t_0}{\adif{t}})^2],
+\end{equation*}
+where $\Phi = E_l/A$ is the laser fluence.

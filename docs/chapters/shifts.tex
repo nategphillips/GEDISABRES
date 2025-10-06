@@ -1,0 +1,30 @@
+\chapter{Line Shifting Mechanisms}
+
+\section{Doppler Shift}
+
+For molecules that have a bulk velocity $u$ relative to a laser beam, the Doppler shift is given by \cite[142]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \fdif{\nu}_D = \nu_0\frac{u}{c}.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\fdif{\nu}_D$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \fdif{\nu}_D = \unit{cm^{-1}}\frac{\unit{m.s^{-1}}}{\unit{m.s^{-1}}} = \unit{cm^{-1}}.
+\end{equation*}
+
+\section{Collisional Shift}
+
+Line shifts due to collisional processes can be modeled as \cite[141]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \fdif{\nu}_C = \alpha p\ab(\frac{T_0}{T})^\beta,
+\end{equation*}
+where $\alpha$ is a pressure shift coefficient in \unit{cm^{-1}.Pa^{-1}} and $\beta$ is a nondimensional temperature exponent.
+
+\paragraph{Unit Verification}
+
+The units of $\fdif{\nu}_C$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \fdif{\nu}_C = \unit{cm^{-1}.Pa^{-1}.Pa} = \unit{cm^{-1}}.
+\end{equation*}

@@ -1,8 +1,8 @@
 \chapter{Spectral Lineshapes}
-\label{c:spectral_lineshapes}
 
-\section{Lorentzian Profile}
-\label{s:lorentzian_profile}
+\section{Lineshape Profiles}
+
+\subsection{Lorentzian Profile}
 
 The PDF describing the Lorentzian profile is
 \begin{equation*}
@@ -18,8 +18,7 @@ Full widths of Lorentzian profiles can be summed linearly such that \cite[361]{j
     \adif{\nu} = \sum_i \adif{\nu}_i.
 \end{equation*}
 
-\section{Gaussian Profile}
-\label{s:gaussian_profile}
+\subsection{Gaussian Profile}
 
 The probability density function (PDF) for the Gaussian profile is
 \begin{equation*}
@@ -35,8 +34,7 @@ Full widths of Gaussian profiles must be summed in quadrature such that \cite[36
     \adif{\nu} = \sqrt{\sum_i \adif{\nu}_i^2}.
 \end{equation*}
 
-\section{Voigt Profile}
-\label{s:voigt_profile}
+\subsection{Voigt Profile}
 
 The Voigt profile is a convolution of the Gaussian and Lorentzian profiles.
 The PDF for the Voigt profile is
@@ -150,6 +148,29 @@ The units of $\adif{\nu}_C$ using the formula given are inverse centimeters, as 
     \adif{\nu}_C = \unit{Pa.m^2.cm^{-1}.s}\sqrt{\frac{\unit{K}}{\unit{kg.J.K}}} = \unit{N.cm^{-1}.s}\sqrt{\frac{\unit{s^2}}{\unit{kg^2.m^2}}} = \unit{cm^{-1}.s}\frac{\unit{kg.m}}{\unit{s^2}}\frac{\unit{s}}{\unit{kg.m}} = \unit{cm^{-1}}.
 \end{equation*}
 
+\subsection{Power Broadening}
+
+The linewidth caused by power broadening from a laser pulse can be estimated as \cite[36]{bernathSpectraAtomsMolecules2016}
+\begin{equation*}
+    \adif{\nu}_P = \frac{\mu_0E}{2\pi hc},
+\end{equation*}
+where $\mu_0$ is the transition dipole moment in \unit{C.m} and $E$ is the applied electric field from the laser pulse.
+Given a laser power $P$ in \unit{W} and circular beam diameter $d$ in \unit{m}, the intensity $I$ in \unit{W.m^{-2}} can be found as
+\begin{equation*}
+    I = \frac{P}{\pi(d/2)^2}.
+\end{equation*}
+Assuming a plane wave, the corresponding electric field in \unit{V.m^{-1}} is \cite[16]{bernathSpectraAtomsMolecules2016}
+\begin{equation*}
+    E = \sqrt{\frac{2I}{c\varepsilon_0}}.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_P$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_P = \frac{\unit{C.m.V.m^{-1}}}{\unit{J.s.cm.s^{-1}}} = \frac{\unit{C.V}}{\unit{J.cm}} = \frac{\unit{J}}{\unit{J.cm}} = \unit{cm^{-1}}.
+\end{equation*}
+
 \section{Inhomogeneous (Gaussian) Broadening}
 
 \subsection{Doppler Broadening}
@@ -164,4 +185,23 @@ From \cite[55]{foxStudentsGuideAtomic2018} and \cite[138]{hansonSpectroscopyOpti
 The units of $\adif{\nu}_D$ using the formula given are inverse centimeters, as shown by the following:
 \begin{equation*}
     \adif{\nu}_D = \unit{cm^{-1}}\sqrt{\frac{\unit{J.K.s^2}}{\unit{K.kg.m^2}}} = \unit{cm^{-1}}\sqrt{\frac{\unit{kg.m^2.s^2}}{\unit{kg.m^2.s^2}}} = \unit{cm^{-1}}.
+\end{equation*}
+
+\subsection{Transit Time Broadening}
+
+Assuming a Gaussian laser beam profile in wavenumber space, the transit time broadening is given as \cite[86]{demtroderLaserSpectroscopy2008}
+\begin{equation*}
+    \adif{\nu}_T = 2\sqrt{2\ln{2}}\frac{u}{cw_0},
+\end{equation*}
+where $u$ is the molecular velocity in \unit{m.s^{-1}} and $w_0$ is the beam waist in \unit{m}.
+If the beam waist is defined to be the location with the minimum beam radius, then the diameter of the beam is
+\begin{equation*}
+    d = 2w_0.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_T$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_T = \frac{\unit{m.s^{-1}}}{\unit{cm.s^{-1}.m}} = \unit{cm^{-1}}.
 \end{equation*}

@@ -1,0 +1,141 @@
+% !TeX program = lualatex
+\documentclass[11pt, twoside, fleqn]{report}
+
+\usepackage[backend=biber, style=ieee]{biblatex}
+\usepackage[labelfont=bf]{caption}
+\usepackage[margin=1in]{geometry}
+\usepackage[colorlinks]{hyperref}
+\usepackage[version=4]{mhchem}
+\usepackage[parfill, skip=1em]{parskip}
+\usepackage[para]{threeparttable}
+\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, microtype, multirow, natex, pgfplots, physics2, siunitx, tikz}
+% Must be loaded after amsmath.
+\usepackage[capitalize, nameinlink]{cleveref}
+% Must be loaded after xcolor.
+\usepackage{pagecolor}
+
+% biblatex
+\addbibresource{gedisabres.bib}
+
+% fancyhdr
+\setlength{\headheight}{14pt}
+\renewcommand{\chaptermark}[1]{\markboth{\thechapter\ #1}{}}
+\renewcommand{\sectionmark}[1]{\markright{\thesection\ #1}}
+\fancypagestyle{mystyle}{
+    \fancyfoot{}
+    \fancyfoot[C]{\thepage}
+}
+
+% hyperref
+\hypersetup{
+    linkcolor = pink,
+    urlcolor = green,
+    citecolor = blue
+}
+
+% pagecolor
+% [Catppuccin palette](https://catppuccin.com/palette/).
+\definecolor{rosewater}{HTML}{f5e0dc}
+\definecolor{flamingo}{HTML}{f2cdcd}
+\definecolor{pink}{HTML}{f5c2e7}
+\definecolor{mauve}{HTML}{cba6f7}
+\definecolor{red}{HTML}{f38ba8}
+\definecolor{maroon}{HTML}{eba0ac}
+\definecolor{peach}{HTML}{fab387}
+\definecolor{yellow}{HTML}{f9e2af}
+\definecolor{green}{HTML}{a6e3a1}
+\definecolor{teal}{HTML}{94e2d5}
+\definecolor{sky}{HTML}{89dceb}
+\definecolor{sapphire}{HTML}{74c7ec}
+\definecolor{blue}{HTML}{89b4fa}
+\definecolor{lavender}{HTML}{b4befe}
+\definecolor{text}{HTML}{cdd6f4}
+\definecolor{subtext-1}{HTML}{bac2de}
+\definecolor{subtext-0}{HTML}{a6adc8}
+\definecolor{overlay-2}{HTML}{9399b2}
+\definecolor{overlay-1}{HTML}{7f849c}
+\definecolor{overlay-0}{HTML}{6c7086}
+\definecolor{surface-2}{HTML}{585b70}
+\definecolor{surface-1}{HTML}{45475a}
+\definecolor{surface-0}{HTML}{313244}
+\definecolor{base}{HTML}{1e1e2e}
+\definecolor{mantle}{HTML}{181825}
+\definecolor{crust}{HTML}{11111b}
+\pagecolor{base}
+\color{text}
+
+% pgfplots
+\pgfplotsset{compat=newest}
+
+% physics2
+\usephysicsmodule{ab}
+
+% siunitx
+\DeclareSIUnit{\angstrom}{\text{Å}}
+
+% custom
+\newcommand{\dash}{\!-\!}
+\newcommand{\state}[2]{\prescript{#1}{}{#2}}
+
+\begin{document}
+
+\pagestyle{empty}
+
+\begin{titlepage}
+
+    \raggedleft
+
+    \rule{1pt}{\textheight}
+    \hspace{0.05\textwidth}
+    \parbox[b]{0.75\textwidth}{
+
+        {\Huge\textsc{GEDISABRES}}\\[2\baselineskip]
+        {\large\textit{\textcolor{red}{Ge}neralized \textcolor{peach}{Di}atomic \textcolor{yellow}{S}imulation for \textcolor{green}{Ab}sorption and \textcolor{sky}{R}ovibronic \\ \textcolor{blue}{E}mission \textcolor{lavender}{S}pectra}}\\[4\baselineskip]
+        {\large Nathan G. Phillips}
+
+        \vspace{0.5\textheight}
+
+        {\noindent Texas A\&M University}\\[\baselineskip]
+    }
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+\pagestyle{mystyle}
+
+\input{chapters/numbers}
+
+\input{chapters/hund}
+
+\input{chapters/energy}
+
+\input{chapters/hamiltonian}
+
+\input{chapters/intensity}
+
+\input{chapters/partition}
+
+\input{chapters/lineshapes}
+
+\input{chapters/shifts}
+
+\input{chapters/lif}
+
+\input{chapters/oxygen}
+
+\appendix
+
+\input{chapters/constants}
+
+\input{chapters/notation}
+
+\printbibliography
+\addcontentsline{toc}{chapter}{Bibliography}
+
+\end{document}

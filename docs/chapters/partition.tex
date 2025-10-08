@@ -1,0 +1,125 @@
+\chapter{Partition Functions}
+
+\section{Partition Functions}
+
+\subsection{General Form}
+
+General form of the Boltzmann population distribution \cite[8]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \frac{N_i}{N} = \frac{g_i}{Q}\exp\ab(-\frac{\varepsilon_i}{kT})
+\end{equation*}
+General form of the partition function \cite[8]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    Q = \sum_i g_i\exp\ab(-\frac{\varepsilon_i}{kT})
+\end{equation*}
+The total molecular partition function can be expressed as the product of the individual translational, electronic, vibrational, rotational, and nuclear components for symmetric molecules is \cite[80]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    Q = Q_tQ_eQ_vQ_rQ_n.
+\end{equation*}
+
+\subsection{Nuclear}
+
+See \cite[81]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    Q_n = \prod_{i = 1}^L (2I_n + 1)
+\end{equation*}
+
+\subsection{Rotational}
+Because of the rotational symmetry of certain molecules, a symmetry parameter $\sigma$ must be added to the rotational partition function to account for the multiple molecular orientations that are indistinguishable.
+See \cite[125]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    Q_r = \frac{1}{\sigma} \sum g_r\exp\ab(-\frac{\varepsilon_r}{kT})
+\end{equation*}
+The degeneracy of each state is
+\begin{equation*}
+    g_r = 2J + 1
+\end{equation*}
+and the rotational energy can be expressed as the term value
+\begin{equation*}
+    \varepsilon_r = F(J)hc.
+\end{equation*}
+Therefore, the rotational partition function is
+\begin{equation*}
+    Q_r = \frac{1}{\sigma} \sum (2J + 1)\exp\ab(-\frac{F(J)hc}{kT}).
+\end{equation*}
+For sufficiently large $T$ or small $B$, the rotational partition function for a molecule in the high-temperature limit is \cite[17]{hansonSpectroscopyOpticalDiagnostics2016} and \cite[125]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    Q_r \approx \frac{1}{\sigma} \int_0^{\infty} (2J + 1)\exp\ab(-\frac{BJ(J + 1)hc}{kT}) \odif{J} = \frac{1}{\sigma}\frac{kT}{hcB}
+\end{equation*}
+The Boltzmann fraction is then
+\begin{equation*}
+    \frac{N_J}{N} = \frac{(2J + 1)}{Q_r}\exp\ab(-\frac{F(J)hc}{kT})
+\end{equation*}
+
+\subsection{Effective Rotational}
+
+The effective rotational partition function for symmetric molecules is \cite[80]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    Q'_r = Q_rQ_n
+\end{equation*}
+Similarly, the effective rotational degeneracy is \cite[80]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    g'_r = g_rg_n
+\end{equation*}
+For homonuclear diatomic molecules, the effective rotational degeneracy is \cite[84]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    g'_r = \frac{(2J + 1)}{2}\ab[(2I + 1)^2 \pm (2I + 1)]
+\end{equation*}
+
+\subsection{Vibrational}
+
+See \cite[123]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    Q_v = \sum g_v\exp\ab(-\frac{\varepsilon_v}{kT})
+\end{equation*}
+The vibrational degeneracy of each state is
+\begin{equation*}
+    g_v = 1,
+\end{equation*}
+and the vibrational energy can be expressed as the term value
+\begin{equation*}
+    \varepsilon_v = G(v)hc.
+\end{equation*}
+Therefore, the vibrational partition function is
+\begin{equation*}
+    Q_v = \sum \exp\ab(-\frac{G(v)hc}{kT}).
+\end{equation*}
+The Boltzmann fraction is then
+\begin{equation*}
+    \frac{N_v}{N} = \frac{1}{Q_v}\exp\ab(-\frac{G(v)hc}{kT})
+\end{equation*}
+The vibrational partition function can also be written in terms of the zero-point vibrational energy as
+\begin{equation*}
+    Q_v = \sum \exp\ab(-\frac{[G(v) - G(0)]hc}{kT}).
+\end{equation*}
+The Boltzmann fraction is therefore
+\begin{equation*}
+    \frac{N_v}{N} = \frac{1}{Q_v}\exp\ab(-\frac{[G(v) - G(0)]hc}{kT}).
+\end{equation*}
+
+\subsection{Electronic}
+
+See \cite[544]{andersonHypersonicHighTemperatureGas2019}
+\begin{equation*}
+    Q_e = \sum g_e\exp\ab(-\frac{\varepsilon}{kT})
+\end{equation*}
+The electronic degeneracy depends on the individual states. The electronic energy can be expressed as the term value
+\begin{equation*}
+    \varepsilon_e = T_ehc.
+\end{equation*}
+Therefore, the electronic partition function is
+\begin{equation*}
+    Q_e = \sum g_e\exp\ab(-\frac{T_ehc}{kT}).
+\end{equation*}
+The Boltzmann fraction is therefore
+\begin{equation*}
+    \frac{N_e}{N} = \frac{g_e}{Q_e}\exp\ab(-\frac{T_ehc}{kT}).
+\end{equation*}
+
+\subsection{Translational}
+
+See \cite[544]{andersonHypersonicHighTemperatureGas2019}
+\begin{equation*}
+    Q_t = \ab(\frac{2\pi mkT}{h^2})^{3/2}V,
+\end{equation*}
+where $V$ is the volume of the system.

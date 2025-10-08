@@ -52,9 +52,9 @@ jobs:
       - name: Build executable with PyInstaller
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            uv run pyinstaller --onefile --noconsole --name pyGEONOSIS --add-data "data;data" --add-data "img;img" --icon=img/icon.ico src/main.py
+            uv run pyinstaller --onefile --noconsole --name GEDISABRES --add-data "data;data" --add-data "img;img" --icon=img/icon.ico src/main.py
           else
-            uv run pyinstaller --onefile --noconsole --name pyGEONOSIS --add-data "data:data" --add-data "img:img" src/main.py
+            uv run pyinstaller --onefile --noconsole --name GEDISABRES --add-data "data:data" --add-data "img:img" src/main.py
           fi
         shell: bash
 
@@ -72,7 +72,7 @@ jobs:
       - name: Package release assets (Windows)
         run: |
           New-Item -ItemType Directory -Path release | Out-Null
-          Copy-Item -Path dist\pyGEONOSIS.exe -Destination release\ -Force
+          Copy-Item -Path dist\GEDISABRES.exe -Destination release\ -Force
           Copy-Item -Path data -Destination release\data -Recurse -Force
           Copy-Item -Path README.md -Destination release\README.md -Force
           Copy-Item -Path LICENSE -Destination release\LICENSE -Force
@@ -83,7 +83,7 @@ jobs:
       - name: Package release assets (Linux/macOS)
         run: |
           mkdir -p release
-          cp dist/pyGEONOSIS release/
+          cp dist/GEDISABRES release/
           cp -r data release/data
           cp README.md LICENSE release/
           tar -czvf $ARCHIVE_NAME -C release .

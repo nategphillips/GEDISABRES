@@ -1,5 +1,5 @@
 # module script.py
-"""This module demonstrates how to use the capabilities of pyGEONOSIS without using the GUI."""
+"""This module demonstrates how to use the capabilities of GEDISABRES without using the GUI."""
 
 # Copyright (C) 2023-2025 Nathan G. Phillips
 

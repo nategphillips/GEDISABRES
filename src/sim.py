@@ -31,6 +31,8 @@ from sim_params import (
     BroadeningBools,
     InstrumentParams,
     LaserParams,
+    PlotBools,
+    PlotParams,
     ShiftBools,
     ShiftParams,
     TemperatureParams,
@@ -56,6 +58,8 @@ class Sim:
         shift_params: ShiftParams = ShiftParams(),
         shift_bools: ShiftBools = ShiftBools(),
         broad_bools: BroadeningBools = BroadeningBools(),
+        plot_bools: PlotBools = PlotBools(),
+        plot_params: PlotParams = PlotParams(),
     ) -> None:
         """Initialize class variables.
 
@@ -81,6 +85,8 @@ class Sim:
         self.shift_params: ShiftParams = shift_params
         self.shift_bools: ShiftBools = shift_bools
         self.broad_bools: BroadeningBools = broad_bools
+        self.plot_bools: PlotBools = plot_bools
+        self.plot_params: PlotParams = plot_params
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands."""
@@ -100,20 +106,22 @@ class Sim:
         # Collision-Broadened and Overlapped Spectral Lines to Obtain Individual Line Parameters" by
         # BelBruno (1981).
 
-        # The total span of wavenumbers from all bands.
-        wavenumbers_line: NDArray[np.float64] = np.concatenate(
-            [band.wavenumbers_line() for band in self.bands]
-        )
+        if self.plot_bools.limits:
+            grid_min: float = utils.wavenum_to_wavelen(self.plot_params.limit_min)
+            grid_max: float = utils.wavenum_to_wavelen(self.plot_params.limit_max)
+        else:
+            wavenumbers_line: NDArray[np.float64] = np.concatenate(
+                [band.wavenumbers_line() for band in self.bands]
+            )
+            # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
+            # spectral features at either extreme are not clipped when the FWHM parameters are large.
+            # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
+            # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
+            inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument())
+            padding: float = 10.0 * max(inst_broadening, 2)
 
-        # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
-        # spectral features at either extreme are not clipped when the FWHM parameters are large.
-        # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
-        # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument())
-        padding: float = 10.0 * max(inst_broadening, 2)
-
-        grid_min: float = wavenumbers_line.min() - padding
-        grid_max: float = wavenumbers_line.max() + padding
+            grid_min = wavenumbers_line.min() - padding
+            grid_max = wavenumbers_line.max() + padding
 
         # Create common wavenumber and intensity grids to hold all of the vibrational band data.
         wavenumbers_conv: NDArray[np.float64] = np.linspace(
@@ -238,24 +246,23 @@ class Sim:
         return q_e
 
     @cached_property
-    def elc_boltz_frac(self) -> float:
+    def elc_boltz_frac(self) -> tuple[float, float]:
         """Return the electronic Boltzmann fraction N_e / N."""
-        match self.sim_type:
-            case SimType.EMISSION:
-                state = self.state_up.name
-            case SimType.ABSORPTION:
-                state = self.state_lo.name
+        energies: dict[str, float] = constants.ELECTRONIC_ENERGIES[self.molecule.name]
+        degeneracies: dict[str, int] = constants.ELECTRONIC_DEGENERACIES[self.molecule.name]
 
-        energy: float = constants.ELECTRONIC_ENERGIES[self.molecule.name][state]
-        degeneracy: int = constants.ELECTRONIC_DEGENERACIES[self.molecule.name][state]
-
-        return (
-            degeneracy
-            * np.exp(
-                -energy
-                * constants.PLANC
-                * constants.LIGHT
-                / (constants.BOLTZ * self.temp_params.electronic)
-            )
-            / self.elc_partition_fn
+        temperature_factor: float = (
+            constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.temp_params.electronic)
         )
+
+        def boltzmann_fraction(state_name: str) -> float:
+            return (
+                degeneracies[state_name]
+                * np.exp(-energies[state_name] * temperature_factor)
+                / self.elc_partition_fn
+            )
+
+        electronic_fraction_up: float = boltzmann_fraction(self.state_up.name)
+        electronic_fraction_lo: float = boltzmann_fraction(self.state_lo.name)
+
+        return electronic_fraction_up, electronic_fraction_lo

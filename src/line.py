@@ -26,6 +26,7 @@ import numpy as np
 import constants
 import utils
 from enums import SimType
+from state import State
 
 if TYPE_CHECKING:
     from band import Band
@@ -73,7 +74,7 @@ class Line:
         self.sim: Sim = sim
         self.band: Band = band
         # NOTE: 25/07/18 - J (and therefore N) can both be half-integer valued, see "The Spectra and
-        # Dynamics of Diatomics Molecules" by Brion, p. 3.
+        # Dynamics of Diatomic Molecules" by Brion, p. 3.
         self.j_qn_up: float = j_qn_up
         self.j_qn_lo: float = j_qn_lo
         self.n_qn_up: float = n_qn_up
@@ -121,29 +122,32 @@ class Line:
     def fwhm_natural(self) -> float:
         """Return the natural broadening FWHM in [1/cm].
 
-        The natural FWHM linewidths are computed using Equation 8.11 in the 2016 book "Spectroscopy
-        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous (Lorentzian).
+        Homogeneous (Lorentzian).
 
         Returns:
             float: The natural broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.natural:
-            # TODO: 24/10/21 - Look over this, seems weird still.
+            # The Einstein A coefficient for each rotational line is the product of the vibronic
+            # component A^{e'v'}_{e''v''} and the rotational component A^{r'}_{r''}. See SPARK
+            # documentation, pg. 19.
+            # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
 
-            # The sum of the Einstein A coefficients for all downward transitions from the two
-            # levels of the transitions i and j.
-            i: int = self.band.v_qn_up
-            a_ik: float = 0.0
-            for k in range(0, i):
-                a_ik += self.sim.einstein[i][k]
-
-            j: int = self.band.v_qn_lo
-            a_jk: float = 0.0
-            for k in range(0, j):
-                a_jk += self.sim.einstein[j][k]
+            # The sum of the Einstein A coefficients for all downward transitions from the upper
+            # rovibronic state. Array slicing gets all elements with an index less than v'. We
+            # don't have coefficients for downward transitions from the lower state since the
+            # Einstein coefficients include the electronic transition moment, i.e., they are only
+            # valid for transitions from some v' in an upper electronic state to some v'' in a
+            # lower electronic state. They cannot be used for a transition from v'' to a lower
+            # manifold within the lower electronic state.
+            sum_upper: float = (
+                self.sim.einstein[self.band.v_qn_up][: self.band.v_qn_up].sum()
+                * self.honl_london_factor
+                / (2.0 * self.j_qn_up + 1.0)
+            )
 
             # Natural broadening in [1/cm].
-            return ((a_ik + a_jk) / (2 * np.pi)) / constants.LIGHT
+            return sum_upper / (2.0 * np.pi * constants.LIGHT)
 
         return 0.0
 
@@ -367,66 +371,122 @@ class Line:
         Returns:
             float: The intensity of the rotational line.
         """
-        # NOTE: 24/10/18 - Before going any further make sure to read Herzberg pp. 20-21,
-        #       pp. 126-127, pp. 200-201, and pp. 382-383.
-
-        match self.sim.sim_type:
-            case SimType.EMISSION:
-                j_qn = self.j_qn_up
-                wavenumber_factor = self.wavenumber**4
-            case SimType.ABSORPTION:
-                j_qn = self.j_qn_lo
-                wavenumber_factor = self.wavenumber
-
-        return (
-            wavenumber_factor
-            * self.rot_boltz_frac
-            * self.band.vib_boltz_frac
-            * self.sim.elc_boltz_frac
+        # The Einstein A coefficient for each rotational line is the product of the vibronic
+        # component A^{e'v'}_{e''v''} and the rotational component A^{r'}_{r''}. See SPARK
+        # documentation, pg. 19.
+        # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
+        spontaneous_emission: float = (
+            self.sim.einstein[self.band.v_qn_up][self.band.v_qn_lo]
             * self.honl_london_factor
-            / (2 * j_qn + 1)
-            * self.sim.franck_condon[self.band.v_qn_up][self.band.v_qn_lo]
+            / (2.0 * self.j_qn_up + 1.0)
         )
+
+        # Given an input pressure, use the ideal gas law to obtain a total number density.
+        # p = N * k * T
+        total_number_density: float = self.sim.pressure / (
+            constants.BOLTZ * self.sim.temp_params.translational
+        )
+
+        # The state number density is given as the product of the individual Boltzmann fractions
+        # times the total number density. See SPARK documentation, pg. 58.
+        number_density_up: float = (
+            total_number_density
+            * self.sim.elc_boltz_frac[0]
+            * self.band.vib_boltz_frac[0]
+            * self.rot_boltz_frac[0]
+        )
+        number_density_lo: float = (
+            total_number_density
+            * self.sim.elc_boltz_frac[1]
+            * self.band.vib_boltz_frac[1]
+            * self.rot_boltz_frac[1]
+        )
+
+        # TODO: 25/10/02 - For individual spectral lines, the lineshape function ϕ(ν) is a Dirac
+        #       delta function. Since the delta function is normalized as ∫ ϕ(ν) dν = 1, it
+        #       technically fits the criteria needed in the emission and absorption coefficients.
+        #       Because ϕ(ν_0) = 1 only at the center wavelength of the line and is zero everywhere
+        #       else, these formulae *should* be correct. I'm not sure if adding broadening effects
+        #       after computing the intensity is correct, however, since the lineshape functions
+        #       must be normalized.
+
+        if self.sim.sim_type == SimType.EMISSION:
+            # The emission coefficient as given in eq. 1.73 of "Radiative Processes in
+            # Astrophysics" by Rybicki and Lightman. It has units [W m^-3 sr^-1 1/cm^-1].
+            # j_v = h * c * ν_0 * N_u * A_ul * ϕ(ν) / 4π
+            emission_coefficient: float = (
+                constants.PLANC
+                * constants.LIGHT
+                * self.wavenumber
+                * number_density_up
+                * spontaneous_emission
+                / (4.0 * np.pi)
+            )
+
+            return emission_coefficient
+
+        stimulated_emission: float = spontaneous_emission / (
+            8.0 * np.pi * constants.PLANC * constants.LIGHT * self.wavenumber**3
+        )
+
+        # Upper and lower state degeneracies g are the product of the electronic, vibrational, and
+        # rotational degeneracies. Since g_v is simply one, it does not contribute to the product.
+        # g_evr = g_e * g_v * g_r = (2 - δ_{0,Λ})(2S + 1) * 1 * (2J + 1)
+        degeneracy_up: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+            self.sim.state_up.name
+        ] * (2.0 * self.j_qn_up + 1.0)
+        degeneracy_lo: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+            self.sim.state_lo.name
+        ] * (2.0 * self.j_qn_lo + 1.0)
+
+        photon_absorption: float = stimulated_emission * degeneracy_up / degeneracy_lo
+
+        # The absorption coefficient as given in eq. 1.75 of "Radiative Processes in Astrophysics"
+        # by Rybicki and Lightman. It has units [m^-1].
+        # α_v = h * c * ν_0 * (N_l * B_lu - N_u * B_ul) * ϕ(ν) / 4π
+        absorption_coefficient: float = (
+            constants.PLANC
+            * constants.LIGHT
+            * self.wavenumber
+            * (number_density_lo * photon_absorption - number_density_up * stimulated_emission)
+            / (4.0 * np.pi)
+        )
+
+        return absorption_coefficient
 
     @cached_property
-    def rot_boltz_frac(self) -> float:
-        """Return the rotational Boltzmann fraction, N_J / N.
-
-        Returns:
-            float: The vibrational Boltzmann fraction, N_J / N.
-        """
-        match self.sim.sim_type:
-            case SimType.EMISSION:
-                state = self.sim.state_up
-                j_qn = self.j_qn_up
-                n_qn = self.n_qn_up
-                rot_term_value = self.rot_term_value_up
-            case SimType.ABSORPTION:
-                state = self.sim.state_lo
-                j_qn = self.j_qn_lo
-                n_qn = self.n_qn_lo
-                rot_term_value = self.rot_term_value_lo
-
-        # Degeneracies for homonuclear diatomics can be different depending on the evenness of N.
-        even_degeneracy, odd_degeneracy = state.nuclear_degeneracy
-        is_n_even: bool = n_qn % 2 == 0
-
-        match is_n_even:
-            case True:
-                nuclear_degen = even_degeneracy
-            case False:
-                nuclear_degen = odd_degeneracy
-
-        # Effective rotational degeneracy, including nuclear effects.
-        degeneracy: float = (2 * j_qn + 1) * nuclear_degen
-
-        return (
-            degeneracy
-            * np.exp(
-                -rot_term_value
-                * constants.PLANC
-                * constants.LIGHT
-                / (constants.BOLTZ * self.sim.temp_params.rotational)
-            )
-            / self.band.rot_partition_fn
+    def rot_boltz_frac(self) -> tuple[float, float]:
+        """Return the rotational Boltzmann fraction, N_J / N."""
+        temperature_factor: float = (
+            constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.sim.temp_params.rotational)
         )
+
+        def degeneracy(state: State, j_qn: float, n_qn: float) -> float:
+            # Degeneracies for homonuclear diatomics can be different depending on the evenness of
+            # N.
+            even_degeneracy, odd_degeneracy = state.nuclear_degeneracy
+            is_n_even: bool = n_qn % 2 == 0
+
+            match is_n_even:
+                case True:
+                    nuclear_degen = even_degeneracy
+                case False:
+                    nuclear_degen = odd_degeneracy
+
+            # Effective rotational degeneracy, including nuclear effects.
+            return (2.0 * j_qn + 1.0) * nuclear_degen
+
+        def boltzmann_fraction(degeneracy: float, rot_term_value: float) -> float:
+            return (
+                degeneracy
+                * np.exp(-rot_term_value * temperature_factor)
+                / self.band.rot_partition_fn
+            )
+
+        degeneracy_up: float = degeneracy(self.sim.state_up, self.j_qn_up, self.n_qn_up)
+        degeneracy_lo: float = degeneracy(self.sim.state_lo, self.j_qn_lo, self.n_qn_lo)
+
+        rotational_fraction_up: float = boltzmann_fraction(degeneracy_up, self.rot_term_value_up)
+        rotational_fraction_lo: float = boltzmann_fraction(degeneracy_lo, self.rot_term_value_lo)
+
+        return rotational_fraction_up, rotational_fraction_lo

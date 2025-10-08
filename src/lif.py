@@ -31,6 +31,7 @@ from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType,
 from line import Line
 from molecule import Molecule
 from sim import Sim
+from sim_params import BroadeningBools, TemperatureParams
 from state import State
 
 MIN_TIME: float = 0.0
@@ -133,9 +134,10 @@ def rate_equations(
     n1, n2, n3 = n
 
     # TODO: 24/10/29 - Implement the overlap integral between the transition and laser lineshapes.
-    overlap_integral: float = 1.5  # [cm]
+    overlap_integral: float = 0.8  # [cm]
 
-    f_b: float = line.rot_boltz_frac
+    # Lower state rotational Boltzmann fraction.
+    f_b: float = line.rot_boltz_frac[1]
 
     i_l: float = laser_intensity(t, laser_params)
     w_la: float = i_l * rate_params.b_12 * overlap_integral / constants.LIGHT
@@ -227,6 +229,10 @@ def get_sim(
         j_qn_up_max=40,
         pressure=pres,
         bands_input=bands,
+        temp_params=TemperatureParams(temp, temp, temp, temp),
+        broad_bools=BroadeningBools(
+            collisional=True, doppler=True, natural=True, predissociation=True
+        ),
     )
 
 

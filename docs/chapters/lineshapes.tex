@@ -1,56 +1,207 @@
 \chapter{Spectral Lineshapes}
-\label{c:spectral_lineshapes}
 
-\section{Gaussian Profile}
-\label{s:gaussian_profile}
+\section{Lineshape Profiles}
+
+\subsection{Lorentzian Profile}
+
+The PDF describing the Lorentzian profile is
+\begin{equation*}
+    \phi_L(\nu) = \frac{1}{\pi}\ab[\frac{\gamma}{(\nu - \nu_0)^2 + \gamma^2}],
+\end{equation*}
+where $\gamma$ is the half width at half maximum.
+Using the relation $\adif{\nu} = 2\gamma$, the Lorentzian PDF can be written as \cite[52]{foxStudentsGuideAtomic2018} and \cite[133]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \phi_L(\nu) = \frac{1}{2\pi}\ab[\frac{\adif{\nu}}{(\nu - \nu_0)^2 + (\adif{\nu}/2)^2}].
+\end{equation*}
+Full widths of Lorentzian profiles can be summed linearly such that \cite[361]{josyulaHypersonicNonequilibriumFlows2015}
+\begin{equation*}
+    \adif{\nu} = \sum_i \adif{\nu}_i.
+\end{equation*}
+
+\subsection{Gaussian Profile}
 
 The probability density function (PDF) for the Gaussian profile is
 \begin{equation*}
-    G(x; x_{0}, \sigma) = \frac{1}{\sigma\sqrt{2\pi}}\exp\ab(-\frac{(x - x_{0})^{2}}{2\sigma^{2}}),
+    \phi_G(\nu) = \frac{1}{\sigma\sqrt{2\pi}}\exp\ab[-\frac{(\nu - \nu_0)^2}{2\sigma^2}],
 \end{equation*}
-where $x$ is the desired wavenumber, $x_{0}$ is the intensity at a wavenumber peak, and $\sigma$ is the broadening parameter.
-
-\section{Lorentzian Profile}
-\label{s:lorentzian_profile}
-
-The PDF for the Lorentzian profile is
+where $\sigma$ is the standard deviation.
+Using the relation $\adif{\nu} = 2\sigma\sqrt{2\ln{2}}$, where $\adif{\nu}$ is the full width at half maximum (FWHM), the Gaussian PDF can be written as \cite[55]{foxStudentsGuideAtomic2018} and \cite[138]{hansonSpectroscopyOpticalDiagnostics2016}
 \begin{equation*}
-    L(x; x_{0}, \gamma) = \frac{1}{\pi}\ab[\frac{\gamma}{(x - x_{0})^{2} + \gamma^{2}}],
+    \phi_G(\nu) = \frac{2}{\adif{\nu}}\sqrt{\frac{\ln{2}}{\pi}}\exp\ab[-4\ln{2}\ab(\frac{\nu - \nu_0}{\adif{\nu}})^2].
 \end{equation*}
-where $\gamma$ is the broadening parameter.
-
-\section{Voigt Profile}
-\label{s:voigt_profile}
-
-The Voigt profile is a convolution of the Gaussian and Lorentzian profiles. The PDF for the Voigt profile is
+Full widths of Gaussian profiles must be summed in quadrature such that \cite[361]{josyulaHypersonicNonequilibriumFlows2015}
 \begin{equation*}
-    V(x; x_{0}, \sigma, \gamma) = \frac{1}{\sigma\sqrt{2\pi}}\Re[w(z)],
+    \adif{\nu} = \sqrt{\sum_i \adif{\nu}_i^2}.
+\end{equation*}
+
+\subsection{Voigt Profile}
+
+The Voigt profile is a convolution of the Gaussian and Lorentzian profiles.
+The PDF for the Voigt profile is
+\begin{equation*}
+    \phi_V(\nu) = \frac{1}{\sigma\sqrt{2\pi}}\Re[w(z)],
 \end{equation*}
 where
 \begin{equation*}
-    w(z) \defas e^{-z^{2}}\erfc(-iz) = e^{-z^{2}}\ab(1 +
-    \frac{2i}{\sqrt{\pi}}\int_{0}^{z} e^{t^{2}} \odif{t}),
+    w(z) \defas e^{-z^2}\erfc(-iz) = e^{-z^2}\ab(1 + \frac{2i}{\sqrt{\pi}}\int_0^z e^{t^2} \odif{t}),
 \end{equation*}
 and
 \begin{equation*}
-    z = \frac{(x - x_{0}) + i\gamma}{\sigma\sqrt{2}}.
+    z = \frac{(\nu - \nu_0) + i\gamma}{\sigma\sqrt{2}}.
 \end{equation*}
 
-% 525070-00008\begin{figure}[H]
-%     \centering
-%     \begin{tikzpicture}
-%         \begin{axis}[axis lines=left, legend style={fill=none, draw=none}]
-%             \addplot[color=p1, smooth]
-%             {1/(1*sqrt(2*pi))*exp(-((x-0)^2)/(2*1^2))};
-%             \addlegendentry{Gaussian}
+\subsection{Comparison of Lineshapes}
 
-%             \addplot[color=p2, smooth]
-%             {1/pi*(1/((x-0)^2+1^2))};
-%             \addlegendentry{Lorentzian}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[width=\linewidth, height=7cm, domain=-5:5, samples=200, axis lines=left, legend style={fill=none, draw=text}]
+            % For a FWHM of 1, σ = 0.4247 and γ = 0.5.
+            \addplot[color=blue]
+            {1/pi*(0.5/((x-0)^2+(0.5)^2))};
+            \addlegendentry{Lorentzian}
 
-%             \addplot gnuplot[color=p3, smooth, no marks]
-%                 {VP(x,1,1)};
-%             \addlegendentry{Voigt}
-%         \end{axis}
-%     \end{tikzpicture}
-% \end{figure}
+            \addplot[color=red]
+            {1/(0.4247*sqrt(2*pi))*exp(-((x-0)^2)/(2*(0.4247)^2))};
+            \addlegendentry{Gaussian}
+
+            \addplot gnuplot[color=green, no marks]
+            {VP(x,0.4247,0.5)};
+            \addlegendentry{Voigt}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{A Lorentzian, Gaussian, and Voigt profile are shown, each with a FWHM of 1.}
+\end{figure}
+
+\section{Homogeneous (Lorentzian) Broadening}
+
+\subsection{Natural Broadening}
+
+The lifetime of an atom in a particular level is determined by spontaneous emission, which is described by \cite[133]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \adif{\nu}_N = \frac{1}{2\pi c}\ab(\sum_{i < u} A_{ui} + \sum_{i < \ell} A_{\ell i}).
+\end{equation*}
+If the transition of interest is between the upper state $u$ and the lower state $\ell$, the first sum includes all downward transitions from $u$ to lower energy states, including $\ell$ itself.
+The second sum includes all downward transitions from the lower state $\ell$ to other states lower in energy than itself.
+If the lower level $\ell$ is the ground state, there can be no radiative decay and its contribution to the FWHM is zero.
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_N$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_N = \unit{cm^{-1}.s}(\unit{s^{-1}}) = \unit{cm^{-1}}.
+\end{equation*}
+
+\subsection{Collisional Broadening}
+
+This discussion follows that given in \cite[134]{hansonSpectroscopyOpticalDiagnostics2016}.
+The collisional cross-section between two molecules is given as
+\begin{equation*}
+    \sigma_{AB} = \pi d_{AB}^2 = \pi\ab(\frac{d_A + d_B}{2})^2,
+\end{equation*}
+where $d_{AB}$ is the optical collision diameter of the two molecules.
+Following this, the number of collisions per second of a single molecule $B$ with all $A$ is
+\begin{equation*}
+    Z_{AB} = n_A\sigma_{AB}\bar{v},
+\end{equation*}
+where $\bar{v}$ is the mean speed of the molecules and is given by
+\begin{equation*}
+    \bar{v} = \sqrt{\frac{8kT}{\pi\mu_{AB}}}.
+\end{equation*}
+Here, $\mu_{AB}$ is the reduced mass of the two molecules, given by
+\begin{equation*}
+    \mu_{AB} = \frac{m_Am_B}{m_A + m_B}.
+\end{equation*}
+The total collision frequency of a single $B$ is
+\begin{equation*}
+    Z_B = \sum_AN_A\sigma_{AB}\sqrt{\frac{8kT}{\pi\mu_{AB}}}.
+\end{equation*}
+Using the ideal gas law $p = NkT$, this expression becomes
+\begin{equation*}
+    Z_B = p\sum_AX_A\sigma_{AB}\sqrt{\frac{8}{\pi\mu_{AB}kT}},
+\end{equation*}
+where $X_A$ is the mole fraction of species $A$. If we assume that
+\begin{equation*}
+    \frac{1}{\tau'} = \frac{1}{\tau''} = Z_B,
+\end{equation*}
+the FWHM due to collisional broadening is
+\begin{equation*}
+    \adif{\nu}_C = \frac{Z_B}{\pi c}.
+\end{equation*}
+For a single species, this becomes
+\begin{equation*}
+    \adif{\nu}_C = \frac{p\sigma_{BB}}{\pi c}\sqrt{\frac{8}{\pi\mu_{BB}kT}}.
+\end{equation*}
+The collisional cross-section for a single species mixture is
+\begin{equation*}
+    \sigma_{BB} = \pi\ab(\frac{d_B + d_B}{2})^2 = \pi d_B^2.
+\end{equation*}
+The reduced mass for a single species mixture is
+\begin{equation*}
+    \mu_{BB} = \frac{m_Bm_B}{m_B + m_B} = \frac{m_B^2}{2m_B} = \frac{m_B}{2}.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_C$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_C = \unit{Pa.m^2.cm^{-1}.s}\sqrt{\frac{\unit{K}}{\unit{kg.J.K}}} = \unit{N.cm^{-1}.s}\sqrt{\frac{\unit{s^2}}{\unit{kg^2.m^2}}} = \unit{cm^{-1}.s}\frac{\unit{kg.m}}{\unit{s^2}}\frac{\unit{s}}{\unit{kg.m}} = \unit{cm^{-1}}.
+\end{equation*}
+
+\subsection{Power Broadening}
+
+The linewidth caused by power broadening from a laser pulse can be estimated as \cite[36]{bernathSpectraAtomsMolecules2016}
+\begin{equation*}
+    \adif{\nu}_P = \frac{\mu_0E}{2\pi hc},
+\end{equation*}
+where $\mu_0$ is the transition dipole moment in \unit{C.m} and $E$ is the applied electric field from the laser pulse.
+Given a laser power $P$ in \unit{W} and circular beam diameter $d$ in \unit{m}, the intensity $I$ in \unit{W.m^{-2}} can be found as
+\begin{equation*}
+    I = \frac{P}{\pi(d/2)^2}.
+\end{equation*}
+Assuming a plane wave, the corresponding electric field in \unit{V.m^{-1}} is \cite[16]{bernathSpectraAtomsMolecules2016}
+\begin{equation*}
+    E = \sqrt{\frac{2I}{c\varepsilon_0}}.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_P$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_P = \frac{\unit{C.m.V.m^{-1}}}{\unit{J.s.cm.s^{-1}}} = \frac{\unit{C.V}}{\unit{J.cm}} = \frac{\unit{J}}{\unit{J.cm}} = \unit{cm^{-1}}.
+\end{equation*}
+
+\section{Inhomogeneous (Gaussian) Broadening}
+
+\subsection{Doppler Broadening}
+
+From \cite[55]{foxStudentsGuideAtomic2018} and \cite[138]{hansonSpectroscopyOpticalDiagnostics2016}
+\begin{equation*}
+    \adif{\nu}_D = \nu_0\sqrt{\frac{8kT\ln{2}}{mc^2}}
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_D$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_D = \unit{cm^{-1}}\sqrt{\frac{\unit{J.K.s^2}}{\unit{K.kg.m^2}}} = \unit{cm^{-1}}\sqrt{\frac{\unit{kg.m^2.s^2}}{\unit{kg.m^2.s^2}}} = \unit{cm^{-1}}.
+\end{equation*}
+
+\subsection{Transit Time Broadening}
+
+Assuming a Gaussian laser beam profile in wavenumber space, the transit time broadening is given as \cite[86]{demtroderLaserSpectroscopy2008}
+\begin{equation*}
+    \adif{\nu}_T = 2\sqrt{2\ln{2}}\frac{u}{cw_0},
+\end{equation*}
+where $u$ is the molecular velocity in \unit{m.s^{-1}} and $w_0$ is the beam waist in \unit{m}.
+If the beam waist is defined to be the location with the minimum beam radius, then the diameter of the beam is
+\begin{equation*}
+    d = 2w_0.
+\end{equation*}
+
+\paragraph{Unit Verification}
+
+The units of $\adif{\nu}_T$ using the formula given are inverse centimeters, as shown by the following:
+\begin{equation*}
+    \adif{\nu}_T = \frac{\unit{m.s^{-1}}}{\unit{cm.s^{-1}.m}} = \unit{cm^{-1}}.
+\end{equation*}

@@ -1,0 +1,111 @@
+\chapter{Intensity}
+
+\section{H\"onl--London Factors}
+
+The rotational line strength factors for $\state{3}{\Sigma}^{\pm}\dash\state{3}{\Sigma}^{\pm}$ transitions are shown below in \cref{t:honl_london_factors_3s}.
+\begin{table}[H]
+    \centering
+    \caption{H\"onl--London Factors for $\state{3}{\Sigma}^{\pm}\dash\state{3}{\Sigma}^{\pm}$ transitions \cite[2945]{tatumHonlLondonFactors1966}.}
+    \label{t:honl_london_factors_3s}
+    \begin{tabular}{ccc}
+        \toprule
+        Branch              & Emission                                & Absorption                                 \\
+        \midrule
+        $P_1$             & $\dfrac{(N' + 1)(2N' + 5)}{2N' + 3}$    & $\dfrac{N''(2N'' + 3)}{2N'' + 1}$          \\
+        \addlinespace[0.5em]
+        $R_1$             & $\dfrac{N'(2N' + 3)}{2N' + 1}$          & $\dfrac{(N'' + 1)(2N'' + 5)}{2N'' + 3}$    \\
+        \addlinespace[0.5em]
+        $\state{P}{Q}_{13}$ & $\dfrac{1}{(N' + 1)(2N' + 1)(2N' + 3)}$ & $\dfrac{1}{N''(2N'' - 1)(2N'' + 1)}$       \\
+        \addlinespace[0.5em]
+        $\state{P}{Q}_{12}$ & $\dfrac{1}{N' + 1}$                     & $\dfrac{1}{N''}$                           \\
+        \addlinespace[0.5em]
+        $P_2$             & $\dfrac{N'(N' + 2)}{N' + 1}$            & $\dfrac{(N'' - 1)(N'' + 1)}{N''}$          \\
+        \addlinespace[0.5em]
+        $R_2$             & $\dfrac{(N' - 1)(N' + 1)}{N'}$          & $\dfrac{N''(N'' + 2)}{N'' + 1}$            \\
+        \addlinespace[0.5em]
+        $\state{P}{Q}_{23}$ & $\dfrac{1}{N' + 1}$                     & $\dfrac{1}{N''}$                           \\
+        \addlinespace[0.5em]
+        $\state{R}{Q}_{21}$ & $\dfrac{1}{N'}$                         & $\dfrac{1}{N'' + 1}$                       \\
+        \addlinespace[0.5em]
+        $P_3$             & $\dfrac{(N' + 1)(2N' - 1)}{2N' + 1}$    & $\dfrac{N''(2N'' - 3)}{2N'' - 1}$          \\
+        \addlinespace[0.5em]
+        $R_3$             & $\dfrac{N'(2N' - 3)}{2N' - 1}$          & $\dfrac{(N'' + 1)(2N'' - 1)}{2N'' + 1}$    \\
+        \addlinespace[0.5em]
+        $\state{R}{Q}_{32}$ & $\dfrac{1}{N'}$                         & $\dfrac{1}{N'' + 1}$                       \\
+        \addlinespace[0.5em]
+        $\state{R}{Q}_{31}$ & $\dfrac{1}{N'(2N' - 1)(2N' + 1)}$       & $\dfrac{1}{(N'' + 1)(2N'' + 1)(2N'' + 3)}$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{Transition Intensities}
+
+In terms of the spectral radiance $I_\nu$, the amount of radiant energy $\odif{E_\nu}$ transmitted across an element of area $\odif{\sigma}$ over solid angle $\odif{\Omega}$ in a wavenumber interval $\odif{\nu}$ during a time $\odif{t}$ is \cite[1]{chandrasekharRadiativeTransfer2016}
+\begin{equation*}
+    \odif{E_\nu} = I_\nu\cos\theta\odif{\nu}\odif{\sigma}\odif{\Omega}\odif{t},
+\end{equation*}
+where the units of spectral radiance are \unit{W.m^{-2}.sr^{-1}.1/cm^{-1}}.
+Define the emission coefficient $j_\nu$ such that
+\begin{equation*}
+    \odif{I_\nu} = j_\nu\odif{s},
+\end{equation*}
+with units \unit{W.m^{-3}.sr^{-1}.1/cm^{-1}} \cite[9]{rybickiRadiativeProcessesAstrophysics2004}.
+In terms of Einstein coefficients, this can be expressed as \cite[31]{rybickiRadiativeProcessesAstrophysics2004}
+\begin{equation*}
+    j_\nu = \frac{hc\nu_0}{4\pi}N_2A_{21}\phi(\nu).
+\end{equation*}
+Similarly, define the absorption coefficient $\alpha_\nu$ such that
+\begin{equation*}
+    \odif{I_\nu} = -\alpha_\nu I_\nu\odif{s},
+\end{equation*}
+with units \unit{m^{-1}} \cite[10]{rybickiRadiativeProcessesAstrophysics2004}.
+In terms of Einstein coefficients, this can be expressed as \cite[31]{rybickiRadiativeProcessesAstrophysics2004}
+\begin{equation*}
+    \alpha_\nu = \frac{hc\nu_0}{4\pi}(N_1B_{12} - N_2B_{21})\phi(\nu).
+\end{equation*}
+
+\subsection{Einstein Coefficients}
+
+The Einstein transition probability of spontaneous emission is \cite[21]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    A_{nm} = \frac{64\pi^4\nu_{nm}^3}{3h}\frac{\sum\abs{\vb{R}_{n_im_k}}^2}{d_n}.
+\end{equation*}
+Similarly, the Einstein transition probability of absorption is
+\begin{equation*}
+    B_{mn} = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}_{n_im_k}}^2}{d_m}.
+\end{equation*}
+These two equations are related by
+\begin{equation*}
+    B_{mn} = \frac{1}{8\pi hc\nu_{nm}^3}\frac{d_n}{d_m}A_{nm}.
+\end{equation*}
+
+\subsection{Transition Moment}
+
+The electronic transition moment is defined as \cite[199]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    \ev{\vb{R}} = \int \psi'\vb{\mu}\psi'' \odif{\tau}.
+\end{equation*}
+Using the Born--Oppenheimer approximation, the total transition moment may be written as \cite[382]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    \vb{R} = \vb{R}_e^{nm}\vb{R}_v^{v'v''}\vb{R}_r^{J'J''}
+\end{equation*}
+The transition probability for absorption is approximately (assuming the dipole moment integrals can be separated via the Born--Oppenheimer \& Franck--Condon principles) \cite[382]{herzbergMolecularSpectraMolecular1950}
+\begin{equation*}
+    B_{evr} = \frac{8\pi^3}{3h^2c}\frac{\sum\abs{\vb{R}}^2}{g_eg_vg_r} = \frac{8\pi^3}{3h^2c}\frac{\abs{\vb{R}_e^{nm}}^2}{g_e}\frac{\abs{\vb{R}_v^{v'v''}}^2}{g_v}\frac{\sum\abs{\vb{R}_r^{J'J''}}^2}{g_r}.
+\end{equation*}
+The electronic-vibrational transition moment is calculated directly as \cite[9]{lauxArraysRadiativeTransition1992}
+\begin{equation*}
+    \ev{R_e^{v'v''}}^2 = \ab(\int \psi_{v'}(r)R_e(r)\psi_{v''}(r) \odif{r})^2.
+\end{equation*}
+The line strength of a rovibronic transition can be written as the product of the vibronic transition moment and the H\"onl--London factor \cite[451]{schadeeUniqueDefinitionsBand1978}
+\begin{equation*}
+    S^{e'v'J'}_{e''v''J''} = \ev{R_e^{v'v''}}^2S^{J'}_{J''}.
+\end{equation*}
+The electronic-vibrational Einstein coefficient for spontaneous emission is \cite[452]{schadeeUniqueDefinitionsBand1978}
+\begin{equation*}
+    A^{e'v'}_{e''v''} = \frac{64\pi^4\nu^3}{3h}\frac{(2 - \delta_{0, \Lambda' + \Lambda''})}{(2 - \delta_{0, \Lambda'})}\ev{R_e^{v'v''}}^2.
+\end{equation*}
+Writing the total Einstein coefficient for spontaneous emission gives
+\begin{equation*}
+    A_{ul} = A^{e'v'}_{e''v''}A^{J'}_{J''} = \frac{64\pi^4\nu^3}{3h}\frac{(2 - \delta_{0, \Lambda' + \Lambda''})}{(2 - \delta_{0, \Lambda'})}\ev{R_e^{v'v''}}^2\frac{S^{J'}_{J''}}{(2J' + 1)}.
+\end{equation*}

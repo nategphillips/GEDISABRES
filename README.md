@@ -1,6 +1,6 @@
-# pyGEONOSIS
+# GEDISABRES 
 
-pyGEONOSIS is a general-purpose tool for simulating the rovibronic spectra of diatomic molecules. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, pyGEONOSIS is designed to be easily understood and modified.
+GEDISABRES (Generalized Diatomic Simulation for Absorption and Rovibronic Emission Spectra) is a general-purpose tool for simulating the rovibronic spectra of diatomic molecules. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, GEDISABRES is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 
@@ -49,7 +49,7 @@ Four plot types are currently implemented:
 
 ## Validation with Experimental Data
 
-Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of pyGEONOSIS. In particular, data for the [Schumann–Runge bands](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) is used at 300 K. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
+Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics](https://www.cfa.harvard.edu/) is used to verify the output of GEDISABRES. In particular, data for the [Schumann–Runge bands](https://lweb.cfa.harvard.edu/amp/ampdata/o2pub92/S-R.html) is used at 300 K. The specific bands chosen to emulate the experimental data are shown in the at the top left of the GUI in each image.
 
 ### (2, 0) Band Validation
 
@@ -59,17 +59,17 @@ Data for molecular oxygen from the [Harvard-Smithsonian Center for Astrophysics]
 
 ### From an Executable
 
-Go to the [releases tab](https://github.com/nategphillips/pyGEONOSIS/releases) of this repository and download the latest compressed archive specific to your operating system. Extract the contents and run the binary file contained inside.
+Go to the [releases tab](https://github.com/nategphillips/GEDISABRES/releases) of this repository and download the latest compressed archive specific to your operating system. Extract the contents and run the binary file contained inside.
 
 ### From Source
 
 On your PC, navigate to a directory of your choice and run
 
 ```bash
-git clone https://github.com/nategphillips/pyGEONOSIS
+git clone https://github.com/nategphillips/GEDISABRES
 ```
 
-to download the source code directly. This repository uses the [uv](https://github.com/astral-sh/uv) package manager for Python. Install uv using the instructions on their [website](https://docs.astral.sh/uv/). Once uv is installed, the packages required for pyGEONOSIS can be added in a virtual environment by navigating to the repository's root directory and installing the dependencies:
+to download the source code directly. This repository uses the [uv](https://github.com/astral-sh/uv) package manager for Python. Install uv using the instructions on their [website](https://docs.astral.sh/uv/). Once uv is installed, the packages required for GEDISABRES can be added in a virtual environment by navigating to the repository's root directory and installing the dependencies:
 
 ```bash
 uv sync

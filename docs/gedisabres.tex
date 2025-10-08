@@ -15,7 +15,7 @@
 \usepackage{pagecolor}
 
 % biblatex
-\addbibresource{pygeonosis.bib}
+\addbibresource{gedisabres.bib}
 
 % fancyhdr
 \setlength{\headheight}{14pt}
@@ -82,28 +82,22 @@
 \pagestyle{empty}
 
 \begin{titlepage}
-    \null
-    \vspace{\fill}
-    \begin{center}
-        \let \footnote \thanks
-        {\LARGE \textbf{pyGEONOSIS} \par}
-        {\large Python GEnerated Oxygen and Nitric Oxide SImulated Spectra}
-        \vskip 1.5em
-        {\large
-            \lineskip .5em
-            \begin{tabular}[t]{c}
-                Nathan G. Phillips
-        \end{tabular}\par}
-        \vskip 1em
-        {\large \today}
-        \vskip 2em
-    \end{center}
-    \vspace{\fill}
 
-    \begin{center}
-        {\large{\textbf{Texas A\&M University}} \par}
-        {\large{Department of Aerospace Engineering}}
-    \end{center}
+    \raggedleft
+
+    \rule{1pt}{\textheight}
+    \hspace{0.05\textwidth}
+    \parbox[b]{0.75\textwidth}{
+
+        {\Huge\textsc{GEDISABRES}}\\[2\baselineskip]
+        {\large\textit{\textcolor{red}{Ge}neralized \textcolor{peach}{Di}atomic \textcolor{yellow}{S}imulation for \textcolor{green}{Ab}sorption and \textcolor{sky}{R}ovibronic \\ \textcolor{blue}{E}mission \textcolor{lavender}{S}pectra}}\\[4\baselineskip]
+        {\large Nathan G. Phillips}
+
+        \vspace{0.5\textheight}
+
+        {\noindent Texas A\&M University}\\[\baselineskip]
+    }
+
 \end{titlepage}
 
 \tableofcontents

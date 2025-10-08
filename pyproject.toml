@@ -1,7 +1,7 @@
 [project]
-name = "pyGEONOSIS"
+name = "GEDISABRES"
 version = "0.2.0"
-description = "A tool for simulating the spectra of any diatomic molecule."
+description = "A tool for simulating the rovibronic spectra of diatomic molecules."
 readme = "README.md"
 requires-python = "==3.13.7"
 dependencies = [

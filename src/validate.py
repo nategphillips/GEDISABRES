@@ -1,5 +1,5 @@
 # module validate.py
-"""Compares the output of pyGEONOSIS to that of PGOPHER for selected molecules."""
+"""Compares the output of GEDISABRES to that of PGOPHER for selected molecules."""
 
 # Copyright (C) 2023-2025 Nathan G. Phillips
 
@@ -168,7 +168,7 @@ def plot(sim: Sim, sample_name: str):
     wns_sim, ins_sim = sim.all_line_data()
     ins_sim /= ins_sim.max()
 
-    plt.stem(wns_sim, ins_sim, "r", label="pyGEONOSIS", markerfmt="")
+    plt.stem(wns_sim, ins_sim, "r", label="GEDISABRES", markerfmt="")
 
     sample = (
         pl.read_csv(f"../data/samples/{sample_name}.csv").select("Position", "Intensity").to_numpy()

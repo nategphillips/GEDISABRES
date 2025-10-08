@@ -1320,7 +1320,7 @@ class GUI(QMainWindow):
         pg.setConfigOption("background", (32, 33, 36))
         pg.setConfigOption("foreground", "w")
 
-        self.setWindowTitle("pyGEONOSIS")
+        self.setWindowTitle("GEDISABRES")
         self.resize(1600, 800)
         self.init_ui()
         self.showMaximized()

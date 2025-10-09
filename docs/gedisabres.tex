@@ -1,6 +1,7 @@
-% !TeX program = lualatex
 \documentclass[11pt, twoside, fleqn]{report}
 
+% Load first to prevent errors of unknown origin.
+\usepackage{tipa}
 \usepackage[backend=biber, style=ieee]{biblatex}
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
@@ -8,7 +9,7 @@
 \usepackage[version=4]{mhchem}
 \usepackage[parfill, skip=1em]{parskip}
 \usepackage[para]{threeparttable}
-\usepackage{amssymb, booktabs, derivative, fancyhdr, float, fontspec, graphicx, microtype, multirow, natex, pgfplots, physics2, siunitx, tikz}
+\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, microtype, multirow, natex, pgfplots, physics2, siunitx, tikz}
 % Must be loaded after amsmath.
 \usepackage[capitalize, nameinlink]{cleveref}
 % Must be loaded after xcolor.
@@ -25,9 +26,6 @@
     \fancyfoot{}
     \fancyfoot[C]{\thepage}
 }
-
-% fontspec
-\newfontface\ipafont{CMU Serif}
 
 % hyperref
 \hypersetup{
@@ -93,7 +91,7 @@
     \parbox[b]{0.75\textwidth}{
 
         {\Huge\textsc{GEDISABRES}}\\
-        \ipafont{/ˈdʒɛdaɪ ˈseɪbɚz/}\\[2\baselineskip]
+        \textipa{/"dZEdaI "seIb\textrhookschwa z/}\\[2\baselineskip]
         {\large\textit{\textcolor{red}{Ge}neralized \textcolor{peach}{Di}atomic \textcolor{yellow}{S}imulation for \textcolor{green}{Ab}sorption and \textcolor{sky}{R}ovibronic \\ \textcolor{blue}{E}mission \textcolor{lavender}{S}pectra}}\\[4\baselineskip]
         {\large Nathan G. Phillips}
 

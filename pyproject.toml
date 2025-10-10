@@ -50,4 +50,4 @@ hamilterm = { git = "https://github.com/nategphillips/hamilterm", rev = "2dabd56
 py3nj = { git = "https://github.com/fujiisoup/py3nj", rev = "098e40e433d6c1f32b1b488519bbae40f40b812b" }
 
 [tool.uv]
-required-version = "==0.8.24"
+required-version = ">=0.9.1"

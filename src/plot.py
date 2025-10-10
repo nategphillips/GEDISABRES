@@ -132,7 +132,7 @@ def plot_line_info(
             wavelength: float = utils.wavenum_to_wavelen(line.wavenumber)
             intensity: float = line.intensity / max_intensity
             text: pg.TextItem = pg.TextItem(
-                f"ΔJ: {line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}(J'={line.j_qn_up}, J''{line.j_qn_lo})\nΔN: {line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}(N'={line.n_qn_up}, N''={line.n_qn_lo})",
+                f"ΔJ: {line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}(J'={line.j_qn_up}, J''={line.j_qn_lo})\nΔN: {line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}(N'={line.n_qn_up}, N''={line.n_qn_lo})",
                 color="w",
                 anchor=(0.5, 1.2),
             )

@@ -33,7 +33,6 @@ import convolve
 import utils
 from enums import ConstantsType, SimType, TermSymbol
 from line import Line
-from state import State
 
 if TYPE_CHECKING:
     from fractions import Fraction
@@ -41,6 +40,7 @@ if TYPE_CHECKING:
     from numpy.typing import NDArray
 
     from sim import Sim
+    from state import State
 
 
 def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
@@ -163,24 +163,19 @@ def honl_london_matrix(
     #       that GFortran and Ninja are installed via the appropriate package manager and you're
     #       good to go.
 
-    lambda_matrix_up = lambda_basis_up[None, :]
-    lambda_matrix_lo = lambda_basis_lo[:, None]
-    sigma_matrix_up = sigma_basis_up[None, :]
-    sigma_matrix_lo = sigma_basis_lo[:, None]
-    omega_matrix_up = omega_basis_up[None, :]
-    omega_matrix_lo = omega_basis_lo[:, None]
+    lambda_matrix_up = lambda_basis_up[:, None]
+    lambda_matrix_lo = lambda_basis_lo[None, :]
+    sigma_matrix_up = sigma_basis_up[:, None]
+    sigma_matrix_lo = sigma_basis_lo[None, :]
+    omega_matrix_up = omega_basis_up[:, None]
+    omega_matrix_lo = omega_basis_lo[None, :]
 
     two_j1: int = int(2 * j_qn_up)
     two_j2: int = int(2 * transition_order)
     two_j3: int = int(2 * j_qn_lo)
 
-    # (m, 1) matrix containing all lower state Ω'' values
     two_m1: NDArray[np.int64] = (2 * omega_matrix_up).astype(int)
-    # (m, n) matrix containing all (Λ'', Λ') pairs
-    two_m2: NDArray[np.int64] = (2 * lambda_matrix_lo).astype(int) - (2 * lambda_matrix_up).astype(
-        int
-    )
-    # (1, n) matrix containing all upper state Ω' values
+    two_m2: NDArray[np.int64] = (2 * (lambda_matrix_lo - lambda_matrix_up)).astype(int)
     two_m3: NDArray[np.int64] = (2 * omega_matrix_lo).astype(int)
 
     # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ can be
@@ -188,7 +183,6 @@ def honl_london_matrix(
     #       method are doubled so that half-integer values are properly handled, see
     #       https://py3nj.readthedocs.io/en/master/examples.html for details.
 
-    # Clebsch-Gordan coefficients for all (Ω'', Ω') pairs, has dimension (m, n)
     cg: NDArray[np.float64] = clebsch_gordan(
         two_j1=two_j1,
         two_j2=two_j2,
@@ -204,9 +198,8 @@ def honl_london_matrix(
     #       (Appendix E). See eq. 2.28 in "Angular Momentum" by Zare for the conversion between
     #       Clebsch-Gordan and Wigner 3j symbols.
 
-    # Compute the matrix of all possible transitions for a given (J', J'') pair. This results in an
-    # (m, n) dimensional matrix, with one HLF for each (i, j) branch index pair.
-    transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg.T @ unitary_lo
+    # Compute the matrix of all possible transitions for a given (J', J'') pair.
+    transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg @ unitary_lo
 
     hlf: NDArray[np.float64] = (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
 
@@ -218,7 +211,7 @@ def honl_london_matrix(
     )
 
     # Implement the H1 function from Ochkin.
-    hlf[mask_up.T | mask_lo.T] *= 2
+    hlf[mask_up | mask_lo] *= 2
 
     return hlf
 
@@ -517,10 +510,6 @@ class Band:
         dim_up: int = len(basis_fns_up)
         dim_lo: int = len(basis_fns_lo)
 
-        # Branch indices should range from 1 to the dimension of the Hamiltonian.
-        branch_up_range: range = range(1, dim_up + 1)
-        branch_lo_range: range = range(1, dim_lo + 1)
-
         # Each (J', J'') pair will have an associated Hönl-London factor matrix with the dimensions
         # (num_branches_up, branch_branches_lo). For example, each (J', J'') pair for a 3x3
         # Hamiltonian will have an associated 3x3 HLF matrix. Each entry within the matrix
@@ -596,35 +585,30 @@ class Band:
                     )
                     hlf_matrix_cache[key] = hlf_mat
 
-                # Enforce the Hönl-London cutoff and allowed rotational quantum number conditions
-                # for each branch index pair (i, j), dimensions (num_branches_up, num_branches_lo).
-                nonzero_indices = np.where(hlf_mat > constants.HONL_LONDON_CUTOFF)
-                # Get the row and column (i, j) indices where the mask is true.
-                ij_pairs: zip[tuple[NDArray[np.int64], NDArray[np.int64]]] = zip(
-                    nonzero_indices[0], nonzero_indices[1]
-                )
+                # Get the indices of the arguments that are non-zero.
+                ij_pairs = np.argwhere(hlf_mat > constants.HONL_LONDON_CUTOFF)
 
                 # Upper state eigenvalues, dimension (1, num_branches_lo).
                 eigenvals_lo: NDArray[np.float64] = eigenvals_lo_cache[j_qn_lo]
 
                 for i, j in ij_pairs:
-                    branch_idx_up: int = branch_up_range[i]
-                    branch_idx_lo: int = branch_lo_range[j]
+                    # Account for lambda doubling when labeling branch indices and N values.
+                    mod_up: int = (
+                        (dim_up // 2) if self.sim.state_up.term_symbol != TermSymbol.SIGMA else 1
+                    )
+                    mod_lo: int = (
+                        (dim_lo // 2) if self.sim.state_lo.term_symbol != TermSymbol.SIGMA else 1
+                    )
 
-                    mod_up: int = dim_up
-                    mod_lo: int = dim_lo
+                    # Branch indices start at 1, not 0.
+                    branch_idx_up: int = (i // mod_up) + 1
+                    branch_idx_lo: int = (j // mod_lo) + 1
 
-                    # Account for lambda doubling when labeling N values.
-                    if self.sim.state_up.term_symbol != TermSymbol.SIGMA:
-                        mod_up = dim_up // 2
-                    if self.sim.state_lo.term_symbol != TermSymbol.SIGMA:
-                        mod_lo = dim_lo // 2
-
-                    n_qn_up: float = n_qn_up_vals[i % mod_up]
-                    n_qn_lo: float = n_qn_lo_vals[j % mod_lo]
+                    n_qn_up = n_qn_up_vals[i // mod_up]
+                    n_qn_lo = n_qn_lo_vals[j // mod_lo]
 
                     # Discard lines with disallowed nuclear statistics.
-                    if not allowed_n_qn_up[i % mod_up] or not allowed_n_qn_lo[j % mod_lo]:
+                    if not allowed_n_qn_up[i // mod_up] or not allowed_n_qn_lo[j // mod_lo]:
                         continue
 
                     hlf: float = float(hlf_mat[i, j])

@@ -16,17 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import TYPE_CHECKING
-
 import numpy as np
 import pyqtgraph as pg
 from numpy.typing import NDArray
 
 import utils
 from sim import Sim
-
-if TYPE_CHECKING:
-    from line import Line
 
 PEN_WIDTH: int = 1
 
@@ -133,14 +128,11 @@ def plot_line_info(
     plot_line(plot_widget, sim, colors, max_intensity, color_index)
 
     for band in sim.bands:
-        # Only select non-satellite lines to reduce the amount of data on screen.
-        lines: list[Line] = [line for line in band.lines if not line.is_satellite]
-
-        for line in lines:
+        for line in band.lines:
             wavelength: float = utils.wavenum_to_wavelen(line.wavenumber)
             intensity: float = line.intensity / max_intensity
             text: pg.TextItem = pg.TextItem(
-                f"ΔJ: {line.branch_name_j}_{line.branch_idx_up}{line.branch_idx_lo}",
+                f"ΔJ: {line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}(J'={line.j_qn_up}, J''{line.j_qn_lo})\nΔN: {line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}(N'={line.n_qn_up}, N''={line.n_qn_lo})",
                 color="w",
                 anchor=(0.5, 1.2),
             )

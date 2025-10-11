@@ -1,7 +1,6 @@
+% !TeX program = lualatex
 \documentclass[11pt, twoside, fleqn]{report}
 
-% Load first to prevent errors of unknown origin.
-\usepackage{tipa}
 \usepackage[backend=biber, style=ieee]{biblatex}
 \usepackage[labelfont=bf]{caption}
 \usepackage[margin=1in]{geometry}
@@ -9,7 +8,7 @@
 \usepackage[version=4]{mhchem}
 \usepackage[parfill, skip=1em]{parskip}
 \usepackage[para]{threeparttable}
-\usepackage{amssymb, booktabs, derivative, fancyhdr, float, graphicx, microtype, multirow, natex, pgfplots, physics2, siunitx, tikz}
+\usepackage{booktabs, derivative, fancyhdr, float, graphicx, microtype, multirow, natex-lualatex, pgfplots, physics2, siunitx, tikz}
 % Must be loaded after amsmath.
 \usepackage[capitalize, nameinlink]{cleveref}
 % Must be loaded after xcolor.
@@ -105,13 +104,14 @@
             \draw[line width=1pt, peach] (p1) ++(1, 0) -- ++(0, 2);
             \draw[line width=1pt, yellow] (p1) ++(2, 0) -- ++(0, 3);
 
-            \draw[line width=1pt, green] (p1) ++(3.075, 0) -- ++(0, 1);
+            \draw[line width=1pt, green] (p1) ++(2.81, 0) -- ++(0, 1);
+            \draw[line width=1pt, green] (p2) ++(-2.81, 0) -- ++(0, 1);
 
             \draw[line width=1pt, sky] (p2) ++(-2, 0) -- ++(0, 3);
             \draw[line width=1pt, blue] (p2) ++(-1, 0) -- ++(0, 2);
             \draw[line width=1pt, lavender] (p2) -- ++(0, 1);
         \end{tikzpicture}\\
-        \textipa{/"dZEdaI "seIb\textrhookschwa z/}\\[2\baselineskip]
+        /ˈdʒɛdaɪ ˈseɪbɚz/\\[2\baselineskip]
         {\large\textit{\textcolor{red}{Ge}neralized \textcolor{peach}{Di}atomic \textcolor{yellow}{S}imulation for \textcolor{green}{Ab}sorption and \textcolor{sky}{R}ovibronic \\ \textcolor{blue}{E}mission \textcolor{lavender}{S}pectra}}\\[4\baselineskip]
         {\large Nathan G. Phillips}
 

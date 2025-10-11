@@ -1,6 +1,6 @@
 # GEDISABRES 
 
-GEDISABRES /ˈdʒɛdaɪ ˈseɪbɚz/ (Generalized Diatomic Simulation for Absorption and Rovibronic Emission Spectra) is a general-purpose tool for simulating the rovibronic spectra of diatomic molecules. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, GEDISABRES is designed to be easily understood and modified.
+GEDISABRES [/ˈdʒɛdaɪ ˈseɪbɚz/](https://ipa-reader.com/?text=ˈdʒɛdaɪ ˈseɪbɚz&voice=Matthew) (Generalized Diatomic Simulation for Absorption and Rovibronic Emission Spectra) is a general-purpose tool for simulating the rovibronic spectra of diatomic molecules. Built using NumPy, Polars, PySide6, PyQtGraph, and SciPy, GEDISABRES is designed to be easily understood and modified.
 
 The capabilities of this tool are briefly summarized below. More detailed theory and notation are explained in the included document.
 

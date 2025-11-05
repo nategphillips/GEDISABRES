@@ -56,17 +56,17 @@ and
     \centering
     \begin{tikzpicture}
         \begin{axis}[width=\linewidth, height=7cm, domain=-5:5, samples=200, axis lines=left, legend style={fill=none, draw=text}]
-            % For a FWHM of 1, σ = 0.4247 and γ = 0.5.
             \addplot[color=blue]
-            {1/pi*(0.5/((x-0)^2+(0.5)^2))};
+            {1/(2*pi)*(1/(x^2+(1/2)^2))};
             \addlegendentry{Lorentzian}
 
             \addplot[color=red]
-            {1/(0.4247*sqrt(2*pi))*exp(-((x-0)^2)/(2*(0.4247)^2))};
+            {2*sqrt(ln(2)/pi)*exp(-4*ln(2)*(x)^2)};
             \addlegendentry{Gaussian}
 
+            % For a Voigt FWHM of 1, σ = γ = 0.27766.
             \addplot gnuplot[color=green, no marks]
-            {VP(x,0.4247,0.5)};
+            {VP(x,0.27766,0.27766)};
             \addlegendentry{Voigt}
         \end{axis}
     \end{tikzpicture}

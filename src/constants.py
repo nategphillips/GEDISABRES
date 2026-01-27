@@ -34,7 +34,18 @@ EPERM: float = 8.8541878188e-12
 
 # Atomic masses [g/mol]
 # Data from IUPAC: Atomic Weights of The Elements 2023 - <https://iupac.qmul.ac.uk/AtWt/>
-ATOMIC_MASSES: dict[str, float] = {"H": 1.008, "N": 14.007, "O": 15.999}
+ATOMIC_MASSES: dict[str, float] = {
+    "H": 1.008,
+    "He": 4.002602,
+    "Li": 6.94,
+    "Be": 9.0121831,
+    "B": 10.81,
+    "C": 12.011,
+    "N": 14.007,
+    "O": 15.999,
+    "F": 18.998403162,
+    "Ne": 20.1797,
+}
 
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
 # standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
@@ -45,7 +56,18 @@ BRANCH_NAME_MAP: dict[int, str] = {-3: "N", -2: "O", -1: "P", 0: "Q", +1: "R", +
 
 # Nuclear spin [-]
 # Data from NUBASE 2020 - <https://doi.org/10.1088/1674-1137/abddae>
-NUCLEAR_SPIN: dict[str, Fraction] = {"H": Fraction(1, 2), "N": Fraction(1), "O": Fraction(0)}
+NUCLEAR_SPIN: dict[str, Fraction] = {
+    "H": Fraction(1, 2),
+    "He": Fraction(0),
+    "Li": Fraction(3, 2),
+    "Be": Fraction(3, 2),
+    "B": Fraction(3, 2),
+    "C": Fraction(0),
+    "N": Fraction(1),
+    "O": Fraction(0),
+    "F": Fraction(1, 2),
+    "Ne": Fraction(0),
+}
 
 # Electric dipole moment [C*m]
 # Data from NIST Diatomic Spectral Database Holdings - <https://physics.nist.gov/cgi-bin/MolSpec/diperiodic.pl>

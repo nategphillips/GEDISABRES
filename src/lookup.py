@@ -106,7 +106,9 @@ def mass_lookup() -> dict[str, float]:
     Returns:
         A dictionary containing (element, mass) pairs.
     """
-    lf = fwf_reader.create_lazyframe(data_path.get_data_path("data", "mass_1.mas20"), MASS_COLS)
+    lf = fwf_reader.create_lazyframe(
+        data_path.get_data_path("data", "atomic", "mass_1.mas20"), MASS_COLS
+    )
 
     # Stuff for the mass LazyFrame.
     # Create an `A El` column to match what's found in NUBASE, it also makes grabbing isotopes easy.
@@ -139,7 +141,9 @@ def spin_lookup() -> dict[str, str]:
     Returns:
         A dictionary containing (element, spin) pairs.
     """
-    lf = fwf_reader.create_lazyframe(data_path.get_data_path("data", "nubase_4.mas20"), SPIN_COLS)
+    lf = fwf_reader.create_lazyframe(
+        data_path.get_data_path("data", "atomic", "nubase_4.mas20"), SPIN_COLS
+    )
     # Stuff for the spin LazyFrame.
     # Drop all elements that are not in the ground state (i = 0), i.e., isomers (i = 1,2),
     # levels (i = 3,4), resonance (i = 5), and IAS (i = 8,9).

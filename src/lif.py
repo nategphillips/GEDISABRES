@@ -1,7 +1,7 @@
 # module lif.py
 """A three-level LIF model for the Schumann-Runge bands of molecular oxygen."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,22 +17,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from dataclasses import dataclass
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sy
-from numpy.typing import NDArray
 
 import constants
-import utils
+import data_path
 from atom import Atom
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
-from line import Line
 from molecule import Molecule
 from sim import Sim
 from sim_params import BroadeningBools, TemperatureParams
 from state import State
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from line import Line
 
 MIN_TIME: float = 0.0
 MAX_TIME: float = 60e-9
@@ -277,7 +280,7 @@ def get_rates(sim: Sim, line: Line) -> RateParams:
     g_l: int = constants.ELECTRONIC_DEGENERACIES[sim.molecule.name][sim.state_lo.name]
 
     a21_coeffs: NDArray[np.float64] = np.loadtxt(
-        fname=utils.get_data_path(
+        fname=data_path.get_data_path(
             "data",
             sim.molecule.name,
             "einstein",
@@ -511,7 +514,7 @@ def plot_n2_vs_time_and_fluence(
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
+    molecule: Molecule = Molecule(name="O2", atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="B",

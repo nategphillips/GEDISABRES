@@ -1,7 +1,7 @@
 # module molecule.py
 """Contains the implementation of the Molecule class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,7 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from atom import Atom
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from atom import Atom
 
 
 class Molecule:
@@ -34,7 +37,7 @@ class Molecule:
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
         self.mass: float = self.atom_1.mass + self.atom_2.mass
-        self.is_homonuclear: bool = self.atom_1.name == self.atom_2.name
+        self.is_homonuclear: bool = self.atom_1.chemical_symbol == self.atom_2.chemical_symbol
 
     @property
     def symmetry_param(self) -> int:

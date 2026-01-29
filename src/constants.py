@@ -1,7 +1,7 @@
 # module constants.py
 """Provides physical and molecular constants."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from fractions import Fraction
-
+import lookup
 from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
 
 # Data from NIST CODATA - <https://physics.nist.gov/cuu/Constants/index.html>
@@ -32,42 +31,17 @@ PLANC: float = 6.62607015e-34
 # Vacuum electric permittivity [F/m]
 EPERM: float = 8.8541878188e-12
 
-# Atomic masses [g/mol]
-# Data from IUPAC: Atomic Weights of The Elements 2023 - <https://iupac.qmul.ac.uk/AtWt/>
-ATOMIC_MASSES: dict[str, float] = {
-    "H": 1.008,
-    "He": 4.002602,
-    "Li": 6.94,
-    "Be": 9.0121831,
-    "B": 10.81,
-    "C": 12.011,
-    "N": 14.007,
-    "O": 15.999,
-    "F": 18.998403162,
-    "Ne": 20.1797,
-}
+# Atomic masses [g/mol] (same as [amu])
+# Data from Atomic Mass Evaluation 2020 - <https://www.anl.gov/phy/reference/ame-2020-mass1mas20>.
+ATOMIC_MASSES: dict[str, float] = lookup.mass_lookup()
+
+# Nuclear spin [-]
+# Data from NUBASE 2020 - <https://www.anl.gov/phy/reference/nubase-2020-nubase4mas20>.
+NUCLEAR_SPIN: dict[str, str] = lookup.spin_lookup()
 
 # Mapping ΔQN = QN' - QN'' to a branch name. As far as I know, the names O, P, Q, R, and S are all
 # standard, while T and N are used in PGOPHER to denote +/- 3 transitions.
 BRANCH_NAME_MAP: dict[int, str] = {-3: "N", -2: "O", -1: "P", 0: "Q", +1: "R", +2: "S", +3: "T"}
-
-# TODO: 25/07/17 - Different isotopes of the same nuclei have different nuclear spins, so this table
-#       should also contain the atomic mass number.
-
-# Nuclear spin [-]
-# Data from NUBASE 2020 - <https://doi.org/10.1088/1674-1137/abddae>
-NUCLEAR_SPIN: dict[str, Fraction] = {
-    "H": Fraction(1, 2),
-    "He": Fraction(0),
-    "Li": Fraction(3, 2),
-    "Be": Fraction(3, 2),
-    "B": Fraction(3, 2),
-    "C": Fraction(0),
-    "N": Fraction(1),
-    "O": Fraction(0),
-    "F": Fraction(1, 2),
-    "Ne": Fraction(0),
-}
 
 # Electric dipole moment [C*m]
 # Data from NIST Diatomic Spectral Database Holdings - <https://physics.nist.gov/cgi-bin/MolSpec/diperiodic.pl>

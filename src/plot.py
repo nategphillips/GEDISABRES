@@ -1,7 +1,7 @@
 # module plot.py
 """Contains functions used for plotting."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,12 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pyqtgraph as pg
-from numpy.typing import NDArray
 
 import utils
-from sim import Sim
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from sim import Sim
 
 PEN_WIDTH: int = 1
 

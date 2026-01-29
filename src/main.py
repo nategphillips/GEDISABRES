@@ -90,7 +90,7 @@ DEFAULT_BROADENING: float = 0.0
 
 DEFAULT_BANDS: str = "0-0"
 
-DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom(16, "O"), Atom(16, "O"))
+DEFAULT_MOLECULE: Molecule = Molecule(Atom(16, "O"), Atom(16, "O"))
 DEFAULT_STATE_UP: State = State(
     DEFAULT_MOLECULE,
     "B",
@@ -119,13 +119,13 @@ DEFAULT_SIM: Sim = Sim(
     bands_input=[(0, 0)],
 )
 
-O2_MOLECULE = Molecule("O2", Atom(16, "O"), Atom(16, "O"))
-NO_MOLECULE = Molecule("NO", Atom(14, "N"), Atom(16, "O"))
-OH_MOLECULE = Molecule("OH", Atom(16, "O"), Atom(1, "H"))
+O2_MOLECULE = Molecule(Atom(16, "O"), Atom(16, "O"))
+NO_MOLECULE = Molecule(Atom(14, "N"), Atom(16, "O"))
+OH_MOLECULE = Molecule(Atom(16, "O"), Atom(1, "H"))
 
 MOLECULAR_PRESETS = [
     {
-        "name": "O2 B-X",
+        "name": "16O16O B-X",
         "molecule": O2_MOLECULE,
         "state_up": State(
             O2_MOLECULE,
@@ -147,7 +147,7 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO A-X",
+        "name": "14N16O A-X",
         "molecule": NO_MOLECULE,
         "state_up": State(
             NO_MOLECULE,
@@ -169,7 +169,7 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO B-X",
+        "name": "14N16O B-X",
         "molecule": NO_MOLECULE,
         "state_up": State(
             NO_MOLECULE,
@@ -191,7 +191,7 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "OH A-X",
+        "name": "16O1H A-X",
         "molecule": OH_MOLECULE,
         "state_up": State(
             OH_MOLECULE,
@@ -430,12 +430,11 @@ class ParametersDialog(QDialog):
     def __init__(self, tab, context_name=""):
         super().__init__(tab)
         self.setWindowTitle(f"{context_name} Parameters")
+
         # Prevent modification of the main window while the dialog box is open.
         self.setModal(True)
         self.resize(600, 400)
         self.tab = tab
-
-        self.name = QLineEdit()
 
         # asadf
         self.atom_1_mass = QSpinBox()
@@ -459,7 +458,7 @@ class ParametersDialog(QDialog):
         atom2_layout.addWidget(self.atom_2_symbol)
 
         molecule_form = QFormLayout()
-        molecule_form.addRow("Molecule Name:", self.name)
+        molecule_form.addRow(QLabel(f"<b>Molecule: {tab.molecule.name}</b>"))
         molecule_form.addRow("Atom 1 (A, symbol):", atom1_row)
         molecule_form.addRow("Atom 2 (A, symbol):", atom2_row)
 
@@ -544,7 +543,6 @@ class ParametersDialog(QDialog):
         main_layout.addWidget(buttons)
 
         # Set values from the parent tab.
-        self.name.setText(tab.molecule.name)
         self.atom_1_symbol.setText(tab.molecule.atom_1.chemical_symbol)
         self.atom_2_symbol.setText(tab.molecule.atom_2.chemical_symbol)
         self.atom_1_mass.setValue(tab.molecule.atom_1.atomic_mass_number)
@@ -570,7 +568,6 @@ class ParametersDialog(QDialog):
 
     def accept(self):
         self.tab.molecule = Molecule(
-            self.name.text(),
             Atom(self.atom_1_mass.value(), self.atom_1_symbol.text()),
             Atom(self.atom_2_mass.value(), self.atom_2_symbol.text()),
         )

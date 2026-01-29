@@ -514,7 +514,7 @@ def plot_n2_vs_time_and_fluence(
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule(name="O2", atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
+    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="B",

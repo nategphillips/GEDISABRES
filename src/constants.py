@@ -48,7 +48,7 @@ BRANCH_NAME_MAP: dict[int, str] = {-3: "N", -2: "O", -1: "P", 0: "Q", +1: "R", +
 # If available, the ground state electric dipole moment is used. See also
 # <https://cccbdb.nist.gov/diplistx.asp>. Note that homonuclear diatomics have no permanent dipole
 # moment.
-DIPOLE_MOMENT: dict[str, float] = {"O2": 0.0, "NO": 0.52943e-30, "OH": 5.56245e-30}
+DIPOLE_MOMENT: dict[str, float] = {"16O16O": 0.0, "14N16O": 0.52943e-30, "16O1H": 5.56245e-30}
 
 # Mappings from enums to strings for use with the dictionaries below.
 TERM_SYMBOL_MAP: dict[TermSymbol, str] = {
@@ -70,15 +70,15 @@ REFLECTION_SYMMETRY_MAP: dict[ReflectionSymmetry, str] = {
 # Internuclear distance [m]
 # Data from NIST Chemistry WebBook - <https://webbook.nist.gov/chemistry/>
 INTERNUCLEAR_DISTANCE: dict[str, dict[str, float]] = {
-    "O2": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10},
-    "NO": {"X2P": 1.15077e-10, "A2S+": 1.06434e-10},
-    "OH": {"X2P": 0.96966e-10, "A2S+": 1.0121e-10},
+    "16O16O": {"X3Sg-": 1.20752e-10, "B3Su-": 1.6042e-10},
+    "14N16O": {"X2P": 1.15077e-10, "A2S+": 1.06434e-10},
+    "16O1H": {"X2P": 0.96966e-10, "A2S+": 1.0121e-10},
 }
 
 # Electronic energies [1/cm]
 # Data from NIST Chemistry WebBook - <https://webbook.nist.gov/chemistry/>
 ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
-    "O2": {
+    "16O16O": {
         "X3Sg-": 0.0,
         "a1Pg": 7918.1,
         "b1Sg+": 13195.1,
@@ -87,7 +87,7 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
         "A3Su+": 35397.8,
         "B3Su-": 49793.28,
     },
-    "NO": {
+    "14N16O": {
         "X2P": 0.0,
         "a4P": 38440.0,
         "A2S+": 43965.7,
@@ -96,7 +96,7 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
         "C2P": 52126.0,
         "D2S+": 53084.7,
     },
-    "OH": {
+    "16O1H": {
         "X2P": 0.0,
         "A2S+": 32684.1,
         "B2S+": 69774.0,
@@ -109,9 +109,9 @@ ELECTRONIC_ENERGIES: dict[str, dict[str, float]] = {
 # Data from Table 1.4 of "Nonequilibrium Hypersonic Aerodynamics" by Chul Park - <https://ntrs.nasa.gov/citations/19910029860>
 # (Degeneracies are also directly calculable from the term symbols themselves.)
 ELECTRONIC_DEGENERACIES: dict[str, dict[str, int]] = {
-    "O2": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3},
-    "NO": {"X2P": 4, "a4P": 8, "A2S+": 2, "B2P": 4, "b4S-": 4, "C2P": 4, "D2S+": 2},
-    "OH": {"X2P": 4, "A2S+": 2, "B2S+": 2, "D2S-": 2, "C2S+": 2},
+    "16O16O": {"X3Sg-": 3, "a1Pg": 2, "b1Sg+": 1, "c1Su-": 1, "A3Pu": 6, "A3Su+": 3, "B3Su-": 3},
+    "14N16O": {"X2P": 4, "a4P": 8, "A2S+": 2, "B2P": 4, "b4S-": 4, "C2P": 4, "D2S+": 2},
+    "16O1H": {"X2P": 4, "A2S+": 2, "B2S+": 2, "D2S-": 2, "C2S+": 2},
 }
 
 # A somewhat arbitrary cutoff value for the Hönl-London factors. If the HLF of a line is lower than

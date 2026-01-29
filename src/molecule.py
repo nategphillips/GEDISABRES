@@ -25,19 +25,18 @@ if TYPE_CHECKING:
 class Molecule:
     """Represents a diatomic molecule consisting of two atoms."""
 
-    def __init__(self, name: str, atom_1: Atom, atom_2: Atom) -> None:
+    def __init__(self, atom_1: Atom, atom_2: Atom) -> None:
         """Initialize class variables.
 
         Args:
-            name (str): Name of the molecule.
             atom_1 (Atom): First constituent atom.
             atom_2 (Atom): Second constituent atom.
         """
-        self.name: str = name
         self.atom_1: Atom = atom_1
         self.atom_2: Atom = atom_2
+        self.name: str = atom_1.ael + atom_2.ael
         self.mass: float = self.atom_1.mass + self.atom_2.mass
-        self.is_homonuclear: bool = self.atom_1.chemical_symbol == self.atom_2.chemical_symbol
+        self.is_homonuclear: bool = self.atom_1.ael == self.atom_2.ael
 
     @property
     def symmetry_param(self) -> int:

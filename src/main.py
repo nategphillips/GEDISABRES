@@ -1,7 +1,7 @@
 # module main.py
 """A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -57,6 +57,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import data_path
 import plot
 import utils
 from atom import Atom
@@ -89,7 +90,7 @@ DEFAULT_BROADENING: float = 0.0
 
 DEFAULT_BANDS: str = "0-0"
 
-DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom("O"), Atom("O"))
+DEFAULT_MOLECULE: Molecule = Molecule(Atom(16, "O"), Atom(16, "O"))
 DEFAULT_STATE_UP: State = State(
     DEFAULT_MOLECULE,
     "B",
@@ -118,12 +119,16 @@ DEFAULT_SIM: Sim = Sim(
     bands_input=[(0, 0)],
 )
 
+O2_MOLECULE = Molecule(Atom(16, "O"), Atom(16, "O"))
+NO_MOLECULE = Molecule(Atom(14, "N"), Atom(16, "O"))
+OH_MOLECULE = Molecule(Atom(16, "O"), Atom(1, "H"))
+
 MOLECULAR_PRESETS = [
     {
-        "name": "O2 B-X",
-        "molecule": Molecule("O2", Atom("O"), Atom("O")),
+        "name": "16O16O B-X",
+        "molecule": O2_MOLECULE,
         "state_up": State(
-            Molecule("O2", Atom("O"), Atom("O")),
+            O2_MOLECULE,
             "B",
             3,
             TermSymbol.SIGMA,
@@ -132,7 +137,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("O2", Atom("O"), Atom("O")),
+            O2_MOLECULE,
             "X",
             3,
             TermSymbol.SIGMA,
@@ -142,10 +147,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO A-X",
-        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "name": "14N16O A-X",
+        "molecule": NO_MOLECULE,
         "state_up": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "A",
             2,
             TermSymbol.SIGMA,
@@ -154,7 +159,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -164,10 +169,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO B-X",
-        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "name": "14N16O B-X",
+        "molecule": NO_MOLECULE,
         "state_up": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "B",
             2,
             TermSymbol.PI,
@@ -176,7 +181,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -186,10 +191,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "OH A-X",
-        "molecule": Molecule("OH", Atom("O"), Atom("H")),
+        "name": "16O1H A-X",
+        "molecule": OH_MOLECULE,
         "state_up": State(
-            Molecule("OH", Atom("O"), Atom("H")),
+            OH_MOLECULE,
             "A",
             2,
             TermSymbol.SIGMA,
@@ -198,7 +203,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.DUNHAM,
         ),
         "state_lo": State(
-            Molecule("OH", Atom("O"), Atom("H")),
+            OH_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -425,19 +430,36 @@ class ParametersDialog(QDialog):
     def __init__(self, tab, context_name=""):
         super().__init__(tab)
         self.setWindowTitle(f"{context_name} Parameters")
+
         # Prevent modification of the main window while the dialog box is open.
         self.setModal(True)
         self.resize(600, 400)
         self.tab = tab
 
-        self.name = QLineEdit()
-        self.atom_1 = QLineEdit()
-        self.atom_2 = QLineEdit()
+        self.atom_1_mass = QSpinBox()
+        self.atom_1_mass.setRange(0, 400)
+        self.atom_1_symbol = QLineEdit()
+
+        atom1_row = QWidget()
+        atom1_layout = QHBoxLayout(atom1_row)
+        atom1_layout.setContentsMargins(0, 0, 0, 0)
+        atom1_layout.addWidget(self.atom_1_mass)
+        atom1_layout.addWidget(self.atom_1_symbol)
+
+        self.atom_2_mass = QSpinBox()
+        self.atom_2_mass.setRange(0, 400)
+        self.atom_2_symbol = QLineEdit()
+
+        atom2_row = QWidget()
+        atom2_layout = QHBoxLayout(atom2_row)
+        atom2_layout.setContentsMargins(0, 0, 0, 0)
+        atom2_layout.addWidget(self.atom_2_mass)
+        atom2_layout.addWidget(self.atom_2_symbol)
 
         molecule_form = QFormLayout()
-        molecule_form.addRow("Molecule Name:", self.name)
-        molecule_form.addRow("Atom 1:", self.atom_1)
-        molecule_form.addRow("Atom 2:", self.atom_2)
+        molecule_form.addRow(QLabel(f"<b>Molecule: {tab.molecule.name}</b>"))
+        molecule_form.addRow("Atom 1 (A, symbol):", atom1_row)
+        molecule_form.addRow("Atom 2 (A, symbol):", atom2_row)
 
         self.letter_up = QLineEdit()
         self.spin_multiplicity_up = QLineEdit()
@@ -520,9 +542,10 @@ class ParametersDialog(QDialog):
         main_layout.addWidget(buttons)
 
         # Set values from the parent tab.
-        self.name.setText(tab.molecule.name)
-        self.atom_1.setText(tab.molecule.atom_1.name)
-        self.atom_2.setText(tab.molecule.atom_2.name)
+        self.atom_1_symbol.setText(tab.molecule.atom_1.chemical_symbol)
+        self.atom_2_symbol.setText(tab.molecule.atom_2.chemical_symbol)
+        self.atom_1_mass.setValue(tab.molecule.atom_1.atomic_mass_number)
+        self.atom_2_mass.setValue(tab.molecule.atom_2.atomic_mass_number)
         self.letter_up.setText(tab.state_up.letter)
         self.letter_lo.setText(tab.state_lo.letter)
         self.spin_multiplicity_up.setText(str(tab.state_up.spin_multiplicity))
@@ -544,7 +567,8 @@ class ParametersDialog(QDialog):
 
     def accept(self):
         self.tab.molecule = Molecule(
-            self.name.text(), Atom(self.atom_1.text()), Atom(self.atom_2.text())
+            Atom(self.atom_1_mass.value(), self.atom_1_symbol.text()),
+            Atom(self.atom_2_mass.value(), self.atom_2_symbol.text()),
         )
 
         self.tab.state_up = State(
@@ -1120,7 +1144,7 @@ class CustomTab(QWidget):
         filename, _ = QFileDialog.getOpenFileName(
             parent=self,
             caption="Open Sample File",
-            dir=str(utils.get_data_path("data", "samples")),
+            dir=str(data_path.get_data_path("data", "samples")),
             filter="CSV Files (*.csv);;All Files (*)",
         )
         if filename:
@@ -1430,7 +1454,7 @@ def main() -> None:
     app: QApplication = QApplication(sys.argv)
     qdarktheme.setup_theme()
 
-    app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
+    app_icon: QIcon = QIcon(str(data_path.get_data_path("img", "icon.ico")))
     app.setWindowIcon(app_icon)
 
     gui: GUI = GUI()

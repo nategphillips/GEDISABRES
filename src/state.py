@@ -1,7 +1,7 @@
 # module state.py
 """Contains the implementation of the State class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import polars as pl
 
-import utils
+import data_path
 from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
 from enums import (
     ConstantsType,
@@ -33,10 +33,11 @@ from enums import (
     Sign,
     TermSymbol,
 )
-from molecule import Molecule
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+    from molecule import Molecule
 
 
 def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
@@ -123,7 +124,7 @@ class State:
                 pathname = "dunham"
 
         return pl.read_csv(
-            utils.get_data_path("data", self.molecule.name, pathname, f"{self.name}.csv")
+            data_path.get_data_path("data", self.molecule.name, pathname, f"{self.name}.csv")
         )
 
     def constants_vqn(self, v_qn: int) -> dict[str, float]:

@@ -1,7 +1,7 @@
 # module line.py
 """Contains the implementation of the Line class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -26,11 +26,11 @@ import numpy as np
 import constants
 import utils
 from enums import SimType
-from state import State
 
 if TYPE_CHECKING:
     from band import Band
     from sim import Sim
+    from state import State
 
 
 class Line:

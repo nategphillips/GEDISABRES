@@ -1,7 +1,7 @@
 # module script.py
 """This module demonstrates how to use the capabilities of GEDISABRES without using the GUI."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utils
+import data_path
 from atom import Atom
 from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
+    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="B",
@@ -76,7 +76,7 @@ def main() -> None:
     )
 
     sample: NDArray[np.float64] = np.genfromtxt(
-        fname=utils.get_data_path("data", "samples", "harvard-o2-bx-20.csv"),
+        fname=data_path.get_data_path("data", "samples", "harvard-o2-bx-20.csv"),
         delimiter=",",
         skip_header=1,
     )

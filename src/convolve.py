@@ -1,7 +1,7 @@
 # module convolve.py
 """Contains functions used for convolution."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,11 +16,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+from typing import TYPE_CHECKING
+
 import numpy as np
-from numpy.typing import NDArray
 from scipy.special import voigt_profile
 
-from line import Line
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from line import Line
 
 
 def broadening_fn(

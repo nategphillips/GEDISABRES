@@ -1,7 +1,7 @@
 # module atom.py
 """Contains the implementation of the Atom class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,26 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import TYPE_CHECKING
+from fractions import Fraction
 
 import constants
 from enums import NuclearStatistics
-
-if TYPE_CHECKING:
-    from fractions import Fraction
 
 
 class Atom:
     """Represents an atom with a name and mass."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, atomic_mass_number: int, chemical_symbol: str) -> None:
         """Initialize class variables.
 
         Args:
-            name (str): Molecule name.
+            atomic_mass_number: The total number of protons and neutrons, A.
+            chemical_symbol: The chemical symbol, e.g., C for carbon.
         """
-        self.name: str = name
-        self.nuclear_spin: Fraction = constants.NUCLEAR_SPIN[self.name]
+        self.atomic_mass_number: int = atomic_mass_number
+        self.chemical_symbol: str = chemical_symbol
+        # A concatenation of the atomic mass number and chemical symbol.
+        self.ael: str = str(atomic_mass_number) + chemical_symbol
+        self.nuclear_spin: Fraction = Fraction(constants.NUCLEAR_SPIN[self.ael])
 
     @property
     def mass(self) -> float:
@@ -50,11 +51,11 @@ class Atom:
         Returns:
             float: The atomic mass in [kg].
         """
-        if self.name not in constants.ATOMIC_MASSES:
-            raise ValueError(f"Atom `{self.name}` not supported.")
+        if self.ael not in constants.ATOMIC_MASSES:
+            raise ValueError(f"Atom `{self.ael}` not supported.")
 
         # Convert from [g/mol] to [kg].
-        return constants.ATOMIC_MASSES[self.name] / constants.AVOGD / 1e3
+        return constants.ATOMIC_MASSES[self.ael] / constants.AVOGD / 1e3
 
     @property
     def nuclear_statistics(self) -> NuclearStatistics:

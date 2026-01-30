@@ -1,7 +1,7 @@
 # module sim.py
 """Contains the implementation of the Sim class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -17,16 +17,16 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from functools import cached_property
+from typing import TYPE_CHECKING
 
 import numpy as np
 import polars as pl
-from numpy.typing import NDArray
 
 import constants
+import data_path
 import utils
 from band import Band
 from enums import ConstantsType, SimType
-from molecule import Molecule
 from sim_params import (
     BroadeningBools,
     InstrumentParams,
@@ -37,7 +37,12 @@ from sim_params import (
     ShiftParams,
     TemperatureParams,
 )
-from state import State
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
+
+    from molecule import Molecule
+    from state import State
 
 
 class Sim:
@@ -113,10 +118,11 @@ class Sim:
             wavenumbers_line: NDArray[np.float64] = np.concatenate(
                 [band.wavenumbers_line() for band in self.bands]
             )
-            # A qualitative amount of padding added to either side of the x-axis limits. Ensures that
-            # spectral features at either extreme are not clipped when the FWHM parameters are large.
-            # The first line's Doppler FWHM is chosen as an arbitrary reference to keep things simple.
-            # The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
+            # A qualitative amount of padding added to either side of the x-axis limits. Ensures
+            # that spectral features at either extreme are not clipped when the FWHM parameters are
+            # large. The first line's Doppler FWHM is chosen as an arbitrary reference to keep
+            # things simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is
+            # encountered.
             inst_broadening: float = max(self.bands[0].lines[0].fwhm_instrument())
             padding: float = 10.0 * max(inst_broadening, 2)
 
@@ -140,7 +146,9 @@ class Sim:
     def predissociation(self) -> dict[str, list[float]]:
         """Return polynomial coefficients for computing predissociation linewidths."""
         return pl.read_csv(
-            utils.get_data_path("data", self.molecule.name, "predissociation", "lewis_coeffs.csv")
+            data_path.get_data_path(
+                "data", self.molecule.name, "predissociation", "lewis_coeffs.csv"
+            )
         ).to_dict(as_series=False)
 
     @cached_property
@@ -151,7 +159,7 @@ class Sim:
         to the lower state vibrational quantum number (v'').
         """
         return np.loadtxt(
-            utils.get_data_path(
+            data_path.get_data_path(
                 "data",
                 self.molecule.name,
                 "einstein",
@@ -168,7 +176,7 @@ class Sim:
         to the lower state vibrational quantum number (v'').
         """
         return np.loadtxt(
-            utils.get_data_path(
+            data_path.get_data_path(
                 "data",
                 self.molecule.name,
                 "franck-condon",

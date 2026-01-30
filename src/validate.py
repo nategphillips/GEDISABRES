@@ -1,7 +1,7 @@
 # module validate.py
 """Compares the output of GEDISABRES to that of PGOPHER for selected molecules."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ from state import State
 
 
 def o2(sample_name: str):
-    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
+    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="B",
@@ -62,7 +62,7 @@ def o2(sample_name: str):
 
 
 def no_ax(sample_name: str):
-    molecule: Molecule = Molecule(name="NO", atom_1=Atom("N"), atom_2=Atom("O"))
+    molecule: Molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="A",
@@ -96,7 +96,7 @@ def no_ax(sample_name: str):
 
 
 def no_bx(sample_name: str):
-    molecule: Molecule = Molecule(name="NO", atom_1=Atom("N"), atom_2=Atom("O"))
+    molecule: Molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
     state_up: State = State(
         molecule=molecule,
         letter="B",
@@ -131,7 +131,7 @@ def no_bx(sample_name: str):
 
 
 def oh(sample_name: str):
-    molecule: Molecule = Molecule(name="OH", atom_1=Atom("O"), atom_2=Atom("H"))
+    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(1, "H"))
     state_up: State = State(
         molecule=molecule,
         letter="A",

@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import math
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -33,29 +34,29 @@ def broadening_fn(
 ) -> NDArray[np.float64]:
     """Return the contribution of a single rotational line to the total spectra.
 
-    Uses a Voigt probability density function.
+    If only Gaussian broadening parameters are present, then a Gaussian profile is returned. Ditto
+    for a Lorentzian lineshape. If both Gaussian and Lorentzian broadening parameters are supplied,
+    a Voigt profile is returned.
 
     Args:
-        wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
-        line (Line): A rotational `Line` object.
+        wavenumbers_conv: A continuous array of wavenumbers.
+        line: A rotational `Line` object.
 
     Returns:
-        NDArray[np.float64]: The Voigt probability density function for a single rotational line.
+        The relevant probability density function.
     """
     inst_gauss, inst_loren = line.fwhm_instrument()
 
     # Note that Gaussian FWHMs must be summed in quadrature: see "Hypersonic Nonequilibrium Flows:
     # Fundamentals and Recent Advances" p. 361.
-    fwhm_gaussian: float = np.sqrt(
-        inst_gauss**2 + line.fwhm_doppler() ** 2 + line.fwhm_transit() ** 2
-    )
+    fwhm_gaussian = math.sqrt(inst_gauss**2 + line.fwhm_doppler() ** 2 + line.fwhm_transit() ** 2)
 
     # NOTE: 24/10/25 - Since predissociating repulsive states have no interfering absorption, the
     #       broadened absorption lines will be Lorentzian in shape. See Julienne, 1975.
 
     # Lorentzian FHWMs are summed linearly: see "Hypersonic Nonequilibrium Flows: Fundamentals and
     # Recent Advances" p. 361.
-    fwhm_lorentzian: float = (
+    fwhm_lorentzian = (
         inst_loren
         + line.fwhm_natural()
         + line.fwhm_collisional()
@@ -63,18 +64,18 @@ def broadening_fn(
         + line.fwhm_power()
     )
 
-    x: NDArray[np.float64] = wavenumbers_conv - line.wavenumber
+    x = wavenumbers_conv - line.wavenumber
 
     # The FWHM of the Gaussian PDF is 2 * sigma * sqrt(2 * ln(2)), where sigma is the standard
     # deviation. See https://mathworld.wolfram.com/FullWidthatHalfMaximum.html.
-    gaussian_stddev: float = fwhm_gaussian / (2.0 * np.sqrt(2.0 * np.log(2.0)))
+    gaussian_stddev = fwhm_gaussian / (2.0 * math.sqrt(2.0 * math.log(2.0)))
 
     # The FWHM of the Lorentzian PDF is 2 * gamma, where gamma is the half-width at half-maximum.
-    lorentzian_hwhm: float = 0.5 * fwhm_lorentzian
+    lorentzian_hwhm = 0.5 * fwhm_lorentzian
 
     # If only Gaussian FWHM parameters are present, then return a Gaussian profile.
     if (fwhm_gaussian > 0.0) and (fwhm_lorentzian == 0.0):
-        return np.exp(-(x**2) / (2.0 * gaussian_stddev**2)) / np.sqrt(
+        return np.exp(-(x**2) / (2.0 * gaussian_stddev**2)) / math.sqrt(
             2.0 * np.pi * gaussian_stddev**2
         )
 
@@ -97,13 +98,13 @@ def convolve(
     """Convolve a discrete number of spectral lines into a continuous spectra.
 
     Args:
-        lines (list[Line]): A list of rotational `Line` objects.
-        wavenumbers_conv (NDArray[np.float64]): A continuous array of wavenumbers.
+        lines: A list of rotational `Line` objects.
+        wavenumbers_conv: A continuous array of wavenumbers.
 
     Returns:
-        NDArray[np.float64]: The total intensity spectrum with contributions from all lines.
+        The total intensity spectrum with contributions from all lines.
     """
-    intensities_conv: NDArray[np.float64] = np.zeros_like(wavenumbers_conv)
+    intensities_conv = np.zeros_like(wavenumbers_conv)
 
     # TODO: 25/02/12 - See if switching to scipy's convolve method improves the speed of this,
     #       especially with a large number of bands or points.

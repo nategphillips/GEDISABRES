@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import math
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -56,37 +57,37 @@ class Line:
         """Initialize class variables.
 
         Args:
-            sim (Sim): Parent simulation.
-            band (Band): Vibrational band.
-            j_qn_up (float): Upper state rotational quantum number J'.
-            j_qn_lo (float): Lower state rotational quantum number J''.
-            n_qn_up (float): Upper state rotational quantum number N'.
-            n_qn_lo (float): Lower state rotational quantum number N''.
-            branch_idx_up (int): Upper branch index.
-            branch_idx_lo (int): Lower branch index.
-            branch_name_j (str): Branch name with respect to ΔJ.
-            branch_name_n (str): Branch name with respect to ΔN.
-            is_satellite (bool): Whether or not the line is a satellite line.
-            honl_london_factor (float): Hönl-London rotational line strength.
-            rot_term_value_up (float): Upper state rotational term value.
-            rot_term_value_lo (float): Lower state rotational term value.
+            sim: Parent simulation.
+            band: Vibrational band.
+            j_qn_up: Upper state rotational quantum number J'.
+            j_qn_lo: Lower state rotational quantum number J''.
+            n_qn_up: Upper state rotational quantum number N'.
+            n_qn_lo: Lower state rotational quantum number N''.
+            branch_idx_up: Upper branch index.
+            branch_idx_lo: Lower branch index.
+            branch_name_j: Branch name with respect to ΔJ.
+            branch_name_n: Branch name with respect to ΔN.
+            is_satellite: Whether or not the line is a satellite line.
+            honl_london_factor: Hönl-London rotational line strength.
+            rot_term_value_up: Upper state rotational term value.
+            rot_term_value_lo: Lower state rotational term value.
         """
-        self.sim: Sim = sim
-        self.band: Band = band
+        self.sim = sim
+        self.band = band
         # NOTE: 25/07/18 - J (and therefore N) can both be half-integer valued, see "The Spectra and
         # Dynamics of Diatomic Molecules" by Brion, p. 3.
-        self.j_qn_up: float = j_qn_up
-        self.j_qn_lo: float = j_qn_lo
-        self.n_qn_up: float = n_qn_up
-        self.n_qn_lo: float = n_qn_lo
-        self.branch_idx_up: int = branch_idx_up
-        self.branch_idx_lo: int = branch_idx_lo
-        self.branch_name_j: str = branch_name_j
-        self.branch_name_n: str = branch_name_n
-        self.is_satellite: bool = is_satellite
-        self.honl_london_factor: float = honl_london_factor
-        self.rot_term_value_up: float = rot_term_value_up
-        self.rot_term_value_lo: float = rot_term_value_lo
+        self.j_qn_up = j_qn_up
+        self.j_qn_lo = j_qn_lo
+        self.n_qn_up = n_qn_up
+        self.n_qn_lo = n_qn_lo
+        self.branch_idx_up = branch_idx_up
+        self.branch_idx_lo = branch_idx_lo
+        self.branch_name_j = branch_name_j
+        self.branch_name_n = branch_name_n
+        self.is_satellite = is_satellite
+        self.honl_london_factor = honl_london_factor
+        self.rot_term_value_up = rot_term_value_up
+        self.rot_term_value_lo = rot_term_value_lo
 
     def fwhm_predissociation(self) -> float:
         """Return the predissociation broadening FWHM in [1/cm].
@@ -96,7 +97,7 @@ class Line:
         by B. R. Lewis et al. Homogeneous (Lorentzian).
 
         Returns:
-            float: The predissociation broadening FWHM in [1/cm].
+            The predissociation broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.predissociation:
             # TODO: 24/10/25 - Using the polynomial fit and coefficients described by Lewis, 1986
@@ -107,12 +108,12 @@ class Line:
             # FIXME: 25/02/12 - This will break the simulation for some vibrational bands if J
             #        exceeds 40 by too large of a margin.
 
-            a1: float = self.sim.predissociation["a1"][self.band.v_qn_up]
-            a2: float = self.sim.predissociation["a2"][self.band.v_qn_up]
-            a3: float = self.sim.predissociation["a3"][self.band.v_qn_up]
-            a4: float = self.sim.predissociation["a4"][self.band.v_qn_up]
-            a5: float = self.sim.predissociation["a5"][self.band.v_qn_up]
-            x: float = self.j_qn_up * (self.j_qn_up + 1)
+            a1 = self.sim.predissociation["a1"][self.band.v_qn_up]
+            a2 = self.sim.predissociation["a2"][self.band.v_qn_up]
+            a3 = self.sim.predissociation["a3"][self.band.v_qn_up]
+            a4 = self.sim.predissociation["a4"][self.band.v_qn_up]
+            a5 = self.sim.predissociation["a5"][self.band.v_qn_up]
+            x = self.j_qn_up * (self.j_qn_up + 1)
 
             # Predissociation broadening in [1/cm].
             return a1 + a2 * x + a3 * x**2 + a4 * x**3 + a5 * x**4
@@ -122,10 +123,10 @@ class Line:
     def fwhm_natural(self) -> float:
         """Return the natural broadening FWHM in [1/cm].
 
-        Homogeneous (Lorentzian).
+        Natural broadening is homogeneous (Lorentzian).
 
         Returns:
-            float: The natural broadening FWHM in [1/cm].
+            The natural broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.natural:
             # The Einstein A coefficient for each rotational line is the product of the vibronic
@@ -141,7 +142,7 @@ class Line:
             # lower electronic state. They cannot be used for a transition from v'' to a lower
             # manifold within the lower electronic state.
             sum_upper: float = (
-                self.sim.einstein[self.band.v_qn_up][: self.band.v_qn_up].sum()
+                self.sim.einstein[self.band.v_qn_up, : self.band.v_qn_up].sum()
                 * self.honl_london_factor
                 / (2.0 * self.j_qn_up + 1.0)
             )
@@ -152,14 +153,14 @@ class Line:
         return 0.0
 
     def fwhm_collisional(self) -> float:
-        """Return the collisional broadening FWHM in [1/cm].
+        """Return the collisional (pressure) broadening FWHM in [1/cm].
 
         The collisional FWHM linewidths are computed using Equation 8.18 in the 2016 book
-        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Homogeneous
-        (Lorentzian).
+        "Spectroscopy and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Collisional
+        (pressure) broadening is homogeneous (Lorentzian).
 
         Returns:
-            float: The collisional broadening FWHM in [1/cm].
+            The collisional (pressure) broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.collisional:
             # NOTE: 24/11/05 - In most cases, the amount of electronically excited molecules in the
@@ -167,7 +168,7 @@ class Line:
             #       Therefore, the ground state radius is used to compute the cross-section. An even
             #       more accurate approach would be to multiply the radius in each state by its
             #       Boltzmann fraction and add them together.
-            cross_section: float = (
+            cross_section = (
                 np.pi
                 * (
                     2
@@ -185,7 +186,7 @@ class Line:
             #       effective radius of the molecule. For homogeneous gases, the reduced mass is
             #       just half the molecular mass (remember, this is for molecule-molecule
             #       interactions).
-            reduced_mass: float = self.sim.molecule.mass / 2
+            reduced_mass = 0.5 * self.sim.molecule.mass
 
             # NOTE: 24/11/05 - The translational tempearature is used for collisional and Doppler
             #       broadening since both effects are direct consequences of the thermal velocity of
@@ -195,8 +196,8 @@ class Line:
             return (
                 self.sim.pressure
                 * cross_section
-                * np.sqrt(
-                    8
+                * math.sqrt(
+                    8.0
                     / (np.pi * reduced_mass * constants.BOLTZ * self.sim.temp_params.translational)
                 )
                 / np.pi
@@ -205,22 +206,23 @@ class Line:
         return 0.0
 
     def fwhm_doppler(self) -> float:
-        """Return the Doppler broadening FWHM in [1/cm].
+        """Return the Doppler (thermal) broadening FWHM in [1/cm].
 
         The doppler FWHM linewidths are computed using Equation 8.24 in the 2016 book "Spectroscopy
-        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Inhomogeneous (Gaussian).
+        and Optical Diagnostics for Gases" by Ronald K. Hanson et al. Doppler (thermal) broadening
+        is inhomogeneous (Gaussian).
 
         Returns:
-            float: The Doppler broadening FWHM in [1/cm].
+            The Doppler (thermal) broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.doppler:
             # Doppler (thermal) broadening in [1/cm]. Note that the speed of light is converted from
             # [cm/s] to [m/s] to ensure that the units work out correctly.
-            return self.wavenumber * np.sqrt(
-                8
+            return self.wavenumber * math.sqrt(
+                8.0
                 * constants.BOLTZ
                 * self.sim.temp_params.translational
-                * np.log(2)
+                * math.log(2.0)
                 / (self.sim.molecule.mass * (constants.LIGHT / 1e2) ** 2)
             )
 
@@ -230,20 +232,21 @@ class Line:
         """Return the instrument broadening FWHM in [1/cm].
 
         The instrument FWHM linewidths are given as inputs from the user in units of [nm], which are
-        then converted to units of [1/cm]. Inhomogeneous (Gaussian) & homogeneous (Lorentzian).
+        then converted to units of [1/cm]. Inhomogeneous (Gaussian) and homogeneous (Lorentzian)
+        parameters are supported.
 
         Returns:
-            float: The instrument broadening FWHM in [1/cm].
+            The instrument broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.instrument:
             # NOTE: 25/02/12 - Instrument broadening is passed into this function with units [nm],
             #       so we must convert it to [1/cm]. Note that the FWHM is a bandwidth, so we cannot
             #       simply convert [nm] to [1/cm] in the normal sense - there must be a central
             #       wavelength to expand about.
-            wn_gauss: float = utils.bandwidth_wavelen_to_wavenum(
+            wn_gauss = utils.bandwidth_wavelen_to_wavenum(
                 utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_params.gauss_fwhm_wl
             )
-            wn_loren: float = utils.bandwidth_wavelen_to_wavenum(
+            wn_loren = utils.bandwidth_wavelen_to_wavenum(
                 utils.wavenum_to_wavelen(self.wavenumber), self.sim.inst_params.loren_fwhm_wl
             )
 
@@ -255,19 +258,19 @@ class Line:
         """Return the power broadening FWHM in [1/cm].
 
         The power FWHM linewidths are computed using Equation 1.99 in the 2016 book "Spectra of
-        Atoms and Molecules, 3rd ed." by Bernath. Homogeneous (Lorentzian).
+        Atoms and Molecules, 3rd ed." by Bernath. Power broadening is homogeneous (Lorentzian).
 
         Returns:
-            float: The power broadening FWHM in [1/cm].
+            The power broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.power:
             # Intensity in [W/m^2]. Convert beam diameter from [mm] to [m].
-            intensity: float = self.sim.laser_params.power_w / (
+            intensity = self.sim.laser_params.power_w / (
                 np.pi * (1e-3 * 0.5 * self.sim.laser_params.beam_diameter_mm) ** 2
             )
             # Intensity of a plane wave in air: I = 0.5 * ε_0 * c * E^2. Convert the speed of light
             # from [cm/s] to [m/s] to ensure units work out.
-            electric_field: float = np.sqrt(
+            electric_field = math.sqrt(
                 2.0 * intensity / (constants.EPERM * (1e-2 * constants.LIGHT))
             )
             # Convert from [1/s] to [1/cm].
@@ -283,10 +286,11 @@ class Line:
         """Return the transit-time broadening FWHM in [1/cm].
 
         The transit-time FWHM linewidths are computed using Equation 3.63 in the 2008 book "Laser
-        Spectroscopy: Volume 1, 4th ed." by Demtröder. Inhomogeneous (Gaussian).
+        Spectroscopy: Volume 1, 4th ed." by Demtröder. Transit-time broadening is inhomogeneous
+        (Gaussian).
 
         Returns:
-            float: The transit-time broadening FWHM in [1/cm].
+            The transit-time broadening FWHM in [1/cm].
         """
         if self.sim.broad_bools.transit:
             # This approximation is only valid for a 90° interaction angle between the molecular
@@ -296,13 +300,13 @@ class Line:
 
             # Assume the diameter of the beam is exactly twice the beam waist. Also convert from
             # [mm] to [m].
-            beam_waist_m: float = 1e-3 * 0.5 * self.sim.laser_params.beam_diameter_mm
+            beam_waist_m = 1e-3 * 0.5 * self.sim.laser_params.beam_diameter_mm
 
             # Convert from [1/s] to [1/cm].
             return utils.freq_to_wavenum(
                 2.0
                 * (self.sim.laser_params.molecule_velocity_ms / beam_waist_m)
-                * np.sqrt(2.0 * np.log(2))
+                * math.sqrt(2.0 * math.log(2.0))
             )
 
         return 0.0
@@ -312,13 +316,13 @@ class Line:
         """Return the wavenumber in [1/cm].
 
         Returns:
-            float: The wavenumber of the rotational line in [1/cm].
+            The wavenumber of the rotational line in [1/cm].
         """
         # NOTE: 24/10/18 - Make sure to understand transition structure: Herzberg pp. 149-152, and
         #       pp. 168-169.
 
         # Herzberg p. 168, eq. (IV, 24)
-        unshifted_wavenumber: float = self.band.band_origin + (
+        unshifted_wavenumber = self.band.band_origin + (
             self.rot_term_value_up - self.rot_term_value_lo
         )
 
@@ -344,7 +348,7 @@ class Line:
         Ronald K. Hanson et al.
 
         Returns:
-            float: The Doppler shift in [1/cm].
+            The Doppler shift in [1/cm].
         """
         # Convert the speed of light from [cm/s] to [m/s].
         return wavenumber * self.sim.laser_params.molecule_velocity_ms / (1e-2 * constants.LIGHT)
@@ -356,7 +360,7 @@ class Line:
         Ronald K. Hanson et al.
 
         Returns:
-            float: The collisional shift in [1/cm].
+            The collisional shift in [1/cm].
         """
         return (
             self.sim.shift_params.collisional_a
@@ -369,33 +373,33 @@ class Line:
         """Return the intensity.
 
         Returns:
-            float: The intensity of the rotational line.
+            The intensity of the rotational line.
         """
         # The Einstein A coefficient for each rotational line is the product of the vibronic
         # component A^{e'v'}_{e''v''} and the rotational component A^{r'}_{r''}. See SPARK
         # documentation, pg. 19.
         # A_evr = A_ev * A_r = A^{e'v'}_{e''v''} * S^{J'}_{J''} / (2J' + 1)
         spontaneous_emission: float = (
-            self.sim.einstein[self.band.v_qn_up][self.band.v_qn_lo]
+            self.sim.einstein[self.band.v_qn_up, self.band.v_qn_lo]
             * self.honl_london_factor
             / (2.0 * self.j_qn_up + 1.0)
         )
 
         # Given an input pressure, use the ideal gas law to obtain a total number density.
         # p = N * k * T
-        total_number_density: float = self.sim.pressure / (
+        total_number_density = self.sim.pressure / (
             constants.BOLTZ * self.sim.temp_params.translational
         )
 
         # The state number density is given as the product of the individual Boltzmann fractions
         # times the total number density. See SPARK documentation, pg. 58.
-        number_density_up: float = (
+        number_density_up = (
             total_number_density
             * self.sim.elc_boltz_frac[0]
             * self.band.vib_boltz_frac[0]
             * self.rot_boltz_frac[0]
         )
-        number_density_lo: float = (
+        number_density_lo = (
             total_number_density
             * self.sim.elc_boltz_frac[1]
             * self.band.vib_boltz_frac[1]
@@ -414,7 +418,7 @@ class Line:
             # The emission coefficient as given in eq. 1.73 of "Radiative Processes in
             # Astrophysics" by Rybicki and Lightman. It has units [W m^-3 sr^-1 1/cm^-1].
             # j_v = h * c * ν_0 * N_u * A_ul * ϕ(ν) / 4π
-            emission_coefficient: float = (
+            return (
                 constants.PLANC
                 * constants.LIGHT
                 * self.wavenumber
@@ -423,28 +427,26 @@ class Line:
                 / (4.0 * np.pi)
             )
 
-            return emission_coefficient
-
-        stimulated_emission: float = spontaneous_emission / (
+        stimulated_emission = spontaneous_emission / (
             8.0 * np.pi * constants.PLANC * constants.LIGHT * self.wavenumber**3
         )
 
         # Upper and lower state degeneracies g are the product of the electronic, vibrational, and
         # rotational degeneracies. Since g_v is simply one, it does not contribute to the product.
         # g_evr = g_e * g_v * g_r = (2 - δ_{0,Λ})(2S + 1) * 1 * (2J + 1)
-        degeneracy_up: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+        degeneracy_up = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
             self.sim.state_up.name
         ] * (2.0 * self.j_qn_up + 1.0)
-        degeneracy_lo: float = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
+        degeneracy_lo = constants.ELECTRONIC_DEGENERACIES[self.sim.molecule.name][
             self.sim.state_lo.name
         ] * (2.0 * self.j_qn_lo + 1.0)
 
-        photon_absorption: float = stimulated_emission * degeneracy_up / degeneracy_lo
+        photon_absorption = stimulated_emission * degeneracy_up / degeneracy_lo
 
         # The absorption coefficient as given in eq. 1.75 of "Radiative Processes in Astrophysics"
         # by Rybicki and Lightman. It has units [m^-1].
         # α_v = h * c * ν_0 * (N_l * B_lu - N_u * B_ul) * ϕ(ν) / 4π
-        absorption_coefficient: float = (
+        return (
             constants.PLANC
             * constants.LIGHT
             * self.wavenumber
@@ -452,12 +454,14 @@ class Line:
             / (4.0 * np.pi)
         )
 
-        return absorption_coefficient
-
     @cached_property
     def rot_boltz_frac(self) -> tuple[float, float]:
-        """Return the rotational Boltzmann fraction, N_J / N."""
-        temperature_factor: float = (
+        """Return the rotational Boltzmann fraction N_J / N.
+
+        Returns:
+            The rotational Boltzmann fraction N_J / N.
+        """
+        temperature_factor = (
             constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.sim.temp_params.rotational)
         )
 
@@ -465,7 +469,7 @@ class Line:
             # Degeneracies for homonuclear diatomics can be different depending on the evenness of
             # N.
             even_degeneracy, odd_degeneracy = state.nuclear_degeneracy
-            is_n_even: bool = n_qn % 2 == 0
+            is_n_even = n_qn % 2 == 0
 
             match is_n_even:
                 case True:
@@ -479,14 +483,14 @@ class Line:
         def boltzmann_fraction(degeneracy: float, rot_term_value: float) -> float:
             return (
                 degeneracy
-                * np.exp(-rot_term_value * temperature_factor)
+                * math.exp(-rot_term_value * temperature_factor)
                 / self.band.rot_partition_fn
             )
 
-        degeneracy_up: float = degeneracy(self.sim.state_up, self.j_qn_up, self.n_qn_up)
-        degeneracy_lo: float = degeneracy(self.sim.state_lo, self.j_qn_lo, self.n_qn_lo)
+        degeneracy_up = degeneracy(self.sim.state_up, self.j_qn_up, self.n_qn_up)
+        degeneracy_lo = degeneracy(self.sim.state_lo, self.j_qn_lo, self.n_qn_lo)
 
-        rotational_fraction_up: float = boltzmann_fraction(degeneracy_up, self.rot_term_value_up)
-        rotational_fraction_lo: float = boltzmann_fraction(degeneracy_lo, self.rot_term_value_lo)
+        rotational_fraction_up = boltzmann_fraction(degeneracy_up, self.rot_term_value_up)
+        rotational_fraction_lo = boltzmann_fraction(degeneracy_lo, self.rot_term_value_lo)
 
         return rotational_fraction_up, rotational_fraction_lo

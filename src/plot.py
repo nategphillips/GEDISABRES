@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
     from sim import Sim
 
-PEN_WIDTH: int = 1
+PEN_WIDTH = 1
 
 
 def plot_sample(
@@ -41,11 +41,11 @@ def plot_sample(
     """Plot sample data.
 
     Args:
-        plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        x_values (NDArray[np.float64]): Sample wavenumbers.
-        intensities (NDArray[np.float64]): Sample intensities.
-        display_name (str): The name of the file without directory information.
-        value_type (str): Either wavenumbers or wavelengths.
+        plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
+        x_values: Sample wavenumbers.
+        intensities: Sample intensities.
+        display_name: The name of the file without directory information.
+        value_type: Either wavenumbers or wavelengths.
     """
     if value_type == "wavenumber":
         x_values = utils.wavenum_to_wavelen(x_values)
@@ -68,13 +68,12 @@ def plot_line(
     """Plot each rotational line.
 
     Args:
-        plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        sim (Sim): The parent simulation.
-        colors (list[str]): A list of colors for plotting.
-        max_intensity (float | None, optional): Provided only if multiple simulations are being run
-            together. Defaults to None.
-        color_index (int, optional): Provided only if multiple simulations are being run together.
-            Defaults to None.
+        plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
+        sim: The parent simulation.
+        colors: A list of colors for plotting.
+        max_intensity: Provided only if multiple simulations are being run together. Defaults to
+            None.
+        color_index: Provided only if multiple simulations are being run together. Defaults to None.
     """
     if max_intensity is None:
         max_intensity = sim.all_line_data()[1].max()
@@ -84,18 +83,18 @@ def plot_line(
     for idx, band in enumerate(sim.bands):
         color_idx = color_index if color_index is not None else idx
 
-        wavelengths_line: NDArray[np.float64] = utils.wavenum_to_wavelen(band.wavenumbers_line())
-        intensities_line: NDArray[np.float64] = band.intensities_line()
+        wavelengths_line = utils.wavenum_to_wavelen(band.wavenumbers_line())
+        intensities_line = band.intensities_line()
 
         # Create a scatter plot with points at zero and peak intensity.
-        scatter_data: NDArray[np.float64] = np.column_stack(
+        scatter_data = np.column_stack(
             [
                 np.repeat(wavelengths_line, 2),
                 np.column_stack(
                     [np.zeros_like(wavelengths_line), intensities_line / max_intensity]
                 ).flatten(),
             ],
-        ).astype(np.float64)
+        )
 
         plot_widget.plot(
             scatter_data[:, 0],
@@ -116,13 +115,12 @@ def plot_line_info(
     """Plot information about each rotational line.
 
     Args:
-        plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        sim (Sim): The parent simulation.
-        colors (list[str]): A list of colors for plotting.
-        max_intensity (float | None, optional): Provided only if multiple simulations are being run
-            together. Defaults to None.
-        color_index (int, optional): Provided only if multiple simulations are being run together.
-            Defaults to None.
+        plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
+        sim: The parent simulation.
+        colors: A list of colors for plotting.
+        max_intensity: Provided only if multiple simulations are being run together. Defaults to
+            None.
+        color_index: Provided only if multiple simulations are being run together. Defaults to None.
     """
     if max_intensity is None:
         max_intensity = sim.all_line_data()[1].max()
@@ -134,9 +132,9 @@ def plot_line_info(
 
     for band in sim.bands:
         for line in band.lines:
-            wavelength: float = utils.wavenum_to_wavelen(line.wavenumber)
-            intensity: float = line.intensity / max_intensity
-            text: pg.TextItem = pg.TextItem(
+            wavelength = utils.wavenum_to_wavelen(line.wavenumber)
+            intensity = line.intensity / max_intensity
+            text = pg.TextItem(
                 f"ΔJ: {line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}(J'={line.j_qn_up}, J''={line.j_qn_lo})\nΔN: {line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}(N'={line.n_qn_up}, N''={line.n_qn_lo})",
                 color="w",
                 anchor=(0.5, 1.2),
@@ -156,15 +154,15 @@ def plot_conv_sep(
     """Plot convolved data for each vibrational band separately.
 
     Args:
-        plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        sim (Sim): The parent simulation.
-        colors (list[str]): A list of colors for plotting.
-        granularity (int): Number of points on the wavenumber axis.
-        max_intensity (float | None, optional): Provided only if multiple simulations are being run
-            together. Defaults to None.
+        plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
+        sim: The parent simulation.
+        colors: A list of colors for plotting.
+        granularity: Number of points on the wavenumber axis.
+        max_intensity: Provided only if multiple simulations are being run together. Defaults to
+            None.
     """
     convolved_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
-    calculated_max_intensity: float = 0.0
+    calculated_max_intensity = 0.0
 
     # Need to convolve all bands separately, get their maximum intensities, store the largest, and
     # then divide all bands by that maximum. If the max intensity was found for all bands convolved

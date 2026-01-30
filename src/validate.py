@@ -27,9 +27,9 @@ from sim_params import TemperatureParams
 from state import State
 
 
-def o2(sample_name: str):
-    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
-    state_up: State = State(
+def o2(sample_name: str) -> None:
+    molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
+    state_up = State(
         molecule=molecule,
         letter="B",
         spin_multiplicity=3,
@@ -38,7 +38,7 @@ def o2(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.MINUS,
         constants_type=ConstantsType.PERLEVEL,
     )
-    state_lo: State = State(
+    state_lo = State(
         molecule=molecule,
         letter="X",
         spin_multiplicity=3,
@@ -47,8 +47,7 @@ def o2(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.MINUS,
         constants_type=ConstantsType.PERLEVEL,
     )
-
-    sim: Sim = Sim(
+    sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -61,9 +60,9 @@ def o2(sample_name: str):
     plot(sim, sample_name)
 
 
-def no_ax(sample_name: str):
-    molecule: Molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
-    state_up: State = State(
+def no_ax(sample_name: str) -> None:
+    molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
+    state_up = State(
         molecule=molecule,
         letter="A",
         spin_multiplicity=2,
@@ -72,7 +71,7 @@ def no_ax(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.PLUS,
         constants_type=ConstantsType.DUNHAM,
     )
-    state_lo: State = State(
+    state_lo = State(
         molecule=molecule,
         letter="X",
         spin_multiplicity=2,
@@ -81,8 +80,7 @@ def no_ax(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.NONE,
         constants_type=ConstantsType.DUNHAM,
     )
-
-    sim: Sim = Sim(
+    sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -95,9 +93,9 @@ def no_ax(sample_name: str):
     plot(sim, sample_name)
 
 
-def no_bx(sample_name: str):
-    molecule: Molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
-    state_up: State = State(
+def no_bx(sample_name: str) -> None:
+    molecule = Molecule(atom_1=Atom(14, "N"), atom_2=Atom(16, "O"))
+    state_up = State(
         molecule=molecule,
         letter="B",
         spin_multiplicity=2,
@@ -106,7 +104,7 @@ def no_bx(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.NONE,
         constants_type=ConstantsType.PERLEVEL,
     )
-    state_lo: State = State(
+    state_lo = State(
         molecule=molecule,
         letter="X",
         spin_multiplicity=2,
@@ -115,8 +113,7 @@ def no_bx(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.NONE,
         constants_type=ConstantsType.PERLEVEL,
     )
-
-    sim: Sim = Sim(
+    sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -130,9 +127,9 @@ def no_bx(sample_name: str):
     plot(sim, sample_name)
 
 
-def oh(sample_name: str):
-    molecule: Molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(1, "H"))
-    state_up: State = State(
+def oh(sample_name: str) -> None:
+    molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(1, "H"))
+    state_up = State(
         molecule=molecule,
         letter="A",
         spin_multiplicity=2,
@@ -141,7 +138,7 @@ def oh(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.PLUS,
         constants_type=ConstantsType.DUNHAM,
     )
-    state_lo: State = State(
+    state_lo = State(
         molecule=molecule,
         letter="X",
         spin_multiplicity=2,
@@ -150,8 +147,7 @@ def oh(sample_name: str):
         reflection_symmetry=ReflectionSymmetry.NONE,
         constants_type=ConstantsType.DUNHAM,
     )
-
-    sim: Sim = Sim(
+    sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -164,7 +160,7 @@ def oh(sample_name: str):
     plot(sim, sample_name)
 
 
-def plot(sim: Sim, sample_name: str):
+def plot(sim: Sim, sample_name: str) -> None:
     wns_sim, ins_sim = sim.all_line_data()
     ins_sim /= ins_sim.max()
 

@@ -48,7 +48,7 @@ class SimType(Enum):
 
 
 class InversionSymmetry(Enum):
-    """Inversion parity through a centre of symmetry (g/u)."""
+    """Inversion parity through a center of symmetry (g/u)."""
 
     NONE = 1
     GERADE = 2

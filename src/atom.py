@@ -23,7 +23,7 @@ from enums import NuclearStatistics
 
 
 class Atom:
-    """Represents an atom with a name and mass."""
+    """Represents an atom using an atomic mass number and chemical symbol."""
 
     def __init__(self, atomic_mass_number: int, chemical_symbol: str) -> None:
         """Initialize class variables.
@@ -32,24 +32,21 @@ class Atom:
             atomic_mass_number: The total number of protons and neutrons, A.
             chemical_symbol: The chemical symbol, e.g., C for carbon.
         """
-        self.atomic_mass_number: int = atomic_mass_number
-        self.chemical_symbol: str = chemical_symbol
-        # A concatenation of the atomic mass number and chemical symbol.
-        self.ael: str = str(atomic_mass_number) + chemical_symbol
-        self.nuclear_spin: Fraction = Fraction(constants.NUCLEAR_SPIN[self.ael])
+        self.atomic_mass_number = atomic_mass_number
+        self.chemical_symbol = chemical_symbol
+        # A concatenation of the atomic mass number and chemical symbol, e.g., 12C for carbon-12.
+        self.ael = str(atomic_mass_number) + chemical_symbol
+        self.nuclear_spin = Fraction(constants.NUCLEAR_SPIN[self.ael])
 
     @property
     def mass(self) -> float:
         """Return the atomic mass in [kg].
 
-        Args:
-            name (str): Name of the atom.
+        Returns:
+            The atomic mass in [kg].
 
         Raises:
             ValueError: If the selected atom is not supported.
-
-        Returns:
-            float: The atomic mass in [kg].
         """
         if self.ael not in constants.ATOMIC_MASSES:
             raise ValueError(f"Atom `{self.ael}` not supported.")
@@ -61,11 +58,11 @@ class Atom:
     def nuclear_statistics(self) -> NuclearStatistics:
         """Determine the nuclear spin statistics of the nuclei.
 
+        Returns:
+            The nuclear spin statistics, Bose or Fermi.
+
         Raises:
             ValueError: If the spin is not an integer or half-integer.
-
-        Returns:
-            NuclearStatistics: The nuclear spin statistics, Bose or Fermi.
         """
         # Bosons have integer values of spin.
         if self.nuclear_spin.is_integer():

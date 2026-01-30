@@ -24,7 +24,7 @@ def get_data_path(*relative_path_parts) -> Path:
     """Get the correct data path, accounting for PyInstaller executable.
 
     Returns:
-        Path: A relative path if developing, the absolute path to the bundle folder if PyInstaller.
+        A relative path if developing, the absolute path to the bundle folder if using PyInstaller.
     """
     if getattr(sys, "frozen", False):
         base_path = Path(sys._MEIPASS)  # pyright: ignore[reportAttributeAccessIssue]

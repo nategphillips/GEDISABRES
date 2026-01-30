@@ -21,7 +21,7 @@ from dataclasses import dataclass
 
 @dataclass
 class TemperatureParams:
-    """Temperature parameters."""
+    """Translational, electronic, vibrational, and rotational temperatures."""
 
     translational: float = 300.0
     electronic: float = 300.0
@@ -31,7 +31,7 @@ class TemperatureParams:
 
 @dataclass
 class ShiftBools:
-    """Switches for line shifting mechanisms."""
+    """Switches for collisional and Doppler line shifting mechanisms."""
 
     collisional: bool = False
     doppler: bool = False
@@ -39,7 +39,7 @@ class ShiftBools:
 
 @dataclass
 class ShiftParams:
-    """Line shift parameters."""
+    """Line shift parameters `a` and `b`."""
 
     collisional_a: float = 0.0
     collisional_b: float = 0.0
@@ -47,7 +47,7 @@ class ShiftParams:
 
 @dataclass
 class LaserParams:
-    """Laser parameters."""
+    """Laser power, beam diameter, and molecule velocity."""
 
     power_w: float = 0.0
     beam_diameter_mm: float = 1.0
@@ -56,7 +56,7 @@ class LaserParams:
 
 @dataclass
 class InstrumentParams:
-    """Instrument broadening parameters."""
+    """Instrument broadening parameters, Gaussian and Lorentzian."""
 
     gauss_fwhm_wl: float = 0.0
     loren_fwhm_wl: float = 0.0
@@ -64,7 +64,7 @@ class InstrumentParams:
 
 @dataclass
 class BroadeningBools:
-    """Switches for broadening mechanisms."""
+    """Switches for all broadening mechanisms."""
 
     collisional: bool = False
     doppler: bool = False

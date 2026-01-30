@@ -39,10 +39,10 @@ def wavenum_to_wavelen(wavenumber: float | NDArray[np.float64]) -> float | NDArr
     Not valid for bandwidth conversions since there is an inverse relationship.
 
     Args:
-        wavenumber (float | NDArray[np.float64]): Wavenumber(s) in [1/cm].
+        wavenumber: Wavenumber(s) in [1/cm].
 
     Returns:
-        float | NDArray[np.float64]: The corresponding wavelength(s) in [nm].
+        The corresponding wavelength(s) in [nm].
     """
     return 1.0 / wavenumber * 1e7
 
@@ -53,10 +53,10 @@ def freq_to_wavenum(freq: float) -> float:
     Valid for bandwidth conversions since there is no inverse relationship.
 
     Args:
-        freq (float): Frequency in [1/s].
+        freq: Frequency in [1/s].
 
     Returns:
-        float: The corresponding wavenumber in [1/cm].
+        The corresponding wavenumber in [1/cm].
     """
     return freq / constants.LIGHT
 
@@ -68,16 +68,16 @@ def bandwidth_wavelen_to_wavenum(center_wl: float, fwhm_wl: float) -> float:
     https://www.lasercalculator.com/spectral-bandwidth-converter/ for details.
 
     Args:
-        center_wl (float): Center wavelength in [nm] around which the bandwidth is defined.
-        fwhm_wl (float): FWHM bandwidth in [nm].
+        center_wl: Center wavelength in [nm] around which the bandwidth is defined.
+        fwhm_wl: FWHM bandwidth in [nm].
 
     Returns:
-        float: The FWHM bandwidth in [1/cm].
+        The FWHM bandwidth in [1/cm].
     """
-    wl_min: float = center_wl - 0.5 * fwhm_wl
-    wl_max: float = center_wl + 0.5 * fwhm_wl
-    wn_min: float = 1.0 / wl_max
-    wn_max: float = 1.0 / wl_min
+    wl_min = center_wl - 0.5 * fwhm_wl
+    wl_max = center_wl + 0.5 * fwhm_wl
+    wn_min = 1.0 / wl_max
+    wn_max = 1.0 / wl_min
 
     # Convert from [1/nm] to [1/cm].
     return 1e7 * (wn_max - wn_min)

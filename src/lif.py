@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, overload
 
@@ -103,7 +104,7 @@ def laser_intensity(
     <https://doi.org/10.2514/6.1996-1991>.
 
     Args:
-        t: Time point(s) at which to calculate the intensity.
+        t: Time point(s) at which to calculate the intensity in [s].
         laser_params: Parameters defining the laser beam properties.
 
     Returns:
@@ -112,8 +113,10 @@ def laser_intensity(
     return (
         laser_params.fluence
         / laser_params.pulse_width
-        * np.sqrt(4 * np.log(2) / np.pi)
-        * np.exp(-4 * np.log(2) * ((t - laser_params.pulse_center) / laser_params.pulse_width) ** 2)
+        * math.sqrt(4.0 * math.log(2.0) / np.pi)
+        * np.exp(
+            -4.0 * math.log(2.0) * ((t - laser_params.pulse_center) / laser_params.pulse_width) ** 2
+        )
     )
 
 
@@ -138,12 +141,14 @@ def time_independent_rates(sim: Sim, line: Line) -> RateParams:
     s_j = line.honl_london_factor
 
     # Einstein coefficient for spontaneous emission in [1/s].
-    a_21 = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2 * j_qn_lo + 1)
+    a_21: float = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2 * j_qn_lo + 1)
 
     # Fluorescent radiative decay rate in [1/s].
     # The sum of all downward radiative transitions A_{ul} where u = v', minus the resonant
     # contribution where l = v'.
-    w_f = (sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo]) * s_j / (2 * j_qn_lo + 1)
+    w_f: float = (
+        (sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo]) * s_j / (2 * j_qn_lo + 1)
+    )
 
     # Einstein coefficient for photon absorption in [cm^2/(J.s)], Herzberg Eq. (I, 56).
     b_12 = a_21 / (8 * np.pi * constants.PLANC * constants.LIGHT * line.wavenumber**3) * g_u / g_l
@@ -205,12 +210,14 @@ def rate_equations(
 
     # Normalized rate equations from "A 3-Level Model for O2 LIF" by Diskin; see the `simulate`
     # function for the normalization used.
-    dn1_dt = -(w_la + rate_params.w_c) * n1 + (w_le + rate_params.a_21) * n2 + rate_params.w_c * n3
-    dn2_dt = (
+    dn1_dt: float = (
+        -(w_la + rate_params.w_c) * n1 + (w_le + rate_params.a_21) * n2 + rate_params.w_c * n3
+    )
+    dn2_dt: float = (
         w_la * n1
         - (w_le + rate_params.w_d + rate_params.a_21 + rate_params.w_f + rate_params.w_q) * n2
     )
-    dn3_dt = -(f_b / (1.0 - f_b)) * rate_params.w_c * (n3 - n1)
+    dn3_dt: float = -(f_b / (1.0 - f_b)) * rate_params.w_c * (n3 - n1)
 
     return [dn1_dt, dn2_dt, dn3_dt]
 
@@ -220,8 +227,8 @@ def simulate(
     laser_params: LIFLaserParams,
     line: Line,
     t_eval: NDArray[np.float64] | None = None,
-) -> OdeResult:
-    """Return the population densities of the three states as functions of time.
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Return the time and population densities of the three states as functions of time.
 
     Args:
         rate_params: Rate parameters.
@@ -230,7 +237,7 @@ def simulate(
         t_eval: Optional, which time steps to integrate over. Defaults to None.
 
     Returns:
-        The result of the integration, including the time and solution arrays.
+        The time and solution arrays.
 
     Raises:
         RuntimeError: If the solution fails to converge.
@@ -247,7 +254,7 @@ def simulate(
     # By default, the solver chooses its own time array, but we can also pass one if desired.
     t_span = (MIN_TIME, MAX_TIME) if t_eval is None else (float(t_eval[0]), float(t_eval[-1]))
 
-    solution = solve_ivp(
+    solution: OdeResult = solve_ivp(
         fun=rate_equations,
         t_span=t_span,
         y0=n0,
@@ -261,7 +268,7 @@ def simulate(
     if not solution.success:
         raise RuntimeError(solution.message)
 
-    return solution
+    return solution.t, solution.y
 
 
 def get_signal(
@@ -355,9 +362,7 @@ def populations_vs_time(sim: Sim, line: Line, laser_params: LIFLaserParams) -> N
     """
     rate_params = time_independent_rates(sim, line)
 
-    sol = simulate(rate_params, laser_params, line)
-    t = sol.t
-    n1, n2, n3 = sol.y
+    t, (n1, n2, n3) = simulate(rate_params, laser_params, line)
 
     # Normalize the signal with respect to N2.
     sf = get_signal(t, n2, rate_params)
@@ -404,10 +409,9 @@ def max_signal_vs_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) ->
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        sol = simulate(rate_params, iterate_laser_params, line)
-        _, n2, _ = sol.y
+        t, (_, n2, _) = simulate(rate_params, iterate_laser_params, line)
 
-        signal = get_signal(sol.t, n2, rate_params)
+        signal = get_signal(t, n2, rate_params)
         max_signals[idx] = signal.max()
 
     plt.plot(fluences, max_signals / max_signals.max())
@@ -436,8 +440,7 @@ def n2_vs_time_and_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) -
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        sol = simulate(rate_params, iterate_laser_params, line, t_eval=t_eval)
-        _, n2, _ = sol.y
+        t, (_, n2, _) = simulate(rate_params, iterate_laser_params, line, t_eval=t_eval)
 
         n2_populations[idx, :] = n2
 

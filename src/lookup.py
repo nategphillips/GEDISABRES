@@ -22,7 +22,7 @@ import data_path
 import fwf_reader
 
 # Column headers and data are from the Atomic Mass Evaluation 2020 mass_1.mas20 database file.
-MASS_COLS: list[tuple[str, int, int]] = [
+MASS_COLS = [
     # a1
     ("cc", 0, 1),
     # i3

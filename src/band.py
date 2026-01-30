@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import dataclasses
+import math
 from functools import cached_property
 from typing import TYPE_CHECKING
 
@@ -44,15 +45,15 @@ if TYPE_CHECKING:
 
 
 def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
-    """Create filled constant classes for use with hamilterm.
+    """Create filled constant classes for use with Hamilterm.
 
     Args:
-        table (dict[str, float]): Dictionary containing all supplied constants for the molecule.
+        table: Dictionary containing all supplied constants for the molecule.
 
     Returns:
-        hconsts.NumericConstants: Constants object for use with hamilterm.
+        A `NumericConstants` object for use with Hamilterm.
     """
-    numeric_consts: hconsts.ConstantsNum = hconsts.ConstantsNum()
+    numeric_consts = hconsts.ConstantsNum()
 
     for field in dataclasses.fields(numeric_consts):
         # Load all constant classes contained in NumericConstants (rotational, spin-orbit,
@@ -72,17 +73,17 @@ def n_values_for_j(j_qn: float, s_qn: float) -> list[float]:
     """Computes the possible values of N for a given J, from J - S to J + S.
 
     Args:
-        j_qn (float): Quantum number J.
-        s_qn (float): Quantum number S.
+        j_qn: Quantum number J.
+        s_qn: Quantum number S.
 
     Returns:
-        list[float]: Valid N for the given J.
+        Valid values of N for the given J.
     """
-    lo: float = j_qn - s_qn
-    hi: float = j_qn + s_qn
+    lo = j_qn - s_qn
+    hi = j_qn + s_qn
 
     n_values: list[float] = []
-    current: float = lo
+    current = lo
     while current <= hi:
         n_values.append(current)
         current += 1
@@ -96,17 +97,17 @@ def nuclear_parity_mask(
     """Create a mask of allowed rotational quantum numbers using nuclear degeneracies.
 
     Args:
-        n_qn_vals (list[float]): Quantum numbers N.
-        degeneracy_even (float): Nuclear degeneracy for even values of N.
-        degeneracy_odd (float): Nuclear degeneracy for odd values of N.
+        n_qn_vals: Quantum numbers N.
+        degeneracy_even: Nuclear degeneracy for even values of N.
+        degeneracy_odd: Nuclear degeneracy for odd values of N.
+
+    Returns:
+        Allowed rotational quantum numbers N.
 
     Raises:
         ValueError: If both even and odd nuclear degeneracies are zero.
-
-    Returns:
-        NDArray[np.bool]: Allowed rotational quantum numbers N.
     """
-    n_qn_arr: NDArray[np.int64] = np.array(n_qn_vals)
+    n_qn_arr = np.array(n_qn_vals, dtype=np.float64)
 
     # If even N values are forbidden, return true only for odd values.
     if (degeneracy_even == 0) and (degeneracy_odd != 0):
@@ -139,24 +140,24 @@ def honl_london_matrix(
     Algorithm based on Equation 22 in Hornkohl, et al.
 
     Args:
-        j_qn_up (float): Upper state rotational quantum number J'.
-        j_qn_lo (float): Lower state rotational quantum number J''.
-        unitary_up (NDArray[np.float64]): Upper state unitary matrix.
-        unitary_lo (NDArray[np.float64]): Lower state unitary matrix.
-        omega_basis_up (NDArray[np.float64]): Upper state Ω' quantum numbers.
-        omega_basis_lo (NDArray[np.float64]): Lower state Ω'' quantum numbers.
-        lambda_basis_up (NDArray[np.float64]): Upper state Λ' quantum numbers.
-        lambda_basis_lo (NDArray[np.float64]): Lower state Λ'' quantum numbers.
-        transition_order (int, optional): Transition order. Defaults to 1.
+        j_qn_up: Upper state rotational quantum number J'.
+        j_qn_lo: Lower state rotational quantum number J''.
+        unitary_up: Upper state unitary matrix.
+        unitary_lo: Lower state unitary matrix.
+        omega_basis_up: Upper state Ω' quantum numbers.
+        omega_basis_lo: Lower state Ω'' quantum numbers.
+        lambda_basis_up: Upper state Λ' quantum numbers.
+        lambda_basis_lo: Lower state Λ'' quantum numbers.
+        transition_order: Transition order. Defaults to 1.
 
     Returns:
-        NDArray[np.float64]: The (num_branches_up, num_branches_low) dimensional Hönl-London factor
-            matrix corresponding to the given (J', J'') pair.
+        The (num_branches_up, num_branches_low) dimensional Hönl-London factor matrix corresponding
+        to the given (J', J'') pair.
     """
     # NOTE: 25/07/09 - This Clebsch-Gordan method comes from the py3nj package
-    #       (https://github.com/fujiisoup/py3nj), which requires a Fortran compiler and the Ninja
+    #       <https://github.com/fujiisoup/py3nj>, which requires a Fortran compiler and the Ninja
     #       build system to be installed. On Windows, Quickstart Fortran
-    #       (https://github.com/LKedward/quickstart-fortran) installs a MinGW backend along with
+    #       <https://github.com/LKedward/quickstart-fortran> installs a MinGW backend along with
     #       GFortran and the Ninja build system. Word of caution: if you have multiple MinGW or
     #       GFortran versions installed, make sure to move the Quickstart Fortran versions to the
     #       top of your PATH, or the build might fail! Linux is more straightforward, just ensure
@@ -170,9 +171,9 @@ def honl_london_matrix(
     omega_matrix_up = omega_basis_up[:, None]
     omega_matrix_lo = omega_basis_lo[None, :]
 
-    two_j1: int = int(2 * j_qn_up)
-    two_j2: int = int(2 * transition_order)
-    two_j3: int = int(2 * j_qn_lo)
+    two_j1 = int(2 * j_qn_up)
+    two_j2 = int(2 * transition_order)
+    two_j3 = int(2 * j_qn_lo)
 
     two_m1: NDArray[np.int64] = (2 * omega_matrix_up).astype(int)
     two_m2: NDArray[np.int64] = (2 * (lambda_matrix_lo - lambda_matrix_up)).astype(int)
@@ -181,7 +182,7 @@ def honl_london_matrix(
     # NOTE: 25/07/09 - Since the values for Λ are always integers, while the values for Σ can be
     #       half-integers, Ω = Λ + Σ is generally a half-integer. The arguments passed to the CG
     #       method are doubled so that half-integer values are properly handled, see
-    #       https://py3nj.readthedocs.io/en/master/examples.html for details.
+    #       <https://py3nj.readthedocs.io/en/master/examples.html> for details.
 
     cg: NDArray[np.float64] = clebsch_gordan(
         two_j1=two_j1,
@@ -199,10 +200,11 @@ def honl_london_matrix(
     #       Clebsch-Gordan and Wigner 3j symbols.
 
     # Compute the matrix of all possible transitions for a given (J', J'') pair.
-    transition_amplitude: NDArray[np.float64] = unitary_up.T @ cg @ unitary_lo
+    transition_amplitude = unitary_up.T @ cg @ unitary_lo
 
-    hlf: NDArray[np.float64] = (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
+    hlf = (2 * j_qn_up + 1) * np.abs(transition_amplitude) ** 2
 
+    # Implement the H1 function from Ochkin.
     mask_up: NDArray[np.bool] = (
         (lambda_matrix_up == 0) & (sigma_matrix_up == 0) & (lambda_matrix_lo == 1)
     )
@@ -210,8 +212,7 @@ def honl_london_matrix(
         (lambda_matrix_lo == 0) & (sigma_matrix_lo == 0) & (lambda_matrix_up == 1)
     )
 
-    # Implement the H1 function from Ochkin.
-    hlf[mask_up | mask_lo] *= 2
+    hlf[mask_up | mask_lo] *= 2.0
 
     return hlf
 
@@ -223,20 +224,19 @@ class Band:
         """Initialize class variables.
 
         Args:
-            sim (Sim): Parent simulation.
-            v_qn_up (int): Upper vibrational quantum number v'.
-            v_qn_lo (int): Lower vibrational quantum number v''.
+            sim: Parent simulation.
+            v_qn_up: Upper vibrational quantum number v'.
+            v_qn_lo: Lower vibrational quantum number v''.
         """
-        self.sim: Sim = sim
-        self.v_qn_up: int = v_qn_up
-        self.v_qn_lo: int = v_qn_lo
+        self.sim = sim
+        self.v_qn_up = v_qn_up
+        self.v_qn_lo = v_qn_lo
 
     def wavenumbers_line(self) -> NDArray[np.float64]:
         """Return an array of wavenumbers, one for each line.
 
         Returns:
-            NDArray[np.float64]: All discrete rotational line wavenumbers belonging to the
-                vibrational band.
+            All discrete rotational line wavenumbers belonging to the vibrational band.
         """
         return np.array([line.wavenumber for line in self.lines])
 
@@ -244,7 +244,7 @@ class Band:
         """Return an array of intensities, one for each line.
 
         Returns:
-            NDArray[np.float64]: All rotational line intensities belonging to the vibrational band.
+            All rotational line intensities belonging to the vibrational band.
         """
         return np.array([line.intensity for line in self.lines])
 
@@ -252,10 +252,10 @@ class Band:
         """Return an array of convolved wavenumbers.
 
         Args:
-            granularity (int): Number of points on the wavenumber axis.
+            granularity: Number of points on the wavenumber axis.
 
         Returns:
-            NDArray[np.float64]: A continuous range of wavenumbers.
+            A continuous range of wavenumbers.
         """
         if self.sim.plot_bools.limits:
             return np.linspace(
@@ -268,12 +268,12 @@ class Band:
         # spectral features at either extreme are not clipped when the FWHM parameters are large.
         # The first line's instrument FWHM is chosen as an arbitrary reference to keep things
         # simple. The minimum Gaussian FWHM allowed is 2 to ensure that no clipping is encountered.
-        inst_broadening: float = max(self.lines[0].fwhm_instrument())
-        padding: float = 10.0 * max(inst_broadening, 2)
+        inst_broadening = max(self.lines[0].fwhm_instrument())
+        padding = 10.0 * max(inst_broadening, 2)
 
         # The individual line wavenumbers are only used to find the minimum and maximum bounds of
         # the spectrum since the spectrum itself is no longer quantized.
-        wns_line: NDArray[np.float64] = self.wavenumbers_line()
+        wns_line = self.wavenumbers_line()
 
         # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min() - padding, wns_line.max() + padding, granularity)
@@ -285,18 +285,22 @@ class Band:
         """Return an array of convolved intensities.
 
         Args:
-            fwhm_selections (dict[str, bool]): The types of broadening to be simulated.
-            wavenumbers_conv (NDArray[np.float64]): The convolved wavelengths to use.
+            fwhm_selections: The types of broadening to be simulated.
+            wavenumbers_conv: The convolved wavelengths to use.
 
         Returns:
-            NDArray[np.float64]: A continuous range of intensities.
+            A continuous range of intensities.
         """
         return convolve.convolve(self.lines, wavenumbers_conv)
 
     @cached_property
     def vib_boltz_frac(self) -> tuple[float, float]:
-        """Return the vibrational Boltzmann fraction N_v / N."""
-        temperature_factor: float = (
+        """Return the vibrational Boltzmann fraction N_v / N.
+
+        Returns:
+            The vibrational Boltzmannn fraction N_v / N.
+        """
+        temperature_factor = (
             constants.PLANC * constants.LIGHT / (constants.BOLTZ * self.sim.temp_params.vibrational)
         )
 
@@ -304,15 +308,15 @@ class Band:
         #       zero-point vibrational energy to match the vibrational partition function.
         def boltzmann_fraction(state: State, v_qn: int) -> float:
             return (
-                np.exp(
+                math.exp(
                     -(state.constants_vqn(v_qn)["G"] - state.constants_vqn(0)["G"])
                     * temperature_factor
                 )
                 / self.sim.vib_partition_fn
             )
 
-        vibrational_fraction_up: float = boltzmann_fraction(self.sim.state_up, self.v_qn_up)
-        vibrational_fraction_lo: float = boltzmann_fraction(self.sim.state_lo, self.v_qn_lo)
+        vibrational_fraction_up = boltzmann_fraction(self.sim.state_up, self.v_qn_up)
+        vibrational_fraction_lo = boltzmann_fraction(self.sim.state_lo, self.v_qn_lo)
 
         return vibrational_fraction_up, vibrational_fraction_lo
 
@@ -321,7 +325,7 @@ class Band:
         """Return the band origin in [1/cm].
 
         Returns:
-            float: The band origin in [1/cm].
+            The band origin in [1/cm].
         """
         # Herzberg p. 168, eq. (IV, 24)
 
@@ -383,14 +387,14 @@ class Band:
 
     @cached_property
     def rot_partition_fn(self) -> float:
-        """Return the rotational partition function, Q_r.
+        """Return the rotational partition function Q_r.
 
         The rotational partition function is computed using the high-temperature approximation,
         given by Equation 2.21 in the 2016 book "Spectroscopy and Optical Diagnostics for Gases" by
         Ronald K. Hanson et al.
 
         Returns:
-            float: The rotational partition function, Q_r.
+            The rotational partition function Q_r.
         """
         match self.sim.sim_type:
             case SimType.EMISSION:
@@ -407,47 +411,42 @@ class Band:
 
         # This is the effective rotational partition function, i.e., it includes the nuclear
         # partition function.
-        theta_r: float = (
+        theta_r = (
             constants.PLANC * constants.LIGHT * state.constants_vqn(v_qn)["B"] / constants.BOLTZ
         )
-        q_r: float = (
+
+        return (
             self.sim.temp_params.rotational
             * state.nuclear_partition_fn()
             / (theta_r * self.sim.molecule.symmetry_param)
         )
-
-        return q_r
 
     @cached_property
     def lines(self) -> list[Line]:
         """Return a list of all allowed rotational lines.
 
         Returns:
-            list[Line]: A list of all allowed `Line` objects for the given selection rules.
+            A list of all allowed `Line` objects for the given selection rules.
         """
-        term_symbol_up: str = (
+        term_symbol_up = (
             str(self.sim.state_up.spin_multiplicity)
             + constants.TERM_SYMBOL_MAP[self.sim.state_up.term_symbol]
         )
-        term_symbol_lo: str = (
+        term_symbol_lo = (
             str(self.sim.state_lo.spin_multiplicity)
             + constants.TERM_SYMBOL_MAP[self.sim.state_lo.term_symbol]
         )
 
-        table_up: dict[str, float] = self.sim.state_up.constants_vqn(self.v_qn_up)
-        table_lo: dict[str, float] = self.sim.state_lo.constants_vqn(self.v_qn_lo)
+        table_up = self.sim.state_up.constants_vqn(self.v_qn_up)
+        table_lo = self.sim.state_lo.constants_vqn(self.v_qn_lo)
 
-        consts_up: hconsts.ConstantsNum = fill_consts_from_dict(table_up)
-        consts_lo: hconsts.ConstantsNum = fill_consts_from_dict(table_lo)
+        consts_up = fill_consts_from_dict(table_up)
+        consts_lo = fill_consts_from_dict(table_lo)
 
         s_qn_up, lambda_qn_up = hutils.parse_term_symbol_num(term_symbol_up)
-        basis_fns_up: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(
-            s_qn_up, lambda_qn_up
-        )
+        basis_fns_up = hutils.generate_basis_fns_num(s_qn_up, lambda_qn_up)
         s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol_num(term_symbol_lo)
-        basis_fns_lo: list[tuple[int, float, float]] = hutils.generate_basis_fns_num(
-            s_qn_lo, lambda_qn_lo
-        )
+        basis_fns_lo = hutils.generate_basis_fns_num(s_qn_lo, lambda_qn_lo)
 
         lambda_basis_up = np.array([lamda for (lamda, _, _) in basis_fns_up])
         lambda_basis_lo = np.array([lamda for (lamda, _, _) in basis_fns_lo])
@@ -462,21 +461,19 @@ class Band:
         #       vibrational and electronic spectra" by Colin M. Western, in which the low quantum
         #       number rules are stated as: J ≥ |Ω|, N ≥ |Λ|, and J ≥ |N - S|.
 
-        n_qn_up_min: int = abs(lambda_qn_up)
-        j_qn_up_min: float = abs(n_qn_up_min - s_qn_up)
+        n_qn_up_min = abs(lambda_qn_up)
+        j_qn_up_min = abs(n_qn_up_min - s_qn_up)
         # NOTE: 25/07/18 - For now, the maximum J' input box in the GUI only accepts integer values,
         #       so in the case of a transition with half-integer values, the minimum value will be
         #       half-integer and we simply add the two to prevent truncation.
-        j_qn_up_max: float = j_qn_up_min + self.sim.j_qn_up_max
+        j_qn_up_max = j_qn_up_min + self.sim.j_qn_up_max
 
         def create_j_range(j_qn_up_min: float, j_qn_up_max: float) -> list[float]:
             count: int = int(j_qn_up_max - j_qn_up_min)
             return [j_qn_up_min + i for i in range(count + 1)]
 
-        j_qn_up_range: list[float] = create_j_range(j_qn_up_min, j_qn_up_max)
-        j_qn_lo_range: list[float] = [
-            j for j in create_j_range(j_qn_up_min - 1, j_qn_up_max + 1) if j >= 0
-        ]
+        j_qn_up_range = create_j_range(j_qn_up_min, j_qn_up_max)
+        j_qn_lo_range = [j for j in create_j_range(j_qn_up_min - 1, j_qn_up_max + 1) if j >= 0]
 
         # NOTE: 25/07/15 - Precomputing the upper state eigenvalues/vectors is somewhat faster than
         #       computing them inside the main loop, but this is mainly done to mirror the
@@ -485,8 +482,8 @@ class Band:
         unitary_up_cache: dict[float, NDArray[np.float64]] = {}
 
         for j_qn_up in j_qn_up_range:
-            # FIXME: 25/08/05 - Should make hamilterm automatically compute the max N power and max
-            #        anticommutator power from the constants supplied.
+            # TODO: 25/08/05 - Should make hamilterm automatically compute the max N power and max
+            #       anticommutator power from the constants supplied.
             comp_up = numerics.NumericComputation(
                 term_symbol_up, consts_up, j_qn_up, max_n_power=12, max_acomm_power=8
             )
@@ -507,8 +504,8 @@ class Band:
             unitary_lo_cache[j_qn_lo] = comp_lo.eigenvectors
 
         # Upper and lower Hamiltonian dimensions.
-        dim_up: int = len(basis_fns_up)
-        dim_lo: int = len(basis_fns_lo)
+        dim_up = len(basis_fns_up)
+        dim_lo = len(basis_fns_lo)
 
         # Each (J', J'') pair will have an associated Hönl-London factor matrix with the dimensions
         # (num_branches_up, branch_branches_lo). For example, each (J', J'') pair for a 3x3
@@ -531,21 +528,21 @@ class Band:
             #       non-negative. For now, keep them to make debugging easier.
 
             # Get all possible N' values for each J'.
-            n_qn_up_vals: list[float] = n_values_for_j(j_qn_up, s_qn_up)
+            n_qn_up_vals = n_values_for_j(j_qn_up, s_qn_up)
 
             # Check if the generated N' values have any zero-valued degeneracies and mask them off
             # if so.
-            allowed_n_qn_up: NDArray[np.bool] = nuclear_parity_mask(
+            allowed_n_qn_up = nuclear_parity_mask(
                 n_qn_up_vals, degeneracy_up_even, degeneracy_up_odd
             )
 
             # Upper state eigenvalues, dimension (1, num_branches_up).
-            eigenvals_up: NDArray[np.float64] = eigenvals_up_cache[j_qn_up]
+            eigenvals_up = eigenvals_up_cache[j_qn_up]
             # Upper state unitary matrix, dimension (num_branches_up, num_branches_up).
-            unitary_up: NDArray[np.float64] = unitary_up_cache[j_qn_up]
+            unitary_up = unitary_up_cache[j_qn_up]
 
             # Allowed ΔJ = J' - J'' values for dipole transitions are +1, 0, and -1.
-            j_qn_lo_list: list[float] = [j for j in [j_qn_up - 1, j_qn_up, j_qn_up + 1] if j >= 0]
+            j_qn_lo_list = [j for j in [j_qn_up - 1, j_qn_up, j_qn_up + 1] if j >= 0]
 
             for j_qn_lo in j_qn_lo_list:
                 # If J'' has not yet been encountered, compute its allowed N'' values.
@@ -556,17 +553,17 @@ class Band:
                     )
 
                 # Get all allowed N'' values for each J''.
-                n_qn_lo_vals: list[float] = n_qn_lo_cache[j_qn_lo]
+                n_qn_lo_vals = n_qn_lo_cache[j_qn_lo]
 
-                allowed_n_qn_lo: NDArray[np.bool] = allowed_n_nq_lo_cache[j_qn_lo]
+                allowed_n_qn_lo = allowed_n_nq_lo_cache[j_qn_lo]
 
-                key: tuple[float, float] = (j_qn_up, j_qn_lo)
+                key = (j_qn_up, j_qn_lo)
                 # Check if the HLFs for the given (J', J'') pair have already been computed.
-                hlf_mat: NDArray[np.float64] | None = hlf_matrix_cache.get(key)
+                hlf_mat = hlf_matrix_cache.get(key)
 
                 if hlf_mat is None:
                     # Lower state unitary matrix, dimension (num_branches_lo, num_branches_lo).
-                    unitary_lo: NDArray[np.float64] = unitary_lo_cache[j_qn_lo]
+                    unitary_lo = unitary_lo_cache[j_qn_lo]
 
                     # Hönl-London factor matrix for the given (J', J'') combination, has dimensions
                     # (num_branches_up, branch_branches_lo).
@@ -586,17 +583,17 @@ class Band:
                     hlf_matrix_cache[key] = hlf_mat
 
                 # Get the indices of the arguments that are non-zero.
-                ij_pairs = np.argwhere(hlf_mat > constants.HONL_LONDON_CUTOFF)
+                ij_pairs: NDArray[np.intp] = np.argwhere(hlf_mat > constants.HONL_LONDON_CUTOFF)
 
                 # Upper state eigenvalues, dimension (1, num_branches_lo).
-                eigenvals_lo: NDArray[np.float64] = eigenvals_lo_cache[j_qn_lo]
+                eigenvals_lo = eigenvals_lo_cache[j_qn_lo]
 
                 for i, j in ij_pairs:
                     # Account for lambda doubling when labeling branch indices and N values.
-                    mod_up: int = (
+                    mod_up = (
                         (dim_up // 2) if self.sim.state_up.term_symbol != TermSymbol.SIGMA else 1
                     )
-                    mod_lo: int = (
+                    mod_lo = (
                         (dim_lo // 2) if self.sim.state_lo.term_symbol != TermSymbol.SIGMA else 1
                     )
 
@@ -604,18 +601,18 @@ class Band:
                     branch_idx_up: int = (i // mod_up) + 1
                     branch_idx_lo: int = (j // mod_lo) + 1
 
-                    n_qn_up = n_qn_up_vals[i // mod_up]
-                    n_qn_lo = n_qn_lo_vals[j // mod_lo]
+                    n_qn_up: float = n_qn_up_vals[i // mod_up]
+                    n_qn_lo: float = n_qn_lo_vals[j // mod_lo]
 
                     # Discard lines with disallowed nuclear statistics.
                     if not allowed_n_qn_up[i // mod_up] or not allowed_n_qn_lo[j // mod_lo]:
                         continue
 
-                    hlf: float = float(hlf_mat[i, j])
-                    eigenval_up: float = float(eigenvals_up[i])
-                    eigenval_lo: float = float(eigenvals_lo[j])
+                    hlf = float(hlf_mat[i, j])
+                    eigenval_up = float(eigenvals_up[i])
+                    eigenval_lo = float(eigenvals_lo[j])
 
-                    is_satellite: bool = branch_idx_up != branch_idx_lo
+                    is_satellite = branch_idx_up != branch_idx_lo
 
                     lines.append(
                         Line(

@@ -436,7 +436,6 @@ class ParametersDialog(QDialog):
         self.resize(600, 400)
         self.tab = tab
 
-        # asadf
         self.atom_1_mass = QSpinBox()
         self.atom_1_mass.setRange(0, 400)
         self.atom_1_symbol = QLineEdit()

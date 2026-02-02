@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import pyqtgraph as pg
@@ -58,6 +57,7 @@ from PySide6.QtWidgets import (
 )
 
 import data_path
+import lif
 import plot
 import utils
 from atom import Atom
@@ -1047,7 +1047,7 @@ class CustomTab(QWidget):
     def run_simulation(self) -> None:
         """Run a simulation instance for this specific tab."""
         bands = self.get_current_bands()
-        colors = get_colors(bands)
+        colors = get_colors(len(bands))
 
         self.plot_widget.clear()
 
@@ -1191,6 +1191,153 @@ class CustomTab(QWidget):
             self.update_tab_name()
 
 
+class LIFTab(QWidget):
+    def __init__(self, parent_tab_widget: QTabWidget):
+        super().__init__()
+        self.parent_tab_widget = parent_tab_widget
+
+        layout = QVBoxLayout(self)
+
+        sim_group = QGroupBox("Parent Simulation")
+        sim_layout = QHBoxLayout(sim_group)
+        self.sim_selector = QComboBox()
+        sim_layout.addWidget(QLabel("Use tab:"))
+        sim_layout.addWidget(self.sim_selector)
+        layout.addWidget(sim_group)
+
+        line_group = QGroupBox("Line Selection")
+        line_layout = QHBoxLayout(line_group)
+        self.branch_name_j = QComboBox()
+        self.branch_name_j.addItems(["P", "Q", "R"])
+        self.branch_idx_lo = QSpinBox()
+        self.branch_idx_lo.setRange(1, 3)
+        self.n_qn_lo = QSpinBox()
+        self.n_qn_lo.setRange(0, 200)
+
+        line_layout.addWidget(QLabel("Branch (ΔJ):"))
+        line_layout.addWidget(self.branch_name_j)
+        line_layout.addWidget(QLabel("Branch index:"))
+        line_layout.addWidget(self.branch_idx_lo)
+        line_layout.addWidget(QLabel("N'':"))
+        line_layout.addWidget(self.n_qn_lo)
+        layout.addWidget(line_group)
+
+        laser_group = QGroupBox("Laser Pulse Parameters")
+        laser_layout = QHBoxLayout(laser_group)
+
+        self.pulse_center = MyDoubleSpinBox()
+        self.pulse_center.setSuffix(" [ns]")
+        self.pulse_width = MyDoubleSpinBox()
+        self.pulse_width.setSuffix(" [ns]")
+        self.fluence = MyDoubleSpinBox()
+        self.fluence.setSuffix(" [J/cm²]")
+
+        self.pulse_center.setValue(30.0)
+        self.pulse_width.setValue(20.0)
+        self.fluence.setValue(25e-3)
+
+        self.max_time = MyDoubleSpinBox()
+        self.max_time.setSuffix(" [ns]")
+        self.n_points = QSpinBox()
+        self.n_points.setMaximum(1000000)
+
+        self.max_time.setValue(60.0)
+        self.n_points.setValue(1000)
+
+        laser_layout.addWidget(QLabel("Center:"))
+        laser_layout.addWidget(self.pulse_center)
+        laser_layout.addWidget(QLabel("Width (FWHM):"))
+        laser_layout.addWidget(self.pulse_width)
+        laser_layout.addWidget(QLabel("Fluence:"))
+        laser_layout.addWidget(self.fluence)
+        laser_layout.addWidget(QLabel("Max time:"))
+        laser_layout.addWidget(self.max_time)
+        laser_layout.addWidget(QLabel("Points:"))
+        laser_layout.addWidget(self.n_points)
+        layout.addWidget(laser_group)
+
+        self.run_btn = QPushButton("Run LIF Simulation")
+        self.run_btn.clicked.connect(self.run_lif)
+        layout.addWidget(self.run_btn)
+
+        self.plot = pg.PlotWidget()
+        self.plot.addLegend(offset=(0, 1))
+        self.plot.setLabel("bottom", "Time, t [s]")
+        self.plot.setLabel("left", "N_1, N_3, I_l (Normalized)")
+        self.plot.setLabel("right", "N_2, S_f (Normalized)")
+        layout.addWidget(self.plot, stretch=1)
+
+        self.refresh_parent_tabs()
+
+    def refresh_parent_tabs(self):
+        self.sim_selector.clear()
+        for idx in range(self.parent_tab_widget.count()):
+            tab = self.parent_tab_widget.widget(idx)
+            if hasattr(tab, "sim"):
+                self.sim_selector.addItem(self.parent_tab_widget.tabText(idx), userData=idx)
+
+    def get_parent_sim(self):
+        idx = self.sim_selector.currentData()
+        if idx is None:
+            return None
+        tab = self.parent_tab_widget.widget(idx)
+        return getattr(tab, "sim", None)
+
+    def run_lif(self):
+        parent_sim = self.get_parent_sim()
+        if parent_sim is None:
+            return
+
+        sim = parent_sim
+
+        branch_name_j = self.branch_name_j.currentText()
+        branch_idx_lo = int(self.branch_idx_lo.value())
+        n_qn_lo = int(self.n_qn_lo.value())
+
+        # TODO: 26/02/02 - Actually add dialog boxes here to tell the user what's happened.
+        try:
+            line = lif.find_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
+        except ValueError as e:
+            print(str(e))
+            return
+
+        # Spinbox inputs are in [ns], so convert back to [s].
+        laser_params = lif.LIFLaserParams(
+            self.pulse_center.value() * 1e-9,
+            self.pulse_width.value() * 1e-9,
+            self.fluence.value(),
+        )
+
+        # Max time also has to be converted from [ns] to [s].
+        t = np.linspace(0.0, self.max_time.value() * 1e-9, self.n_points.value())
+        rate_params = lif.time_independent_rates(sim, line)
+        n1, n2, n3 = lif.simulate(rate_params, laser_params, line, t)
+        sf = lif.get_signal(t, n2, rate_params)
+        il = lif.laser_intensity(t, laser_params)
+
+        sf = sf / n2.max()
+        il = il / il.max()
+
+        colors = get_colors(5)
+
+        self.plot.clear()
+        # Left axis.
+        self.plot.plot(t, n1, name="N1", pen=pg.mkPen(colors[0], width=1))
+        self.plot.plot(t, n3, name="N3", pen=pg.mkPen(colors[1], width=1))
+        self.plot.plot(t, il, name="I_l", pen=pg.mkPen(colors[2], width=1))
+
+        # Right axis.
+        self.plot.plot(
+            t, n2, name="N2", pen=pg.mkPen(colors[3], style=pg.QtCore.Qt.PenStyle.DashLine, width=1)
+        )
+        self.plot.plot(
+            t,
+            sf,
+            name="S_f",
+            pen=pg.mkPen(colors[4], style=pg.QtCore.Qt.PenStyle.DashLine, width=1),
+        )
+
+
 class AllSimulationsTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
@@ -1309,8 +1456,7 @@ class AllSimulationsTab(QWidget):
         #       common to all simulations and then add the contributions of all simulations to the
         #       plot.
 
-        num_tabs = len(custom_tabs)
-        all_sim_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][:num_tabs]
+        all_sim_colors = get_colors(len(custom_tabs))
 
         for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
@@ -1379,6 +1525,11 @@ class GUI(QMainWindow):
         all_sims_tab = AllSimulationsTab(parent_tab_widget=self.molecule_tab_widget)
         self.molecule_tab_widget.addTab(all_sims_tab, "All Simulations")
         self.molecule_tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+
+        self.lif_tab = LIFTab(parent_tab_widget=self.molecule_tab_widget)
+        self.molecule_tab_widget.addTab(self.lif_tab, "LIF")
+        self.molecule_tab_widget.tabBar().setTabButton(1, QTabBar.ButtonPosition.RightSide, None)
+
         self.molecule_tab_widget.tabBar().setMovable(False)
 
         for preset in MOLECULAR_PRESETS[:1]:
@@ -1392,21 +1543,16 @@ class GUI(QMainWindow):
             tab.update_tab_name()
             tab.run_simulation()
 
-        self.molecule_tab_widget.setCurrentIndex(1)
+        self.molecule_tab_widget.setCurrentIndex(2)
         self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
+
+        self.lif_tab.refresh_parent_tabs()
 
         return self.molecule_tab_widget
 
     def close_tab(self, index):
-        if self.molecule_tab_widget.count() > 2:
-            self.molecule_tab_widget.removeTab(index)
-        else:
-            QMessageBox.information(
-                self,
-                "Cannot Close Tab",
-                "At least one simulation tab must remain open.",
-                QMessageBox.StandardButton.Ok,
-            )
+        self.molecule_tab_widget.removeTab(index)
+        self.lif_tab.refresh_parent_tabs()
 
     def add_tab(self):
         dialog = PresetSelectionDialog(self)
@@ -1425,6 +1571,8 @@ class GUI(QMainWindow):
 
             self.molecule_tab_widget.setCurrentIndex(tab_count)
             tab.run_simulation()
+
+            self.lif_tab.refresh_parent_tabs()
 
 
 class WavenumberAxis(pg.AxisItem):

@@ -160,6 +160,7 @@ def plot_conv_sep(
         granularity: Number of points on the wavenumber axis.
         max_intensity: Provided only if multiple simulations are being run together. Defaults to
             None.
+        color_index: Provided only if multiple simulations are being run together. Defaults to 0.
     """
     convolved_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
     calculated_max_intensity = 0.0
@@ -194,19 +195,18 @@ def plot_conv_all(
     colors: list[str],
     granularity: int,
     max_intensity: float | None = None,
-    color_idx: int = 0,
+    color_index: int = 0,
 ) -> None:
     """Plot convolved data for all vibrational bands simultaneously.
 
     Args:
-        plot_widget (pg.PlotWidget): A `GraphicsView` widget with a single `PlotItem` inside.
-        sim (Sim): The parent simulation.
-        colors (list[str]): A list of colors for plotting.
-        granularity (int): Number of points on the wavenumber axis.
-        max_intensity (float | None, optional): Provided only if multiple simulations are being run
-            together. Defaults to None.
-        color_idx (int, optional): Provided only if multiple simulations are being run together.
-            Defaults to 0.
+        plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
+        sim: The parent simulation.
+        colors: A list of colors for plotting.
+        granularity: Number of points on the wavenumber axis.
+        max_intensity: Provided only if multiple simulations are being run together. Defaults to
+            None.
+        color_index: Provided only if multiple simulations are being run together. Defaults to 0.
     """
     wavenumbers_conv, intensities_conv = sim.all_conv_data(granularity)
     wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_conv)
@@ -219,6 +219,6 @@ def plot_conv_all(
     plot_widget.plot(
         wavelengths_conv,
         intensities_conv / max_intensity,
-        pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
+        pen=pg.mkPen(colors[color_index], width=PEN_WIDTH),
         name=f"{sim.molecule.name} conv all",
     )

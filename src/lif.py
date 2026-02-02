@@ -23,7 +23,6 @@ from typing import TYPE_CHECKING, overload
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sy
-from scipy.integrate import solve_ivp
 
 import constants
 from atom import Atom
@@ -39,9 +38,6 @@ if TYPE_CHECKING:
 
     from line import Line
 
-MIN_TIME = 0.0
-MAX_TIME = 60e-9
-N_TIME = 1000
 N_FLUENCE = 100
 
 
@@ -226,18 +222,18 @@ def simulate(
     rate_params: RateParams,
     laser_params: LIFLaserParams,
     line: Line,
-    t_eval: NDArray[np.float64] | None = None,
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    t_eval: NDArray[np.float64],
+) -> NDArray[np.float64]:
     """Return the time and population densities of the three states as functions of time.
 
     Args:
         rate_params: Rate parameters.
         laser_params: Laser parameters.
         line: The rotational line of interest.
-        t_eval: Optional, which time steps to integrate over. Defaults to None.
+        t_eval: Time steps to integrate over.
 
     Returns:
-        The time and solution arrays.
+        The solution array.
 
     Raises:
         RuntimeError: If the solution fails to converge.
@@ -251,24 +247,25 @@ def simulate(
     # The initial state populations are normalized, as are the rate equations.
     n0 = [1.0, 0.0, 1.0]
 
-    # By default, the solver chooses its own time array, but we can also pass one if desired.
-    t_span = (MIN_TIME, MAX_TIME) if t_eval is None else (float(t_eval[0]), float(t_eval[-1]))
+    # By default, the solver chooses its own time array, but we choose to pass one for more control.
+    t_span = (t_eval[0], t_eval[-1])
 
-    solution: OdeResult = solve_ivp(
+    solution: OdeResult = sy.integrate.solve_ivp(
         fun=rate_equations,
         t_span=t_span,
         y0=n0,
         t_eval=t_eval,
         args=(rate_params, laser_params, line),
         method="Radau",
-        rtol=1e-6,
-        atol=1e-9,
+        # Default tolerance (rtol=1e-3, atol=1e-6) seems to work well enough.
+        # rtol=1e-6,
+        # atol=1e-9,
     )
 
     if not solution.success:
         raise RuntimeError(solution.message)
 
-    return solution.t, solution.y
+    return solution.y
 
 
 def get_signal(
@@ -352,50 +349,56 @@ def find_line(sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) ->
     raise ValueError("No matching rotational line found.")
 
 
-def populations_vs_time(sim: Sim, line: Line, laser_params: LIFLaserParams) -> None:
+def populations_vs_time(
+    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+) -> None:
     """Plot the population densities, signal, and laser intensity as functions of time.
 
     Args:
         sim: Simulation.
         line: Line.
         laser_params: Laser parameters.
+        t_eval: Time steps to integrate over.
     """
     rate_params = time_independent_rates(sim, line)
 
-    t, (n1, n2, n3) = simulate(rate_params, laser_params, line)
+    n1, n2, n3 = simulate(rate_params, laser_params, line, t_eval)
 
     # Normalize the signal with respect to N2.
-    sf = get_signal(t, n2, rate_params)
+    sf = get_signal(t_eval, n2, rate_params)
     sf /= n2.max()
 
     # Normalize the laser with respect to itself.
-    il = laser_intensity(t, laser_params)
+    il = laser_intensity(t_eval, laser_params)
     il /= il.max()
 
     _, ax1 = plt.subplots()
     ax1.set_xlabel("Time, $t$ [s]")
     ax1.set_ylabel("$N_1$, $N_3$, $I_l$ (Normalized)")
-    ax1.plot(t, n1, label="$N_1$")
-    ax1.plot(t, n3, label="$N_3$")
-    ax1.plot(t, il, label="$I_l$")
+    ax1.plot(t_eval, n1, label="$N_1$")
+    ax1.plot(t_eval, n3, label="$N_3$")
+    ax1.plot(t_eval, il, label="$I_l$")
     ax1.legend()
 
     ax2 = ax1.twinx()
     ax2.set_ylabel("$N_2$, $S_f$ (Normalized)")
-    ax2.plot(t, n2, label="$N_2$", linestyle="-.")
-    ax2.plot(t, sf, label="$S_f$", linestyle="-.")
+    ax2.plot(t_eval, n2, label="$N_2$", linestyle="-.")
+    ax2.plot(t_eval, sf, label="$S_f$", linestyle="-.")
     ax2.legend()
 
     plt.show()
 
 
-def max_signal_vs_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) -> None:
+def max_signal_vs_fluence(
+    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+) -> None:
     """Plot the maximum fluorescence signal as a function of laser fluence.
 
     Args:
         sim: Simulation.
         line: Line.
         laser_params: Laser parameters.
+        t_eval: Time steps to integrate over.
     """
     rate_params = time_independent_rates(sim, line)
 
@@ -409,9 +412,9 @@ def max_signal_vs_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) ->
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        t, (_, n2, _) = simulate(rate_params, iterate_laser_params, line)
+        _, n2, _ = simulate(rate_params, iterate_laser_params, line, t_eval)
 
-        signal = get_signal(t, n2, rate_params)
+        signal = get_signal(t_eval, n2, rate_params)
         max_signals[idx] = signal.max()
 
     plt.plot(fluences, max_signals / max_signals.max())
@@ -421,18 +424,20 @@ def max_signal_vs_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) ->
     plt.show()
 
 
-def n2_vs_time_and_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) -> None:
+def n2_vs_time_and_fluence(
+    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+) -> None:
     """Plot upper state population as a function of laser fluence and time.
 
     Args:
         sim: Simulation.
         line: Line.
         laser_params: Laser parameters.
+        t_eval: Time steps to integrate over.
     """
     rate_params = time_independent_rates(sim, line)
 
     fluences = np.linspace(0.0, laser_params.fluence, N_FLUENCE)
-    t_eval = np.linspace(MIN_TIME, MAX_TIME, N_TIME)
     n2_populations = np.zeros((len(fluences), len(t_eval)))
 
     for idx, fluence in enumerate(fluences):
@@ -440,7 +445,7 @@ def n2_vs_time_and_fluence(sim: Sim, line: Line, laser_params: LIFLaserParams) -
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        t, (_, n2, _) = simulate(rate_params, iterate_laser_params, line, t_eval=t_eval)
+        _, n2, _ = simulate(rate_params, iterate_laser_params, line, t_eval)
 
         n2_populations[idx, :] = n2
 
@@ -497,16 +502,18 @@ def main() -> None:
 
     laser_params = LIFLaserParams(pulse_center, pulse_width, fluence)
 
-    populations_vs_time(sim, line, laser_params)
+    t = np.linspace(0.0, 60e-9, 1000)
+
+    populations_vs_time(sim, line, laser_params, t)
 
     # Experimental data for the Schumann-Runge bands of O2 at 1800 K, 1 atm, extracted from
     # Figure 5 of <https://doi.org/10.1364/AO.34.005501>.
     jay_27_p9x = np.array([0.0, 1.8, 3.6, 6.0, 12.0, 24.0, 42.5]) / 1e3
     jay_27_p9y = np.array([0.0, 0.08, 0.15, 0.27, 0.47, 0.7, 1.0])
     plt.scatter(jay_27_p9x, jay_27_p9y)
-    max_signal_vs_fluence(sim, line, laser_params)
+    max_signal_vs_fluence(sim, line, laser_params, t)
 
-    n2_vs_time_and_fluence(sim, line, laser_params)
+    n2_vs_time_and_fluence(sim, line, laser_params, t)
 
 
 if __name__ == "__main__":

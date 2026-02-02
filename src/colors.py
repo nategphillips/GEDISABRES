@@ -26,27 +26,25 @@ from matplotlib.colors import to_hex
 #       the maps from Matplotlib are just used directly instead.
 
 
-def get_colors(bands: list[tuple[int, int]]) -> list[str]:
+def get_colors(num_items: int) -> list[str]:
     """Return a list of colors in hex format.
 
     Args:
-        bands: A list of vibrational bands, e.g., [(0, 1), (0, 2)].
+        num_items: The number of items to plot.
 
     Returns:
         A list of colors in hex format.
     """
-    num_bands = len(bands)
-
     colors_small: list[str] = plt.rcParams["axes.prop_cycle"].by_key()["color"]
 
-    if num_bands <= len(colors_small):
-        return colors_small[:num_bands]
+    if num_items <= len(colors_small):
+        return colors_small[:num_items]
 
     palette = color_sequences["tab20c"]
     colors_medium = [to_hex(color) for color in palette]
 
-    if num_bands <= len(colors_medium):
-        return colors_medium[:num_bands]
+    if num_items <= len(colors_medium):
+        return colors_medium[:num_items]
 
     cmap = plt.get_cmap("rainbow")
-    return [to_hex(cmap(i / num_bands)) for i in range(num_bands)]
+    return [to_hex(cmap(i / num_items)) for i in range(num_items)]

@@ -26,10 +26,10 @@ import scipy as sy
 
 import constants
 from atom import Atom
-from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from sim_params import BroadeningBools, TemperatureParams
+from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
 
 if TYPE_CHECKING:

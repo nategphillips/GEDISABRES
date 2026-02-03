@@ -17,7 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import lookup
-from enums import InversionSymmetry, ReflectionSymmetry, TermSymbol
+from sim_props import InversionSymmetry, ReflectionSymmetry, TermSymbol
 
 # Data from NIST CODATA - <https://physics.nist.gov/cuu/Constants/index.html>.
 # Avodagro constant [1/mol]

@@ -19,7 +19,7 @@
 from fractions import Fraction
 
 import constants
-from enums import NuclearStatistics
+from sim_props import NuclearStatistics
 
 
 class Atom:

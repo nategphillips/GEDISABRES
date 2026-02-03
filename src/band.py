@@ -32,8 +32,8 @@ from py3nj import clebsch_gordan
 import constants
 import continuous
 import utils
-from enums import ConstantsType, SimType, TermSymbol
 from line import Line
+from sim_props import ConstantsType, SimType, TermSymbol
 
 if TYPE_CHECKING:
     from fractions import Fraction

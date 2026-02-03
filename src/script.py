@@ -21,10 +21,10 @@ import numpy as np
 
 import data_path
 from atom import Atom
-from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from sim_params import BroadeningBools, InstrumentParams
+from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
 
 

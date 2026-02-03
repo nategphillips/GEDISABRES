@@ -1,4 +1,4 @@
-# module enums.py
+# module sim_props.py
 """Contains enums for defining simulation properties."""
 
 # Copyright (C) 2023-2026 Nathan G. Phillips

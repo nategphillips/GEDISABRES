@@ -62,7 +62,6 @@ import plot
 import utils
 from atom import Atom
 from colors import get_colors
-from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from sim_params import (
@@ -75,6 +74,7 @@ from sim_params import (
     ShiftParams,
     TemperatureParams,
 )
+from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
 
 if TYPE_CHECKING:

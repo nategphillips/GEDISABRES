@@ -27,7 +27,6 @@ import constants
 import data_path
 import utils
 from band import Band
-from enums import ConstantsType, SimType
 from sim_params import (
     BroadeningBools,
     InstrumentParams,
@@ -38,6 +37,7 @@ from sim_params import (
     ShiftParams,
     TemperatureParams,
 )
+from sim_props import ConstantsType, SimType
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray

@@ -25,7 +25,7 @@ import polars as pl
 
 import data_path
 from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
-from enums import (
+from sim_props import (
     ConstantsType,
     InversionSymmetry,
     NuclearStatistics,

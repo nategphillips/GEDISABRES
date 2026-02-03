@@ -117,8 +117,8 @@ class Sim:
 
         return wavenumbers_line, intensities_line
 
-    def all_conv_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
-        """Create common axes for superimposing the convolved data of all vibrational bands.
+    def all_cont_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """Create common axes for superimposing the continuous data of all vibrational bands.
 
         Args:
             granularity: How many points to place on the x-axis.
@@ -148,15 +148,15 @@ class Sim:
             grid_max = wavenumbers_line.max() + padding
 
         # Create common wavenumber and intensity grids to hold all of the vibrational band data.
-        wavenumbers_conv = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
-        intensities_conv = np.zeros_like(wavenumbers_conv)
+        wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
+        intensities_cont = np.zeros_like(wavenumbers_cont)
 
         # The wavelength axis is common to all vibrational bands so that their contributions to the
         # spectra can be summed.
         for band in self.bands:
-            intensities_conv += band.intensities_conv(wavenumbers_conv)
+            intensities_cont += band.intensities_cont(wavenumbers_cont)
 
-        return wavenumbers_conv, intensities_conv
+        return wavenumbers_cont, intensities_cont
 
     @cached_property
     def predissociation(self) -> dict[str, list[float]]:

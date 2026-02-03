@@ -12,7 +12,7 @@ The rotational Hamiltonian is computed on a per-term basis according to the mole
 
 ### Spectral Broadening
 
-Convolutions include the effects of both Gaussian and Lorentzian broadening mechanisms. Each type of broadening can be toggled on or off individually.
+The effects of both Gaussian and Lorentzian broadening mechanisms are simulated. Each type of broadening can be toggled on or off individually.
 
 #### Gaussian
 
@@ -42,10 +42,10 @@ Four plot types are currently implemented:
   - Each rotational line is plotted at its exact wavenumber.
 - Line Info
   - Information is printed above each line for easier identification.
-- Convolve Separate
-  - The rotational lines within a single vibrational band are convolved.
-- Convolve All
-  - All vibrational bands are convolved together.
+- Continuous Separate
+  - The continuous spectra of rotational lines within a single vibrational band.
+- Continuous All
+  - The continuous spectra of rotational lines within all vibrational bands.
 
 ## Validation with Experimental Data
 

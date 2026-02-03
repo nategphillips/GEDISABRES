@@ -30,7 +30,7 @@ from hamilterm import utils as hutils
 from py3nj import clebsch_gordan
 
 import constants
-import convolve
+import continuous
 import utils
 from enums import ConstantsType, SimType, TermSymbol
 from line import Line
@@ -248,8 +248,8 @@ class Band:
         """
         return np.array([line.intensity for line in self.lines])
 
-    def wavenumbers_conv(self, granularity: int) -> NDArray[np.float64]:
-        """Return an array of convolved wavenumbers.
+    def wavenumbers_cont(self, granularity: int) -> NDArray[np.float64]:
+        """Return an array of continuous wavenumbers.
 
         Args:
             granularity: Number of points on the wavenumber axis.
@@ -278,20 +278,17 @@ class Band:
         # Generate a fine-grained x-axis using existing wavenumber data.
         return np.linspace(wns_line.min() - padding, wns_line.max() + padding, granularity)
 
-    def intensities_conv(
-        self,
-        wavenumbers_conv: NDArray[np.float64],
-    ) -> NDArray[np.float64]:
-        """Return an array of convolved intensities.
+    def intensities_cont(self, wavenumbers_cont: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Return an array of continuous intensities.
 
         Args:
             fwhm_selections: The types of broadening to be simulated.
-            wavenumbers_conv: The convolved wavelengths to use.
+            wavenumbers_cont: The continuous wavelengths to use.
 
         Returns:
             A continuous range of intensities.
         """
-        return convolve.convolve(self.lines, wavenumbers_conv)
+        return continuous.sum_lines(self.lines, wavenumbers_cont)
 
     @cached_property
     def vib_boltz_frac(self) -> tuple[float, float]:

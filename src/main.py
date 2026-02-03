@@ -738,7 +738,9 @@ class CustomTab(QWidget):
         group_plot_type = QGroupBox("Plot Type")
         plot_type_layout = QHBoxLayout(group_plot_type)
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        self.plot_type_combo.addItems(
+            ["Line", "Line Info", "Continuous Separate", "Continuous All"]
+        )
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
@@ -1054,14 +1056,14 @@ class CustomTab(QWidget):
         map_functions: dict[str, Callable] = {
             "Line": plot.plot_line,
             "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
+            "Continuous Separate": plot.plot_cont_sep,
+            "Continuous All": plot.plot_cont_all,
         }
         plot_type = self.plot_type_combo.currentText()
         plot_function: Callable | None = map_functions.get(plot_type)
 
         if plot_function is not None:
-            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+            if plot_function.__name__ in ("plot_cont_sep", "plot_cont_all"):
                 plot_function(
                     self.plot_widget,
                     self.sim,
@@ -1362,7 +1364,9 @@ class AllSimulationsTab(QWidget):
         plot_group = QGroupBox("Plot Type")
         plot_layout = QHBoxLayout(plot_group)
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        self.plot_type_combo.addItems(
+            ["Line", "Line Info", "Continuous Separate", "Continuous All"]
+        )
         plot_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(plot_group)
 
@@ -1410,8 +1414,8 @@ class AllSimulationsTab(QWidget):
         map_functions = {
             "Line": plot.plot_line,
             "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
+            "Continuous Separate": plot.plot_cont_sep,
+            "Continuous All": plot.plot_cont_all,
         }
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
@@ -1425,34 +1429,34 @@ class AllSimulationsTab(QWidget):
 
             return intensities_line.max()
 
-        def max_intensity_conv_sep(granularity):
-            convolved_data: list[NDArray[np.float64]] = []
+        def max_intensity_cont_sep(granularity):
+            continuous_data: list[NDArray[np.float64]] = []
             max_intensity = 0.0
 
             for tab in custom_tabs:
                 for band in tab.sim.bands:
-                    intensities_conv = band.intensities_conv(
-                        band.wavenumbers_conv(granularity),
+                    intensities_cont = band.intensities_cont(
+                        band.wavenumbers_cont(granularity),
                     )
 
-                    convolved_data.append(intensities_conv)
+                    continuous_data.append(intensities_cont)
 
-                    max_intensity = max(max_intensity, intensities_conv.max())
+                    max_intensity = max(max_intensity, intensities_cont.max())
 
             return max_intensity
 
-        def max_intensity_conv_all():
-            intensities_conv = np.array([], dtype=np.float64)
+        def max_intensity_cont_all():
+            intensities_cont = np.array([], dtype=np.float64)
 
             for tab in custom_tabs:
-                _, ins = tab.sim.all_conv_data(
+                _, ins = tab.sim.all_cont_data(
                     self.resolution_spinbox.value(),
                 )
-                intensities_conv = np.concatenate((intensities_conv, ins))
+                intensities_cont = np.concatenate((intensities_cont, ins))
 
-            return intensities_conv.max()
+            return intensities_cont.max()
 
-        # TODO: 25/08/01 - Convolving all bands together needs to create a new wavenumber axis
+        # TODO: 25/08/01 - Adding all bands together needs to create a new wavenumber axis
         #       common to all simulations and then add the contributions of all simulations to the
         #       plot.
 
@@ -1460,23 +1464,23 @@ class AllSimulationsTab(QWidget):
 
         for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
-                if plot_function.__name__ == "plot_conv_sep":
+                if plot_function.__name__ == "plot_cont_sep":
                     resolution = self.resolution_spinbox.value()
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
                         resolution,
-                        max_intensity_conv_sep(resolution),
+                        max_intensity_cont_sep(resolution),
                         idx,
                     )
-                elif plot_function.__name__ == "plot_conv_all":
+                elif plot_function.__name__ == "plot_cont_all":
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
                         self.resolution_spinbox.value(),
-                        max_intensity_conv_all(),
+                        max_intensity_cont_all(),
                         idx,
                     )
                 else:

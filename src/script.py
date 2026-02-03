@@ -85,22 +85,22 @@ def main() -> None:
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(band.wavenumbers_conv(granularity)).max() for band in sim.bands
+        band.intensities_cont(band.wavenumbers_cont(granularity)).max() for band in sim.bands
     )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(granularity),
-            band.intensities_conv(band.wavenumbers_conv(granularity)) / max_intensity,
+            band.wavenumbers_cont(granularity),
+            band.intensities_cont(band.wavenumbers_cont(granularity)) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
-    # Convolve all bands together and normalize.
-    wns, ins = sim.all_conv_data(granularity)
+    # Add all bands together and normalize.
+    wns, ins = sim.all_cont_data(granularity)
     ins /= ins.max()
 
-    plt.plot(wns, ins, label="all convolved")
+    plt.plot(wns, ins, label="all added")
 
     # Interpolate simulated data to have the same number of points as the experimental data and
     # compute the residual.

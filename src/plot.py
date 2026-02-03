@@ -143,7 +143,7 @@ def plot_line_info(
             text.setPos(wavelength, intensity)
 
 
-def plot_conv_sep(
+def plot_cont_sep(
     plot_widget: pg.PlotWidget,
     sim: Sim,
     colors: list[str],
@@ -151,7 +151,7 @@ def plot_conv_sep(
     max_intensity: float | None = None,
     color_index: int | None = None,
 ) -> None:
-    """Plot convolved data for each vibrational band separately.
+    """Plot continuous data for each vibrational band separately.
 
     Args:
         plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
@@ -162,34 +162,33 @@ def plot_conv_sep(
             None.
         color_index: Provided only if multiple simulations are being run together. Defaults to 0.
     """
-    convolved_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
+    continuous_data: list[tuple[NDArray[np.float64], NDArray[np.float64]]] = []
     calculated_max_intensity = 0.0
 
-    # Need to convolve all bands separately, get their maximum intensities, store the largest, and
-    # then divide all bands by that maximum. If the max intensity was found for all bands convolved
-    # together, it would be inaccurate because of vibrational band overlap.
+    # Need to sum all bands separately, get their maximum intensities, store the largest, and
+    # then divide all bands by that maximum.
     for band in sim.bands:
-        wavenumbers_conv = band.wavenumbers_conv(granularity)
-        intensities_conv = band.intensities_conv(wavenumbers_conv)
-        wavelengths_conv = utils.wavenum_to_wavelen(wavenumbers_conv)
-        convolved_data.append((wavelengths_conv, intensities_conv))
+        wavenumbers_cont = band.wavenumbers_cont(granularity)
+        intensities_cont = band.intensities_cont(wavenumbers_cont)
+        wavelengths_cont = utils.wavenum_to_wavelen(wavenumbers_cont)
+        continuous_data.append((wavelengths_cont, intensities_cont))
 
         if max_intensity is None:
-            calculated_max_intensity = max(calculated_max_intensity, intensities_conv.max())
+            calculated_max_intensity = max(calculated_max_intensity, intensities_cont.max())
 
     normalization_factor = max_intensity if max_intensity is not None else calculated_max_intensity
 
-    for idx, (wavelengths_conv, intensities_conv) in enumerate(convolved_data):
+    for idx, (wavelengths_cont, intensities_cont) in enumerate(continuous_data):
         color_idx = color_index if color_index is not None else idx
         plot_widget.plot(
-            wavelengths_conv,
-            intensities_conv / normalization_factor,
+            wavelengths_cont,
+            intensities_cont / normalization_factor,
             pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
-            name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} conv",
+            name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} cont",
         )
 
 
-def plot_conv_all(
+def plot_cont_all(
     plot_widget: pg.PlotWidget,
     sim: Sim,
     colors: list[str],
@@ -197,7 +196,7 @@ def plot_conv_all(
     max_intensity: float | None = None,
     color_index: int = 0,
 ) -> None:
-    """Plot convolved data for all vibrational bands simultaneously.
+    """Plot continuous data for all vibrational bands simultaneously.
 
     Args:
         plot_widget: A `GraphicsView` widget with a single `PlotItem` inside.
@@ -208,17 +207,17 @@ def plot_conv_all(
             None.
         color_index: Provided only if multiple simulations are being run together. Defaults to 0.
     """
-    wavenumbers_conv, intensities_conv = sim.all_conv_data(granularity)
-    wavelengths_conv: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_conv)
+    wavenumbers_cont, intensities_cont = sim.all_cont_data(granularity)
+    wavelengths_cont: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_cont)
 
     if max_intensity is None:
-        max_intensity = intensities_conv.max()
+        max_intensity = intensities_cont.max()
 
     assert max_intensity is not None
 
     plot_widget.plot(
-        wavelengths_conv,
-        intensities_conv / max_intensity,
+        wavelengths_cont,
+        intensities_cont / max_intensity,
         pen=pg.mkPen(colors[color_index], width=PEN_WIDTH),
-        name=f"{sim.molecule.name} conv all",
+        name=f"{sim.molecule.name} cont all",
     )

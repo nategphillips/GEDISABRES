@@ -623,6 +623,10 @@ class Band:
                             (j_qn_up == self.sim.pumped_line.j_qn_up)
                             and (n_qn_up == self.sim.pumped_line.n_qn_up)
                             and (branch_idx_up == self.sim.pumped_line.branch_idx_up)
+                            and (
+                                constants.BRANCH_NAME_MAP[int(j_qn_up - j_qn_lo)]
+                                == self.sim.pumped_line.branch_name_j
+                            )
                         ):
                             lines.append(
                                 Line(

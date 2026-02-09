@@ -117,35 +117,32 @@ def laser_intensity(
     )
 
 
-def time_independent_rates(sim: Sim, pumped_line: Line) -> RateParams:
+def time_independent_rates(emission_sim: Sim, pumped_sim: Sim, pumped_line: Line) -> RateParams:
     """Return the time-independent rate parameters.
 
     Args:
-        sim: The parent simulation.
+        emission_sim: The simulation containing the LIF emission lines.
+        pumped_sim: The parent simulation.
         pumped_line: The rotational absorption line pumped by the laser.
 
     Returns:
         Parameters related to the rate equations for the selected rotational line.
     """
-    g_u = constants.ELECTRONIC_DEGENERACIES[sim.molecule.name][sim.state_up.name]
-    g_l = constants.ELECTRONIC_DEGENERACIES[sim.molecule.name][sim.state_lo.name]
+    g_u = constants.ELECTRONIC_DEGENERACIES[pumped_sim.molecule.name][pumped_sim.state_up.name]
+    g_l = constants.ELECTRONIC_DEGENERACIES[pumped_sim.molecule.name][pumped_sim.state_lo.name]
 
     # Only a single vibrational band will be simulated at a time.
-    v_qn_up = sim.bands[0].v_qn_up
-    v_qn_lo = sim.bands[0].v_qn_lo
+    v_qn_up = pumped_sim.bands[0].v_qn_up
+    v_qn_lo = pumped_sim.bands[0].v_qn_lo
 
     j_qn_up = pumped_line.j_qn_up
     s_j = pumped_line.honl_london_factor
 
     # Einstein coefficient for spontaneous emission in [1/s].
-    a_21: float = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2.0 * j_qn_up + 1.0)
+    a_21: float = pumped_sim.einstein[v_qn_up, v_qn_lo] * s_j / (2.0 * j_qn_up + 1.0)
 
     # Fluorescent radiative decay rate in [1/s].
-    # The sum of all downward radiative transitions A_{ul} where u = v', minus the resonant
-    # contribution where l = v'.
-    w_f: float = sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo] * s_j / (
-        2.0 * j_qn_up + 1.0
-    )
+    w_f = compute_wf_from_lines(emission_sim, pumped_line.band.v_qn_lo)
 
     # Einstein coefficient for photon absorption in [cm^2/(J*s)], Herzberg Eq. (I, 56).
     b_12 = (
@@ -171,6 +168,35 @@ def time_independent_rates(sim: Sim, pumped_line: Line) -> RateParams:
     w_q = w_c
 
     return RateParams(a_21, b_12, b_21, w_c, w_d, w_f, w_q)
+
+
+def compute_wf_from_lines(emission_sim: Sim, exclude_resonant_vlo: int | None = None) -> float:
+    """Computes the fluorescent radiative decay using the LIF emission lines.
+
+    Args:
+        emission_sim: The simulation containing the LIF emission lines.
+        exclude_resonant_vlo: Which lower state v'' to exclude from the total fluorescence, if any.
+
+    Returns:
+        The fluorescent radiative decay rate in [1/s]/
+    """
+    w_f = 0.0
+
+    # The sum of all downward radiative transitions A_{ul} where u = v', minus the resonant
+    # contribution where l = v'.
+    for band in emission_sim.bands:
+        if exclude_resonant_vlo is not None and band.v_qn_lo == exclude_resonant_vlo:
+            continue
+
+        for line in band.lines:
+            spontaneous_emission = (
+                emission_sim.einstein[band.v_qn_up, band.v_qn_lo]
+                * line.honl_london_factor
+                / (2.0 * line.j_qn_up + 1.0)
+            )
+            w_f += spontaneous_emission
+
+    return w_f
 
 
 def rate_equations(
@@ -330,6 +356,36 @@ def create_pumped_sim(
     )
 
 
+def create_emission_sim(pumped_sim: Sim, pumped_line: Line, v_qn_lo_max: int) -> Sim:
+    """Create a simulation for LIF emission.
+
+    Args:
+        pumped_sim: The parent simulation for the pumped rotational line.
+        pumped_line: The pumped rotational line.
+        v_qn_lo_max: Maximum lower state vibrational quantum number v''.
+
+    Returns:
+        A `Sim` object for LIF emission.
+    """
+    band_range = [(pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)]
+
+    return Sim(
+        sim_type=SimType.LIF,
+        molecule=pumped_sim.molecule,
+        state_up=pumped_sim.state_up,
+        state_lo=pumped_sim.state_lo,
+        j_qn_up_max=40,
+        pressure=pumped_sim.pressure,
+        bands_input=band_range,
+        inst_params=InstrumentParams(1, 1),
+        temp_params=pumped_sim.temp_params,
+        broad_bools=BroadeningBools(
+            instrument=True, collisional=True, doppler=True, natural=True, predissociation=True
+        ),
+        pumped_line=pumped_line,
+    )
+
+
 def find_line(pumped_sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
     """Return a rotational line with the desired parameters.
 
@@ -388,17 +444,22 @@ def gated_n2_integral(
 
 
 def populations_vs_time(
-    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    emission_sim: Sim,
+    pumped_sim: Sim,
+    pumped_line: Line,
+    laser_params: LIFLaserParams,
+    t_eval: NDArray[np.float64],
 ) -> None:
     """Plot the population densities, signal, and laser intensity as functions of time.
 
     Args:
+        emission_sim: The simulation containing the LIF emission lines.
         pumped_sim: The parent simulation for the pumped rotational line.
         pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(pumped_sim, pumped_line)
+    rate_params = time_independent_rates(emission_sim, pumped_sim, pumped_line)
 
     n1_hat, n2_hat, n3_hat = simulate(rate_params, laser_params, pumped_line, t_eval)
 
@@ -429,17 +490,22 @@ def populations_vs_time(
 
 
 def max_signal_vs_fluence(
-    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    emission_sim: Sim,
+    pumped_sim: Sim,
+    pumped_line: Line,
+    laser_params: LIFLaserParams,
+    t_eval: NDArray[np.float64],
 ) -> None:
     """Plot the maximum fluorescence signal as a function of laser fluence.
 
     Args:
+        emission_sim: The simulation containing the LIF emission lines.
         pumped_sim: The parent simulation for the pumped rotational line.
         pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(pumped_sim, pumped_line)
+    rate_params = time_independent_rates(emission_sim, pumped_sim, pumped_line)
 
     max_fluence = laser_params.fluence
 
@@ -464,17 +530,22 @@ def max_signal_vs_fluence(
 
 
 def n2_vs_time_and_fluence(
-    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    emission_sim: Sim,
+    pumped_sim: Sim,
+    pumped_line: Line,
+    laser_params: LIFLaserParams,
+    t_eval: NDArray[np.float64],
 ) -> None:
     """Plot upper state population as a function of laser fluence and time.
 
     Args:
+        emission_sim: The simulation containing the LIF emission lines.
         pumped_sim: The parent simulation for the pumped rotational line.
         pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(pumped_sim, pumped_line)
+    rate_params = time_independent_rates(emission_sim, pumped_sim, pumped_line)
 
     fluences = np.linspace(0.0, laser_params.fluence, N_FLUENCE)
     n2_populations = np.zeros((len(fluences), len(t_eval)))
@@ -501,20 +572,21 @@ def n2_vs_time_and_fluence(
 
 
 def lif_spectra_vs_time(
+    emission_sim: Sim,
     pumped_sim: Sim,
     pumped_line: Line,
     laser_params: LIFLaserParams,
-    v_qn_lo_max: int,
     t_eval: NDArray[np.float64],
 ) -> None:
     """Plots the LIF spectra.
 
     Args:
+        emission_sim: The simulation containing the LIF emission lines.
         pumped_sim: The parent simulation for the pumped rotational line.
         pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
-        v_qn_lo_max: Maximum lower state vibrational quantum number v''.
         t_eval: Time steps to integrate over.
+        emission_sim: The simulation containing the LIF emission lines.
     """
     granularity = 10000
 
@@ -532,30 +604,10 @@ def lif_spectra_vs_time(
 
     points_per_ns = t_eval.size / (t_eval[-1] - t_eval[0])
 
-    rate_params = time_independent_rates(pumped_sim, pumped_line)
+    rate_params = time_independent_rates(emission_sim, pumped_sim, pumped_line)
     _, n2_hat, _ = simulate(rate_params, laser_params, pumped_line, t_eval)
 
     n2 = n2_hat * number_density_lo
-
-    band_range: list[tuple[int, int]] = [
-        (pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)
-    ]
-
-    emission_sim = Sim(
-        sim_type=SimType.LIF,
-        molecule=pumped_sim.molecule,
-        state_up=pumped_sim.state_up,
-        state_lo=pumped_sim.state_lo,
-        j_qn_up_max=40,
-        pressure=pumped_sim.pressure,
-        bands_input=band_range,
-        inst_params=InstrumentParams(1, 1),
-        temp_params=pumped_sim.temp_params,
-        broad_bools=BroadeningBools(
-            instrument=True, collisional=True, doppler=True, natural=True, predissociation=True
-        ),
-        pumped_line=pumped_line,
-    )
 
     selected_time = 30e-9
     idx_at_time = int(points_per_ns * selected_time)
@@ -645,6 +697,10 @@ def main() -> None:
 
     pumped_line = find_line(pumped_sim, branch_name_j, branch_idx_lo, n_qn_lo)
 
+    # For a given v', get the maximum value of v'' (account for 0-indexing).
+    v_qn_lo_max = pumped_sim.einstein[v_qn_up].size - 1
+    emission_sim = create_emission_sim(pumped_sim, pumped_line, v_qn_lo_max)
+
     pulse_center = 30e-9
     pulse_width = 20e-9
     fluence = 42.5e-3
@@ -658,17 +714,17 @@ def main() -> None:
     # Convert times from [ns] to [s].
     t_eval = np.linspace(min_time * 1e-9, max_time * 1e-9, n_points)
 
-    lif_spectra_vs_time(pumped_sim, pumped_line, laser_params, 15, t_eval)
-    populations_vs_time(pumped_sim, pumped_line, laser_params, t_eval)
+    lif_spectra_vs_time(emission_sim, pumped_sim, pumped_line, laser_params, t_eval)
+    populations_vs_time(emission_sim, pumped_sim, pumped_line, laser_params, t_eval)
 
     # Experimental data for the Schumann-Runge bands of O2 at 1800 K, 1 atm, extracted from
     # Figure 5 of <https://doi.org/10.1364/AO.34.005501>.
     jay_27_p9x = np.array([0.0, 1.8, 3.6, 6.0, 12.0, 24.0, 42.5]) / 1e3
     jay_27_p9y = np.array([0.0, 0.08, 0.15, 0.27, 0.47, 0.7, 1.0])
     plt.scatter(jay_27_p9x, jay_27_p9y)
-    max_signal_vs_fluence(pumped_sim, pumped_line, laser_params, t_eval)
+    max_signal_vs_fluence(emission_sim, pumped_sim, pumped_line, laser_params, t_eval)
 
-    n2_vs_time_and_fluence(pumped_sim, pumped_line, laser_params, t_eval)
+    n2_vs_time_and_fluence(emission_sim, pumped_sim, pumped_line, laser_params, t_eval)
 
 
 if __name__ == "__main__":

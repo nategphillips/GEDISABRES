@@ -134,23 +134,23 @@ def time_independent_rates(sim: Sim, pumped_line: Line) -> RateParams:
     v_qn_up = sim.bands[0].v_qn_up
     v_qn_lo = sim.bands[0].v_qn_lo
 
-    j_qn_lo = pumped_line.j_qn_lo
+    j_qn_up = pumped_line.j_qn_up
     s_j = pumped_line.honl_london_factor
 
     # Einstein coefficient for spontaneous emission in [1/s].
-    a_21: float = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2 * j_qn_lo + 1)
+    a_21: float = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2.0 * j_qn_up + 1.0)
 
     # Fluorescent radiative decay rate in [1/s].
     # The sum of all downward radiative transitions A_{ul} where u = v', minus the resonant
     # contribution where l = v'.
-    w_f: float = (
-        (sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo]) * s_j / (2 * j_qn_lo + 1)
+    w_f: float = sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo] * s_j / (
+        2.0 * j_qn_up + 1.0
     )
 
     # Einstein coefficient for photon absorption in [cm^2/(J*s)], Herzberg Eq. (I, 56).
     b_12 = (
         a_21
-        / (8 * np.pi * constants.PLANC * constants.LIGHT * pumped_line.wavenumber**3)
+        / (8.0 * np.pi * constants.PLANC * constants.LIGHT * pumped_line.wavenumber**3)
         * g_u
         / g_l
     )
@@ -221,7 +221,7 @@ def rate_equations(
         w_la * n1_hat
         - (w_le + rate_params.w_d + rate_params.a_21 + rate_params.w_f + rate_params.w_q) * n2_hat
     )
-    dn3_dt: float = -(f_b / (1.0 - f_b)) * rate_params.w_c * (n3_hat - n1_hat)
+    dn3_dt: float = (f_b / (1.0 - f_b)) * rate_params.w_c * (n1_hat - n3_hat)
 
     return [dn1_dt, dn2_dt, dn3_dt]
 

@@ -414,6 +414,17 @@ class Line:
         #       after computing the intensity is correct, however, since the lineshape functions
         #       must be normalized.
 
+        if self.sim.sim_type == SimType.LIF:
+            # Returns the LIF intensity per N_2, i.e., this value must be multiplied by the
+            # upper state number density elsewhere.
+            return (
+                constants.PLANC
+                * constants.LIGHT
+                * self.wavenumber
+                * spontaneous_emission
+                / (4.0 * np.pi)
+            )
+
         if self.sim.sim_type == SimType.EMISSION:
             # The emission coefficient as given in eq. 1.73 of "Radiative Processes in
             # Astrophysics" by Rybicki and Lightman. It has units [W m^-3 sr^-1 1/cm^-1].

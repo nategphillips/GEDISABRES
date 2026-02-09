@@ -45,6 +45,7 @@ class SimType(Enum):
 
     ABSORPTION = 1
     EMISSION = 2
+    LIF = 3
 
 
 class InversionSymmetry(Enum):

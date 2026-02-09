@@ -42,6 +42,7 @@ from sim_props import ConstantsType, SimType
 if TYPE_CHECKING:
     from numpy.typing import NDArray
 
+    from line import Line
     from molecule import Molecule
     from state import State
 
@@ -66,6 +67,7 @@ class Sim:
         broad_bools: BroadeningBools = BroadeningBools(),
         plot_bools: PlotBools = PlotBools(),
         plot_params: PlotParams = PlotParams(),
+        pumped_line: Line | None = None,
     ) -> None:
         """Initialize class variables.
 
@@ -85,6 +87,7 @@ class Sim:
             broad_bools: Broadening switches.
             plot_bools: Plot switches.
             plot_params: Plot parameters.
+            pumped_line: If running a LIF simulation, the absorption line pumped by the laser.
         """
         self.sim_type = sim_type
         self.molecule = molecule
@@ -101,6 +104,7 @@ class Sim:
         self.broad_bools = broad_bools
         self.plot_bools = plot_bools
         self.plot_params = plot_params
+        self.pumped_line = pumped_line
 
     def all_line_data(self) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Combine the line data for all vibrational bands.
@@ -231,7 +235,7 @@ class Sim:
         #       quantum number is set by the data available. Otherwise, an arbitrary maximum of 20
         #       is set when the Dunham expansion is used.
         match self.sim_type:
-            case SimType.EMISSION:
+            case SimType.EMISSION | SimType.LIF:
                 state = self.state_up
                 if state.constants_type == ConstantsType.PERLEVEL:
                     v_qn_max = self.state_up.all_constants.height

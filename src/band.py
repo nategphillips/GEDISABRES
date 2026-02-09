@@ -394,7 +394,7 @@ class Band:
             The rotational partition function Q_r.
         """
         match self.sim.sim_type:
-            case SimType.EMISSION:
+            case SimType.EMISSION | SimType.LIF:
                 state = self.sim.state_up
                 v_qn = self.v_qn_up
             case SimType.ABSORPTION:
@@ -611,23 +611,55 @@ class Band:
 
                     is_satellite = branch_idx_up != branch_idx_lo
 
-                    lines.append(
-                        Line(
-                            sim=self.sim,
-                            band=self,
-                            j_qn_up=j_qn_up,
-                            j_qn_lo=j_qn_lo,
-                            n_qn_up=n_qn_up,
-                            n_qn_lo=n_qn_lo,
-                            branch_idx_up=branch_idx_up,
-                            branch_idx_lo=branch_idx_lo,
-                            branch_name_j=constants.BRANCH_NAME_MAP[int(j_qn_up - j_qn_lo)],
-                            branch_name_n=constants.BRANCH_NAME_MAP[int(n_qn_up - n_qn_lo)],
-                            is_satellite=is_satellite,
-                            honl_london_factor=hlf,
-                            rot_term_value_up=eigenval_up,
-                            rot_term_value_lo=eigenval_lo,
+                    if self.sim.sim_type == SimType.LIF:
+                        if self.sim.pumped_line is None:
+                            raise ValueError(
+                                "Must provide a pumped line for LIF emission spectrum."
+                            )
+
+                        # If running a LIF simulation, select only the lines with matching J', N',
+                        # and branch index.
+                        if (
+                            (j_qn_up == self.sim.pumped_line.j_qn_up)
+                            and (n_qn_up == self.sim.pumped_line.n_qn_up)
+                            and (branch_idx_up == self.sim.pumped_line.branch_idx_up)
+                        ):
+                            lines.append(
+                                Line(
+                                    sim=self.sim,
+                                    band=self,
+                                    j_qn_up=j_qn_up,
+                                    j_qn_lo=j_qn_lo,
+                                    n_qn_up=n_qn_up,
+                                    n_qn_lo=n_qn_lo,
+                                    branch_idx_up=branch_idx_up,
+                                    branch_idx_lo=branch_idx_lo,
+                                    branch_name_j=constants.BRANCH_NAME_MAP[int(j_qn_up - j_qn_lo)],
+                                    branch_name_n=constants.BRANCH_NAME_MAP[int(n_qn_up - n_qn_lo)],
+                                    is_satellite=is_satellite,
+                                    honl_london_factor=hlf,
+                                    rot_term_value_up=eigenval_up,
+                                    rot_term_value_lo=eigenval_lo,
+                                )
+                            )
+                    else:
+                        lines.append(
+                            Line(
+                                sim=self.sim,
+                                band=self,
+                                j_qn_up=j_qn_up,
+                                j_qn_lo=j_qn_lo,
+                                n_qn_up=n_qn_up,
+                                n_qn_lo=n_qn_lo,
+                                branch_idx_up=branch_idx_up,
+                                branch_idx_lo=branch_idx_lo,
+                                branch_name_j=constants.BRANCH_NAME_MAP[int(j_qn_up - j_qn_lo)],
+                                branch_name_n=constants.BRANCH_NAME_MAP[int(n_qn_up - n_qn_lo)],
+                                is_satellite=is_satellite,
+                                honl_london_factor=hlf,
+                                rot_term_value_up=eigenval_up,
+                                rot_term_value_lo=eigenval_lo,
+                            )
                         )
-                    )
 
         return lines

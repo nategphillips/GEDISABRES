@@ -25,10 +25,11 @@ import numpy as np
 import scipy as sy
 
 import constants
+import utils
 from atom import Atom
 from molecule import Molecule
 from sim import Sim
-from sim_params import BroadeningBools, TemperatureParams
+from sim_params import BroadeningBools, InstrumentParams, TemperatureParams
 from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
 
@@ -47,8 +48,8 @@ class RateParams:
 
     Attributes:
         a_21: Einstein coefficient for spontaneous emission in [1/s].
-        b_12: Einstein coefficient for photon absorption in [cm^2/(J.s)].
-        b_21: Einstein coefficient for stimulated emission in [cm^2/(J.s)].
+        b_12: Einstein coefficient for photon absorption in [cm^2/(J*s)].
+        b_21: Einstein coefficient for stimulated emission in [cm^2/(J*s)].
         w_c: Collisional repopulation rate of the lower state in [1/s].
         w_d: Predissociation rate in [1/s].
         w_f: Fluorescent radiative decay rate in [1/s].
@@ -116,12 +117,12 @@ def laser_intensity(
     )
 
 
-def time_independent_rates(sim: Sim, line: Line) -> RateParams:
+def time_independent_rates(sim: Sim, pumped_line: Line) -> RateParams:
     """Return the time-independent rate parameters.
 
     Args:
         sim: The parent simulation.
-        line: The desired rotational line.
+        pumped_line: The rotational absorption line pumped by the laser.
 
     Returns:
         Parameters related to the rate equations for the selected rotational line.
@@ -133,8 +134,8 @@ def time_independent_rates(sim: Sim, line: Line) -> RateParams:
     v_qn_up = sim.bands[0].v_qn_up
     v_qn_lo = sim.bands[0].v_qn_lo
 
-    j_qn_lo = line.j_qn_lo
-    s_j = line.honl_london_factor
+    j_qn_lo = pumped_line.j_qn_lo
+    s_j = pumped_line.honl_london_factor
 
     # Einstein coefficient for spontaneous emission in [1/s].
     a_21: float = sim.einstein[v_qn_up, v_qn_lo] * s_j / (2 * j_qn_lo + 1)
@@ -146,21 +147,26 @@ def time_independent_rates(sim: Sim, line: Line) -> RateParams:
         (sim.einstein[v_qn_up].sum() - sim.einstein[v_qn_up, v_qn_lo]) * s_j / (2 * j_qn_lo + 1)
     )
 
-    # Einstein coefficient for photon absorption in [cm^2/(J.s)], Herzberg Eq. (I, 56).
-    b_12 = a_21 / (8 * np.pi * constants.PLANC * constants.LIGHT * line.wavenumber**3) * g_u / g_l
+    # Einstein coefficient for photon absorption in [cm^2/(J*s)], Herzberg Eq. (I, 56).
+    b_12 = (
+        a_21
+        / (8 * np.pi * constants.PLANC * constants.LIGHT * pumped_line.wavenumber**3)
+        * g_u
+        / g_l
+    )
 
-    # Einstein coefficient for stimulated emission in [cm^2/(J.s)].
+    # Einstein coefficient for stimulated emission in [cm^2/(J*s)].
     b_21 = b_12 * g_l / g_u
 
     # Predissociation rate in [1/s].
-    w_d = 2.0 * np.pi * constants.LIGHT * line.fwhm_predissociation()
+    w_d = 2.0 * np.pi * constants.LIGHT * pumped_line.fwhm_predissociation()
 
     # NOTE: 26/01/30 - This is a really naïve way of calculating both the upper state quenching and
     #       collisional bath terms, but it's good enough for a first estimation. Further refinement
     #       will be dependent on the molecule used, so this is a general, if simple, approach.
 
     # Collisional repopulation of the lower state in [1/s].
-    w_c = 2.0 * np.pi * constants.LIGHT * line.fwhm_collisional()
+    w_c = 2.0 * np.pi * constants.LIGHT * pumped_line.fwhm_collisional()
     # Quenching rate of the upper state in [1/s].
     w_q = w_c
 
@@ -169,24 +175,24 @@ def time_independent_rates(sim: Sim, line: Line) -> RateParams:
 
 def rate_equations(
     t: float,
-    n: NDArray[np.float64],
+    n_hat: NDArray[np.float64],
     rate_params: RateParams,
     laser_params: LIFLaserParams,
-    line: Line,
+    pumped_line: Line,
 ) -> list[float]:
     """Return the rate equations governing the LIF system.
 
     Args:
         t: Current time in [s].
-        n: Nondimensional population densities of N1, N2, and N3 at a point in time.
+        n_hat: Nondimensional population densities of N1, N2, and N3 at a point in time.
         rate_params: Rate parameters and Einstein coefficients for the system.
         laser_params: Laser parameters.
-        line: The rotational line of interest.
+        pumped_line: The rotational absorption line pumped by the laser.
 
     Returns:
         Differential equations dN1/dt, dN2/dt, and dN3/dt.
     """
-    n1, n2, n3 = n
+    n1_hat, n2_hat, n3_hat = n_hat
 
     # TODO: 24/10/29 - Implement the overlap integral between the transition and laser lineshapes.
 
@@ -202,18 +208,20 @@ def rate_equations(
     w_le = i_l * rate_params.b_21 * overlap_integral / constants.LIGHT
 
     # Lower state rotational Boltzmann fraction.
-    f_b = line.rot_boltz_frac[1]
+    f_b = pumped_line.rot_boltz_frac[1]
 
     # Normalized rate equations from "A 3-Level Model for O2 LIF" by Diskin; see the `simulate`
     # function for the normalization used.
     dn1_dt: float = (
-        -(w_la + rate_params.w_c) * n1 + (w_le + rate_params.a_21) * n2 + rate_params.w_c * n3
+        -(w_la + rate_params.w_c) * n1_hat
+        + (w_le + rate_params.a_21) * n2_hat
+        + rate_params.w_c * n3_hat
     )
     dn2_dt: float = (
-        w_la * n1
-        - (w_le + rate_params.w_d + rate_params.a_21 + rate_params.w_f + rate_params.w_q) * n2
+        w_la * n1_hat
+        - (w_le + rate_params.w_d + rate_params.a_21 + rate_params.w_f + rate_params.w_q) * n2_hat
     )
-    dn3_dt: float = -(f_b / (1.0 - f_b)) * rate_params.w_c * (n3 - n1)
+    dn3_dt: float = -(f_b / (1.0 - f_b)) * rate_params.w_c * (n3_hat - n1_hat)
 
     return [dn1_dt, dn2_dt, dn3_dt]
 
@@ -221,19 +229,19 @@ def rate_equations(
 def simulate(
     rate_params: RateParams,
     laser_params: LIFLaserParams,
-    line: Line,
+    pumped_line: Line,
     t_eval: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    """Return the time and population densities of the three states as functions of time.
+    """Return the normalized population densities of the three states as functions of time.
 
     Args:
         rate_params: Rate parameters.
         laser_params: Laser parameters.
-        line: The rotational line of interest.
-        t_eval: Time steps to integrate over.
+        pumped_line: The rotational absorption line pumped by the laser.
+        t_eval: The time domain to simulate over in [s].
 
     Returns:
-        The solution array.
+        The normalized population densities.
 
     Raises:
         RuntimeError: If the solution fails to converge.
@@ -245,7 +253,7 @@ def simulate(
     # \hat{N}_3 = (N_3 / N_{1,0}) * (f_b / (1 - f_b))
 
     # The initial state populations are normalized, as are the rate equations.
-    n0 = [1.0, 0.0, 1.0]
+    n0_hat = [1.0, 0.0, 1.0]
 
     # By default, the solver chooses its own time array, but we choose to pass one for more control.
     t_span = (t_eval[0], t_eval[-1])
@@ -253,9 +261,9 @@ def simulate(
     solution: OdeResult = sy.integrate.solve_ivp(
         fun=rate_equations,
         t_span=t_span,
-        y0=n0,
+        y0=n0_hat,
         t_eval=t_eval,
-        args=(rate_params, laser_params, line),
+        args=(rate_params, laser_params, pumped_line),
         method="Radau",
         # Default tolerance (rtol=1e-3, atol=1e-6) seems to work well enough.
         # rtol=1e-6,
@@ -269,22 +277,22 @@ def simulate(
 
 
 def get_signal(
-    t: NDArray[np.float64], n2: NDArray[np.float64], rate_params: RateParams
+    t_eval: NDArray[np.float64], n2_hat: NDArray[np.float64], rate_params: RateParams
 ) -> NDArray[np.float64]:
     """Return the LIF signal as a function of time.
 
     Args:
-        t: The time domain to simulate over in [s].
-        n2: Normalized population density of state 2.
+        t_eval: The time domain to simulate over in [s].
+        n2_hat: Normalized number density of state 2.
         rate_params: Rate parameters and Einstein coefficients for the system.
 
     Returns:
         The total integrated LIF signal from state 2 as a function of time.
     """
-    return rate_params.w_f * sy.integrate.cumulative_trapezoid(n2, t, initial=0)
+    return rate_params.w_f * sy.integrate.cumulative_simpson(n2_hat, x=t_eval, initial=0)
 
 
-def create_sim(
+def create_pumped_sim(
     molecule: Molecule,
     state_up: State,
     state_lo: State,
@@ -293,7 +301,7 @@ def create_sim(
     v_qn_up: int,
     v_qn_lo: int,
 ) -> Sim:
-    """Return a simulation object with the desired parameters.
+    """Create a simulation for the pumped absorption line.
 
     Args:
         molecule: Molecule of interest.
@@ -305,7 +313,7 @@ def create_sim(
         v_qn_lo: Lower state vibrational quantum number v''.
 
     Returns:
-        A `Sim` object with the desired parameters.
+        A `Sim` object for the pumped absorption line.
     """
     return Sim(
         sim_type=SimType.ABSORPTION,
@@ -322,11 +330,11 @@ def create_sim(
     )
 
 
-def find_line(sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
+def find_line(pumped_sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) -> Line:
     """Return a rotational line with the desired parameters.
 
     Args:
-        sim: The parent simulation.
+        pumped_sim: The parent simulation for the pumped rotational line.
         branch_name_j: Branch name with respect to ΔJ.
         branch_idx_lo : Lower state branch index.
         n_qn_lo: Lower state rotational quantum number N''.
@@ -337,7 +345,7 @@ def find_line(sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) ->
     Raises:
         ValueError: If the requested rotational line does not exist within the simulation.
     """
-    for line in sim.bands[0].lines:
+    for line in pumped_sim.bands[0].lines:
         if (
             line.branch_name_j == branch_name_j
             and line.branch_idx_lo == branch_idx_lo
@@ -349,40 +357,71 @@ def find_line(sim: Sim, branch_name_j: str, branch_idx_lo: int, n_qn_lo: int) ->
     raise ValueError("No matching rotational line found.")
 
 
+def gated_n2_integral(
+    t_eval: NDArray[np.float64], n2: NDArray[np.float64], gate_start: float, gate_stop: float
+) -> float:
+    """Integrates the upper state number density over the selected time interval.
+
+    Args:
+        t_eval: The time domain to simulate over in [s].
+        n2: The upper state number density.
+        gate_start: Gate start time in [s].
+        gate_stop: Gate stop time in [s].
+
+    Returns:
+        The integrated upper state number density.
+
+    Raises:
+        ValueError: If t_stop <= t_start.
+        ValueError: If the selected gate is too narrow for the current time resolution.
+    """
+    if gate_stop <= gate_start:
+        raise ValueError("The value of gate_stop must be > gate_start.")
+
+    mask = (t_eval >= gate_start) & (t_eval <= gate_stop)
+
+    # Here, `.sum()` finds the total number of True elements in the mask.
+    if mask.sum() < 2:
+        raise ValueError("Gate is too narrow for the current time resolution.")
+
+    return sy.integrate.simpson(n2[mask], t_eval[mask])
+
+
 def populations_vs_time(
-    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
 ) -> None:
     """Plot the population densities, signal, and laser intensity as functions of time.
 
     Args:
-        sim: Simulation.
-        line: Line.
+        pumped_sim: The parent simulation for the pumped rotational line.
+        pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(sim, line)
+    rate_params = time_independent_rates(pumped_sim, pumped_line)
 
-    n1, n2, n3 = simulate(rate_params, laser_params, line, t_eval)
+    n1_hat, n2_hat, n3_hat = simulate(rate_params, laser_params, pumped_line, t_eval)
 
     # Normalize the signal with respect to N2.
-    sf = get_signal(t_eval, n2, rate_params)
-    sf /= n2.max()
+    sf = get_signal(t_eval, n2_hat, rate_params)
+    sf /= n2_hat.max()
 
     # Normalize the laser with respect to itself.
     il = laser_intensity(t_eval, laser_params)
     il /= il.max()
 
     _, ax1 = plt.subplots()
-    ax1.set_xlabel("Time, $t$ [s]")
+    t_eval = t_eval * 1e9
+    ax1.set_xlabel("Time, $t$ [ns]")
     ax1.set_ylabel("$N_1$, $N_3$, $I_l$ (Normalized)")
-    ax1.plot(t_eval, n1, label="$N_1$")
-    ax1.plot(t_eval, n3, label="$N_3$")
+    ax1.plot(t_eval, n1_hat, label="$N_1$")
+    ax1.plot(t_eval, n3_hat, label="$N_3$")
     ax1.plot(t_eval, il, label="$I_l$")
     ax1.legend()
 
     ax2 = ax1.twinx()
     ax2.set_ylabel("$N_2$, $S_f$ (Normalized)")
-    ax2.plot(t_eval, n2, label="$N_2$", linestyle="-.")
+    ax2.plot(t_eval, n2_hat, label="$N_2$", linestyle="-.")
     ax2.plot(t_eval, sf, label="$S_f$", linestyle="-.")
     ax2.legend()
 
@@ -390,17 +429,17 @@ def populations_vs_time(
 
 
 def max_signal_vs_fluence(
-    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
 ) -> None:
     """Plot the maximum fluorescence signal as a function of laser fluence.
 
     Args:
-        sim: Simulation.
-        line: Line.
+        pumped_sim: The parent simulation for the pumped rotational line.
+        pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(sim, line)
+    rate_params = time_independent_rates(pumped_sim, pumped_line)
 
     max_fluence = laser_params.fluence
 
@@ -412,9 +451,9 @@ def max_signal_vs_fluence(
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        _, n2, _ = simulate(rate_params, iterate_laser_params, line, t_eval)
+        _, n2_hat, _ = simulate(rate_params, iterate_laser_params, pumped_line, t_eval)
 
-        signal = get_signal(t_eval, n2, rate_params)
+        signal = get_signal(t_eval, n2_hat, rate_params)
         max_signals[idx] = signal.max()
 
     plt.plot(fluences, max_signals / max_signals.max())
@@ -425,17 +464,17 @@ def max_signal_vs_fluence(
 
 
 def n2_vs_time_and_fluence(
-    sim: Sim, line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
+    pumped_sim: Sim, pumped_line: Line, laser_params: LIFLaserParams, t_eval: NDArray[np.float64]
 ) -> None:
     """Plot upper state population as a function of laser fluence and time.
 
     Args:
-        sim: Simulation.
-        line: Line.
+        pumped_sim: The parent simulation for the pumped rotational line.
+        pumped_line: The pumped rotational line.
         laser_params: Laser parameters.
         t_eval: Time steps to integrate over.
     """
-    rate_params = time_independent_rates(sim, line)
+    rate_params = time_independent_rates(pumped_sim, pumped_line)
 
     fluences = np.linspace(0.0, laser_params.fluence, N_FLUENCE)
     n2_populations = np.zeros((len(fluences), len(t_eval)))
@@ -445,19 +484,129 @@ def n2_vs_time_and_fluence(
             laser_params.pulse_center, laser_params.pulse_width, fluence
         )
 
-        _, n2, _ = simulate(rate_params, iterate_laser_params, line, t_eval)
+        _, n2_hat, _ = simulate(rate_params, iterate_laser_params, pumped_line, t_eval)
 
-        n2_populations[idx, :] = n2
+        n2_populations[idx, :] = n2_hat
 
     t, f = np.meshgrid(t_eval, fluences)
 
-    contour = plt.contourf(t, f, n2_populations, levels=50, cmap="magma")
+    contour = plt.contourf(t * 1e9, f, n2_populations, levels=50, cmap="magma")
 
     cbar = plt.colorbar(contour)
     cbar.set_label("$N_2$")
 
-    plt.xlabel("Time, $t$ [s]")
+    plt.xlabel("Time, $t$ [ns]")
     plt.ylabel("Laser Fluence, $\\Phi$ [J/cm$^2$]")
+    plt.show()
+
+
+def lif_spectra_vs_time(
+    pumped_sim: Sim,
+    pumped_line: Line,
+    laser_params: LIFLaserParams,
+    v_qn_lo_max: int,
+    t_eval: NDArray[np.float64],
+) -> None:
+    """Plots the LIF spectra.
+
+    Args:
+        pumped_sim: The parent simulation for the pumped rotational line.
+        pumped_line: The pumped rotational line.
+        laser_params: Laser parameters.
+        v_qn_lo_max: Maximum lower state vibrational quantum number v''.
+        t_eval: Time steps to integrate over.
+    """
+    granularity = 10000
+
+    total_number_density = pumped_sim.pressure / (
+        constants.BOLTZ * pumped_sim.temp_params.translational
+    )
+
+    # N_{1, 0}, the lower state number density of the pumped line.
+    number_density_lo = (
+        total_number_density
+        * pumped_sim.elc_boltz_frac[1]
+        * pumped_line.band.vib_boltz_frac[1]
+        * pumped_line.rot_boltz_frac[1]
+    )
+
+    points_per_ns = t_eval.size / (t_eval[-1] - t_eval[0])
+
+    rate_params = time_independent_rates(pumped_sim, pumped_line)
+    _, n2_hat, _ = simulate(rate_params, laser_params, pumped_line, t_eval)
+
+    n2 = n2_hat * number_density_lo
+
+    band_range: list[tuple[int, int]] = [
+        (pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)
+    ]
+
+    emission_sim = Sim(
+        sim_type=SimType.LIF,
+        molecule=pumped_sim.molecule,
+        state_up=pumped_sim.state_up,
+        state_lo=pumped_sim.state_lo,
+        j_qn_up_max=40,
+        pressure=pumped_sim.pressure,
+        bands_input=band_range,
+        inst_params=InstrumentParams(1, 1),
+        temp_params=pumped_sim.temp_params,
+        broad_bools=BroadeningBools(
+            instrument=True, collisional=True, doppler=True, natural=True, predissociation=True
+        ),
+        pumped_line=pumped_line,
+    )
+
+    selected_time = 30e-9
+    idx_at_time = int(points_per_ns * selected_time)
+
+    gate_start = 10e-9
+    gate_stop = 20e-9
+
+    n2_gate = gated_n2_integral(t_eval, n2, gate_start, gate_stop)
+
+    wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in emission_sim.bands])
+    inst_broadening = max(emission_sim.bands[0].lines[0].fwhm_instrument())
+    padding = 10.0 * max(inst_broadening, 2.0)
+
+    grid_min = wavenumbers_line.min() - padding
+    grid_max = wavenumbers_line.max() + padding
+
+    wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
+    wavelengths_cont = utils.wavenum_to_wavelen(wavenumbers_cont)
+
+    # Intensity per upper number density.
+    intensities_cont = np.zeros_like(wavenumbers_cont)
+
+    for band in emission_sim.bands:
+        intensities_cont += band.intensities_cont(wavenumbers_cont)
+
+    # Intensity vs. time and wavelength.
+    i_t_wl = n2[None, :] * intensities_cont[:, None]
+
+    w, t = np.meshgrid(wavelengths_cont, t_eval, indexing="ij")
+
+    contour = plt.contourf(w, t * 1e9, i_t_wl, levels=50, cmap="magma")
+    cbar = plt.colorbar(contour)
+    cbar.set_label("Intensity, $I$ [a.u.]")
+
+    plt.xlabel(r"Wavelength, $\lambda$ [nm]")
+    plt.ylabel("Time, $t$ [ns]")
+    plt.show()
+
+    plt.plot(
+        wavelengths_cont,
+        intensities_cont * n2_gate / (gate_stop - gate_start),
+        label=f"Gated average spectrum from {gate_start * 1e9} ns to {gate_stop * 1e9} ns",
+    )
+    plt.plot(
+        wavelengths_cont,
+        intensities_cont * n2[idx_at_time],
+        label=f"Instantaneous spectrum at t={selected_time * 1e9:.1f} ns",
+    )
+    plt.xlabel(r"Wavelength, $\lambda$ [nm]")
+    plt.ylabel("Intensity, $I$ [a.u.]")
+    plt.legend()
     plt.show()
 
 
@@ -488,13 +637,13 @@ def main() -> None:
     v_qn_up = 2
     v_qn_lo = 7
 
-    sim = create_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
+    pumped_sim = create_pumped_sim(molecule, state_up, state_lo, temp, pres, v_qn_up, v_qn_lo)
 
     branch_name_j = "P"
     branch_idx_lo = 1
     n_qn_lo = 9
 
-    line = find_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
+    pumped_line = find_line(pumped_sim, branch_name_j, branch_idx_lo, n_qn_lo)
 
     pulse_center = 30e-9
     pulse_width = 20e-9
@@ -502,18 +651,24 @@ def main() -> None:
 
     laser_params = LIFLaserParams(pulse_center, pulse_width, fluence)
 
-    t = np.linspace(0.0, 60e-9, 1000)
+    n_points = 1000
+    min_time = 0.0
+    max_time = 60.0
 
-    populations_vs_time(sim, line, laser_params, t)
+    # Convert times from [ns] to [s].
+    t_eval = np.linspace(min_time * 1e-9, max_time * 1e-9, n_points)
+
+    lif_spectra_vs_time(pumped_sim, pumped_line, laser_params, 15, t_eval)
+    populations_vs_time(pumped_sim, pumped_line, laser_params, t_eval)
 
     # Experimental data for the Schumann-Runge bands of O2 at 1800 K, 1 atm, extracted from
     # Figure 5 of <https://doi.org/10.1364/AO.34.005501>.
     jay_27_p9x = np.array([0.0, 1.8, 3.6, 6.0, 12.0, 24.0, 42.5]) / 1e3
     jay_27_p9y = np.array([0.0, 0.08, 0.15, 0.27, 0.47, 0.7, 1.0])
     plt.scatter(jay_27_p9x, jay_27_p9y)
-    max_signal_vs_fluence(sim, line, laser_params, t)
+    max_signal_vs_fluence(pumped_sim, pumped_line, laser_params, t_eval)
 
-    n2_vs_time_and_fluence(sim, line, laser_params, t)
+    n2_vs_time_and_fluence(pumped_sim, pumped_line, laser_params, t_eval)
 
 
 if __name__ == "__main__":

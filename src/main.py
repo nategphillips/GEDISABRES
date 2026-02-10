@@ -928,7 +928,7 @@ class CustomTab(QWidget):
         self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "")
         self.plot_widget.setXRange(40000, 50000)
         plot_table_layout.addWidget(self.plot_widget, stretch=2)
 
@@ -1323,7 +1323,7 @@ class LIFTab(QWidget):
             print(str(e))
 
         # For a given v', get the maximum value of v'' (account for 0-indexing).
-        v_qn_lo_max = pumped_sim.einstein[pumped_sim.bands[0].v_qn_up].size - 1
+        v_qn_lo_max = lif.get_v_qn_lo_max(pumped_sim)
         band_range = [(pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)]
 
         # The LIF emission simulation is exactly the same as the absorption line simulation except
@@ -1464,6 +1464,7 @@ class LIFTab(QWidget):
         self.slice_plot.setLabel("top", "Wavelength, λ [nm]")
         self.slice_plot.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.slice_plot.setLabel("left", "Intensity, I [a.u.]")
+        self.slice_plot.setLabel("right", "")
 
         if self._time_cursor is not None:
             with contextlib.suppress(Exception):
@@ -1582,7 +1583,7 @@ class AllSimulationsTab(QWidget):
         self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
+        self.plot_widget.setLabel("right", "")
         self.plot_widget.setXRange(40000, 50000)
         main_layout.addWidget(self.plot_widget, stretch=1)
 

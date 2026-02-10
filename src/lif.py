@@ -121,7 +121,7 @@ def time_independent_rates(emission_sim: Sim, pumped_sim: Sim, pumped_line: Line
 
     Args:
         emission_sim: The simulation containing the LIF emission lines.
-        pumped_sim: The parent simulation.
+        pumped_sim: The parent simulation for the pumped rotational line.
         pumped_line: The rotational absorption line pumped by the laser.
 
     Returns:
@@ -353,6 +353,32 @@ def create_pumped_sim(
             collisional=True, doppler=True, natural=True, predissociation=True
         ),
     )
+
+
+def get_v_qn_lo_max(pumped_sim: Sim) -> int:
+    """Find and return the maximum v'' supported by both the Einstein A coefficients and constants.
+
+    Args:
+        pumped_sim: The parent simulation for the pumped rotational line.
+
+    Returns:
+        The maximum value of v'' used to simulate LIF emission.
+    """
+    # For a given v', get the maximum value of v'' supported by the Einstein A coefficients.
+    max_v_einstein = pumped_sim.einstein[pumped_sim.bands[0].v_qn_up].size - 1
+
+    if pumped_sim.state_lo.constants_type == ConstantsType.PERLEVEL:
+        # NOTE: 26/02/10 - The case can arise where the tabulated Einstein A coefficients cover more
+        #       v'' states than the per-level constants, so we must find the lower of the two if
+        #       per-level constants are used.
+        max_v_constants = pumped_sim.state_lo.all_constants.shape[0] - 1
+
+        if max_v_constants < max_v_einstein:
+            return max_v_constants
+
+        return max_v_einstein
+
+    return max_v_einstein
 
 
 def create_emission_sim(pumped_sim: Sim, pumped_line: Line, v_qn_lo_max: int) -> Sim:
@@ -698,8 +724,7 @@ def main() -> None:
 
     pumped_line = find_line(pumped_sim, branch_name_j, branch_idx_lo, n_qn_lo)
 
-    # For a given v', get the maximum value of v'' (account for 0-indexing).
-    v_qn_lo_max = pumped_sim.einstein[v_qn_up].size - 1
+    v_qn_lo_max = get_v_qn_lo_max(pumped_sim)
     emission_sim = create_emission_sim(pumped_sim, pumped_line, v_qn_lo_max)
 
     pulse_center = 30e-9

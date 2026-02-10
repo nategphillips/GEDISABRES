@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import contextlib
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,6 +25,7 @@ import numpy as np
 import polars as pl
 import pyqtgraph as pg
 import qdarktheme
+from PySide6 import QtCore
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -56,6 +58,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import constants
 import data_path
 import lif
 import plot
@@ -921,9 +924,9 @@ class CustomTab(QWidget):
 
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
         self.plot_widget.setXRange(100, 200)
@@ -1258,15 +1261,20 @@ class LIFTab(QWidget):
         laser_layout.addWidget(self.n_points)
         layout.addWidget(laser_group)
 
-        self.run_btn = QPushButton("Run LIF Simulation")
-        self.run_btn.clicked.connect(self.run_lif)
-        layout.addWidget(self.run_btn)
+        button_group = QGroupBox()
+        button_layout = QHBoxLayout(button_group)
+        self.lifspec_btn = QPushButton("Populations vs. Time")
+        self.lifspec_btn.clicked.connect(self.populations_vs_time)
+        button_layout.addWidget(self.lifspec_btn)
+
+        self.lifspec_btn = QPushButton("LIF Spectra vs. Time")
+        self.lifspec_btn.clicked.connect(self.lif_spectra_vs_time)
+        button_layout.addWidget(self.lifspec_btn)
+        layout.addWidget(button_group)
 
         self.plot = pg.PlotWidget()
-        self.plot.addLegend(offset=(0, 1))
-        self.plot.setLabel("bottom", "Time, t [s]")
-        self.plot.setLabel("left", "N_1, N_3, I_l (Normalized)")
-        self.plot.setLabel("right", "N_2, S_f (Normalized)")
+        self._lif_img_item = None
+        self._lif_cbar = None
         layout.addWidget(self.plot, stretch=1)
 
         self.refresh_parent_tabs()
@@ -1278,6 +1286,12 @@ class LIFTab(QWidget):
             if hasattr(tab, "sim"):
                 self.sim_selector.addItem(self.parent_tab_widget.tabText(idx), userData=idx)
 
+    def get_parent_tab(self):
+        idx = self.sim_selector.currentData()
+        if idx is None:
+            return None
+        return self.parent_tab_widget.widget(idx)
+
     def get_parent_sim(self):
         idx = self.sim_selector.currentData()
         if idx is None:
@@ -1285,12 +1299,11 @@ class LIFTab(QWidget):
         tab = self.parent_tab_widget.widget(idx)
         return getattr(tab, "sim", None)
 
-    def run_lif(self):
-        parent_sim = self.get_parent_sim()
-        if parent_sim is None:
-            return
+    def setup_lif(self):
+        pumped_sim = self.get_parent_sim()
 
-        sim = parent_sim
+        if pumped_sim is None:
+            raise ValueError("No pumped simulation.")
 
         branch_name_j = self.branch_name_j.currentText()
         branch_idx_lo = int(self.branch_idx_lo.value())
@@ -1298,10 +1311,34 @@ class LIFTab(QWidget):
 
         # TODO: 26/02/02 - Actually add dialog boxes here to tell the user what's happened.
         try:
-            line = lif.find_line(sim, branch_name_j, branch_idx_lo, n_qn_lo)
+            pumped_line = lif.find_line(pumped_sim, branch_name_j, branch_idx_lo, n_qn_lo)
         except ValueError as e:
             print(str(e))
-            return
+
+        # For a given v', get the maximum value of v'' (account for 0-indexing).
+        v_qn_lo_max = pumped_sim.einstein[pumped_sim.bands[0].v_qn_up].size - 1
+        band_range = [(pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)]
+
+        # The LIF emission simulation is exactly the same as the absorption line simulation except
+        # for the simulation type and bands simulated.
+        emission_sim = Sim(
+            sim_type=SimType.LIF,
+            molecule=pumped_sim.molecule,
+            state_up=pumped_sim.state_up,
+            state_lo=pumped_sim.state_lo,
+            j_qn_up_max=pumped_sim.j_qn_up_max,
+            pressure=pumped_sim.pressure,
+            bands_input=band_range,
+            temp_params=pumped_sim.temp_params,
+            laser_params=pumped_sim.laser_params,
+            inst_params=pumped_sim.inst_params,
+            shift_params=pumped_sim.shift_params,
+            shift_bools=pumped_sim.shift_bools,
+            broad_bools=pumped_sim.broad_bools,
+            plot_bools=pumped_sim.plot_bools,
+            plot_params=pumped_sim.plot_params,
+            pumped_line=pumped_line,
+        )
 
         # Spinbox inputs are in [ns], so convert back to [s].
         laser_params = lif.LIFLaserParams(
@@ -1311,33 +1348,151 @@ class LIFTab(QWidget):
         )
 
         # Max time also has to be converted from [ns] to [s].
-        t = np.linspace(0.0, self.max_time.value() * 1e-9, self.n_points.value())
-        rate_params = lif.time_independent_rates(sim, line)
-        n1, n2, n3 = lif.simulate(rate_params, laser_params, line, t)
-        sf = lif.get_signal(t, n2, rate_params)
-        il = lif.laser_intensity(t, laser_params)
+        t_eval = np.linspace(0.0, self.max_time.value() * 1e-9, self.n_points.value())
 
-        sf = sf / n2.max()
-        il = il / il.max()
+        return emission_sim, pumped_sim, pumped_line, laser_params, t_eval
+
+    def populations_vs_time(self):
+        emission_sim, pumped_sim, pumped_line, laser_params, t_eval = self.setup_lif()
+
+        rate_params = lif.time_independent_rates(emission_sim, pumped_sim, pumped_line)
+        n1_hat, n2_hat, n3_hat = lif.simulate(rate_params, laser_params, pumped_line, t_eval)
+
+        # Normalize the signal with respect to N2.
+        sf = lif.get_signal(t_eval, n2_hat, rate_params)
+        sf /= n2_hat.max()
+
+        # Normalize the laser with respect to itself.
+        il = lif.laser_intensity(t_eval, laser_params)
+        il /= il.max()
 
         colors = get_colors(5)
 
+        # Show time in [ns].
+        time_ns = t_eval * 1e9
+
         self.plot.clear()
+        self._clear_lif_extras()
+
+        # Reset the top axis since the spectrum plot will mess this up otherwise.
+        self.plot.setAxisItems({"top": pg.AxisItem(orientation="top")})
+        self.plot.setLabel("top", "")
+        self.plot.setLabel("bottom", "Time, t [ns]")
+        self.plot.setLabel("left", "N_1, N_3, I_l (Normalized)")
+        self.plot.setLabel("right", "N_2, S_f (Normalized)")
+        self.plot.addLegend(offset=(0, 1))
+
         # Left axis.
-        self.plot.plot(t, n1, name="N1", pen=pg.mkPen(colors[0], width=1))
-        self.plot.plot(t, n3, name="N3", pen=pg.mkPen(colors[1], width=1))
-        self.plot.plot(t, il, name="I_l", pen=pg.mkPen(colors[2], width=1))
+        self.plot.plot(time_ns, n1_hat, name="N1", pen=pg.mkPen(colors[0], width=1))
+        self.plot.plot(time_ns, n3_hat, name="N3", pen=pg.mkPen(colors[1], width=1))
+        self.plot.plot(time_ns, il, name="I_l", pen=pg.mkPen(colors[2], width=1))
 
         # Right axis.
         self.plot.plot(
-            t, n2, name="N2", pen=pg.mkPen(colors[3], style=pg.QtCore.Qt.PenStyle.DashLine, width=1)
+            time_ns,
+            n2_hat,
+            name="N2",
+            pen=pg.mkPen(colors[3], style=pg.QtCore.Qt.PenStyle.DashLine, width=1),
         )
         self.plot.plot(
-            t,
+            time_ns,
             sf,
             name="S_f",
             pen=pg.mkPen(colors[4], style=pg.QtCore.Qt.PenStyle.DashLine, width=1),
         )
+        self.plot.autoRange()
+
+    def lif_spectra_vs_time(self):
+        emission_sim, pumped_sim, pumped_line, laser_params, t_eval = self.setup_lif()
+
+        parent_tab = self.get_parent_tab()
+        if parent_tab is not None and hasattr(parent_tab, "resolution_spinbox"):
+            granularity = int(parent_tab.resolution_spinbox.value())  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            granularity = DEFAULT_RESOLUTION
+
+        total_number_density = pumped_sim.pressure / (
+            constants.BOLTZ * pumped_sim.temp_params.translational
+        )
+
+        # N_{1, 0}, the lower state number density of the pumped line.
+        number_density_lo = (
+            total_number_density
+            * pumped_sim.elc_boltz_frac[1]
+            * pumped_line.band.vib_boltz_frac[1]
+            * pumped_line.rot_boltz_frac[1]
+        )
+
+        rate_params = lif.time_independent_rates(emission_sim, pumped_sim, pumped_line)
+        _, n2_hat, _ = lif.simulate(rate_params, laser_params, pumped_line, t_eval)
+
+        n2 = n2_hat * number_density_lo
+
+        wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in emission_sim.bands])
+        inst_broadening = max(emission_sim.bands[0].lines[0].fwhm_instrument())
+        padding = 10.0 * max(inst_broadening, 2.0)
+
+        grid_min = wavenumbers_line.min() - padding
+        grid_max = wavenumbers_line.max() + padding
+
+        wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
+
+        # Intensity per upper number density.
+        intensities_cont = np.zeros_like(wavenumbers_cont)
+
+        for band in emission_sim.bands:
+            intensities_cont += band.intensities_cont(wavenumbers_cont)
+
+        # Intensity vs. time and wavelength.
+        i_t_wl = n2[None, :] * intensities_cont[:, None]
+
+        self.plot.clear()
+        self._clear_lif_extras()
+
+        # NOTE: 26/02/10 - The grid used to create the intensities at each point is linearly spaced
+        #       in wavenumber coordinates. Any pixel-based image created using this data will have
+        #       one pixel per wavenumber spacing, and therefore cannot easily be transformed into
+        #       wavelength coordinates for plotting without squashing/stretching individual pixels.
+        #       To avoid this, just plot the spectrum in wavenumber coordinates and create a second
+        #       axis for wavelength on top.
+        self.plot.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot.setLabel("top", "Wavelength, λ [nm]")
+        self.plot.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
+        self.plot.setLabel("left", "Time, t [ns]")
+        self.plot.setLabel("right", "")
+
+        time_ns = t_eval * 1e9
+
+        self._lif_img_item = pg.ImageItem()
+        self._lif_img_item.setImage(i_t_wl, autoLevels=False)
+        self._lif_img_item.setLevels([i_t_wl.min(), i_t_wl.max()])
+
+        x0, x1 = float(wavenumbers_cont.min()), float(wavenumbers_cont.max())
+        y0, y1 = float(time_ns.min()), float(time_ns.max())
+        self._lif_img_item.setRect(QtCore.QRectF(x0, y0, x1 - x0, y1 - y0))
+
+        self.plot.addItem(self._lif_img_item)
+
+        self._lif_cbar = self.plot.addColorBar(
+            self._lif_img_item, colorMap="magma", label="Intensity"
+        )
+
+        self.plot.autoRange()
+
+    def _clear_lif_extras(self):
+        if self._lif_cbar is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._lif_cbar)
+            with contextlib.suppress(Exception):
+                self._lif_cbar.setParentItem(None)
+            with contextlib.suppress(Exception):
+                self._lif_cbar.hide()
+            self._lif_cbar = None
+
+        if self._lif_img_item is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._lif_img_item)
+            self._lif_img_item = None
 
 
 class AllSimulationsTab(QWidget):
@@ -1381,9 +1536,9 @@ class AllSimulationsTab(QWidget):
 
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
         self.plot_widget.setXRange(100, 200)
@@ -1579,28 +1734,28 @@ class GUI(QMainWindow):
             self.lif_tab.refresh_parent_tabs()
 
 
-class WavenumberAxis(pg.AxisItem):
-    """A custom x-axis displaying wavenumbers."""
+class WavelengthAxis(pg.AxisItem):
+    """A custom x-axis displaying wavelengths."""
 
     def __init__(self, *args, **kwargs) -> None:
         """Initialize class variables."""
         super().__init__(*args, **kwargs)
 
-    def tickStrings(self, wavelengths: list[float], *_) -> list[str]:  # noqa: N802
-        """Return the wavenumber strings that are placed next to ticks.
+    def tickStrings(self, wavenumbers: list[float], *_) -> list[str]:  # noqa: N802
+        """Return the wavelength strings that are placed next to ticks.
 
         Args:
-            wavelengths: List of wavelength values.
+            wavenumbers: List of wavenumber values.
 
         Returns:
-            List of wavenumber values placed next to ticks.
+            List of wavelength values placed next to ticks.
         """
         strings: list[str] = []
 
-        for wavelength in wavelengths:
-            if wavelength != 0:
-                wavenumber = utils.wavenum_to_wavelen(wavelength)
-                strings.append(f"{wavenumber:.1f}")
+        for wavenumber in wavenumbers:
+            if wavenumber != 0:
+                wavelength = utils.wavenum_to_wavelen(wavenumber)
+                strings.append(f"{wavelength:.1f}")
             else:
                 strings.append("∞")
 

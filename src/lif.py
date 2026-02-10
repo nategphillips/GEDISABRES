@@ -25,7 +25,6 @@ import numpy as np
 import scipy as sy
 
 import constants
-import utils
 from atom import Atom
 from molecule import Molecule
 from sim import Sim
@@ -625,7 +624,6 @@ def lif_spectra_vs_time(
     grid_max = wavenumbers_line.max() + padding
 
     wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
-    wavelengths_cont = utils.wavenum_to_wavelen(wavenumbers_cont)
 
     # Intensity per upper number density.
     intensities_cont = np.zeros_like(wavenumbers_cont)
@@ -633,30 +631,33 @@ def lif_spectra_vs_time(
     for band in emission_sim.bands:
         intensities_cont += band.intensities_cont(wavenumbers_cont)
 
-    # Intensity vs. time and wavelength.
+    # Intensity vs. time and wavenumber.
     i_t_wl = n2[None, :] * intensities_cont[:, None]
 
-    w, t = np.meshgrid(wavelengths_cont, t_eval, indexing="ij")
+    time_ns = t_eval * 1e9
+    extent = (wavenumbers_cont.min(), wavenumbers_cont.max(), time_ns.min(), time_ns.max())
 
-    contour = plt.contourf(w, t * 1e9, i_t_wl, levels=50, cmap="magma")
-    cbar = plt.colorbar(contour)
+    im = plt.imshow(
+        i_t_wl.T, cmap="magma", extent=extent, origin="lower", aspect="auto", interpolation="none"
+    )
+    cbar = plt.colorbar(im)
     cbar.set_label("Intensity, $I$ [a.u.]")
 
-    plt.xlabel(r"Wavelength, $\lambda$ [nm]")
+    plt.xlabel(r"Wavenumber, $\nu$ [cm$^{-1}$]")
     plt.ylabel("Time, $t$ [ns]")
     plt.show()
 
     plt.plot(
-        wavelengths_cont,
+        wavenumbers_cont,
         intensities_cont * n2_gate / (gate_stop - gate_start),
         label=f"Gated average spectrum from {gate_start * 1e9} ns to {gate_stop * 1e9} ns",
     )
     plt.plot(
-        wavelengths_cont,
+        wavenumbers_cont,
         intensities_cont * n2[idx_at_time],
         label=f"Instantaneous spectrum at t={selected_time * 1e9:.1f} ns",
     )
-    plt.xlabel(r"Wavelength, $\lambda$ [nm]")
+    plt.xlabel(r"Wavenumber, $\nu$ [cm$^{-1}$]")
     plt.ylabel("Intensity, $I$ [a.u.]")
     plt.legend()
     plt.show()

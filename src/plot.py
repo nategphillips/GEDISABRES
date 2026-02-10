@@ -47,7 +47,7 @@ def plot_sample(
         display_name: The name of the file without directory information.
         value_type: Either wavenumbers or wavelengths.
     """
-    if value_type == "wavenumber":
+    if value_type == "wavelength":
         x_values = utils.wavenum_to_wavelen(x_values)
 
     plot_widget.plot(
@@ -83,15 +83,15 @@ def plot_line(
     for idx, band in enumerate(sim.bands):
         color_idx = color_index if color_index is not None else idx
 
-        wavelengths_line = utils.wavenum_to_wavelen(band.wavenumbers_line())
+        wavenumbers_line = band.wavenumbers_line()
         intensities_line = band.intensities_line()
 
         # Create a scatter plot with points at zero and peak intensity.
         scatter_data = np.column_stack(
             [
-                np.repeat(wavelengths_line, 2),
+                np.repeat(wavenumbers_line, 2),
                 np.column_stack(
-                    [np.zeros_like(wavelengths_line), intensities_line / max_intensity]
+                    [np.zeros_like(wavenumbers_line), intensities_line / max_intensity]
                 ).flatten(),
             ],
         )
@@ -132,15 +132,13 @@ def plot_line_info(
 
     for band in sim.bands:
         for line in band.lines:
-            wavelength = utils.wavenum_to_wavelen(line.wavenumber)
-            intensity = line.intensity / max_intensity
             text = pg.TextItem(
                 f"ΔJ: {line.branch_name_j}{line.branch_idx_up}{line.branch_idx_lo}(J'={line.j_qn_up}, J''={line.j_qn_lo})\nΔN: {line.branch_name_n}{line.branch_idx_up}{line.branch_idx_lo}(N'={line.n_qn_up}, N''={line.n_qn_lo})",
                 color="w",
                 anchor=(0.5, 1.2),
             )
             plot_widget.addItem(text)
-            text.setPos(wavelength, intensity)
+            text.setPos(line.wavenumber, line.intensity / max_intensity)
 
 
 def plot_cont_sep(
@@ -170,18 +168,17 @@ def plot_cont_sep(
     for band in sim.bands:
         wavenumbers_cont = band.wavenumbers_cont(granularity)
         intensities_cont = band.intensities_cont(wavenumbers_cont)
-        wavelengths_cont = utils.wavenum_to_wavelen(wavenumbers_cont)
-        continuous_data.append((wavelengths_cont, intensities_cont))
+        continuous_data.append((wavenumbers_cont, intensities_cont))
 
         if max_intensity is None:
             calculated_max_intensity = max(calculated_max_intensity, intensities_cont.max())
 
     normalization_factor = max_intensity if max_intensity is not None else calculated_max_intensity
 
-    for idx, (wavelengths_cont, intensities_cont) in enumerate(continuous_data):
+    for idx, (wavenumbers_cont, intensities_cont) in enumerate(continuous_data):
         color_idx = color_index if color_index is not None else idx
         plot_widget.plot(
-            wavelengths_cont,
+            wavenumbers_cont,
             intensities_cont / normalization_factor,
             pen=pg.mkPen(colors[color_idx], width=PEN_WIDTH),
             name=f"{sim.molecule.name} {sim.bands[idx].v_qn_up, sim.bands[idx].v_qn_lo} cont",
@@ -208,7 +205,6 @@ def plot_cont_all(
         color_index: Provided only if multiple simulations are being run together. Defaults to 0.
     """
     wavenumbers_cont, intensities_cont = sim.all_cont_data(granularity)
-    wavelengths_cont: NDArray[np.float64] = utils.wavenum_to_wavelen(wavenumbers_cont)
 
     if max_intensity is None:
         max_intensity = intensities_cont.max()
@@ -216,7 +212,7 @@ def plot_cont_all(
     assert max_intensity is not None
 
     plot_widget.plot(
-        wavelengths_cont,
+        wavenumbers_cont,
         intensities_cont / max_intensity,
         pen=pg.mkPen(colors[color_index], width=PEN_WIDTH),
         name=f"{sim.molecule.name} cont all",

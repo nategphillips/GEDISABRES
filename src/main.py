@@ -929,7 +929,7 @@ class CustomTab(QWidget):
         self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
+        self.plot_widget.setXRange(40000, 50000)
         plot_table_layout.addWidget(self.plot_widget, stretch=2)
 
         main_layout.addWidget(plot_table_widget, stretch=1)
@@ -1273,8 +1273,15 @@ class LIFTab(QWidget):
         layout.addWidget(button_group)
 
         self.plot = pg.PlotWidget()
+        self.slice_plot = pg.PlotWidget()
+        self.slice_plot.hide()
+
         self._lif_img_item = None
         self._lif_cbar = None
+
+        self._time_cursor = None
+
+        layout.addWidget(self.slice_plot, stretch=0)
         layout.addWidget(self.plot, stretch=1)
 
         self.refresh_parent_tabs()
@@ -1353,6 +1360,9 @@ class LIFTab(QWidget):
         return emission_sim, pumped_sim, pumped_line, laser_params, t_eval
 
     def populations_vs_time(self):
+        if self.slice_plot is not None:
+            self.slice_plot.hide()
+
         emission_sim, pumped_sim, pumped_line, laser_params, t_eval = self.setup_lif()
 
         rate_params = lif.time_independent_rates(emission_sim, pumped_sim, pumped_line)
@@ -1444,7 +1454,20 @@ class LIFTab(QWidget):
             intensities_cont += band.intensities_cont(wavenumbers_cont)
 
         # Intensity vs. time and wavelength.
-        i_t_wl = n2[None, :] * intensities_cont[:, None]
+        i_t_wn = n2[None, :] * intensities_cont[:, None]
+
+        time_ns = t_eval * 1e9
+
+        self.slice_plot.show()
+        self.slice_plot.clear()
+        self.slice_plot.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.slice_plot.setLabel("top", "Wavelength, λ [nm]")
+        self.slice_plot.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
+        self.slice_plot.setLabel("left", "Intensity, I [a.u.]")
+
+        if self._time_cursor is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._time_cursor)
 
         self.plot.clear()
         self._clear_lif_extras()
@@ -1461,17 +1484,36 @@ class LIFTab(QWidget):
         self.plot.setLabel("left", "Time, t [ns]")
         self.plot.setLabel("right", "")
 
-        time_ns = t_eval * 1e9
-
         self._lif_img_item = pg.ImageItem()
-        self._lif_img_item.setImage(i_t_wl, autoLevels=False)
-        self._lif_img_item.setLevels([i_t_wl.min(), i_t_wl.max()])
+        self._lif_img_item.setImage(i_t_wn, autoLevels=False)
+        self._lif_img_item.setLevels([i_t_wn.min(), i_t_wn.max()])
 
         x0, x1 = float(wavenumbers_cont.min()), float(wavenumbers_cont.max())
         y0, y1 = float(time_ns.min()), float(time_ns.max())
         self._lif_img_item.setRect(QtCore.QRectF(x0, y0, x1 - x0, y1 - y0))
 
         self.plot.addItem(self._lif_img_item)
+
+        self._time_cursor = pg.InfiniteLine(
+            pos=float(time_ns[len(time_ns) // 2]),
+            angle=0,
+            movable=True,
+            pen=pg.mkPen("w", width=2),
+        )
+        self.plot.addItem(self._time_cursor)
+
+        # Plot an empty set of data that can be updated later.
+        slice_curve = self.slice_plot.plot([], [], pen=pg.mkPen("w", width=1))
+
+        def update_slice():
+            y = self._time_cursor.value()  # pyright: ignore[reportOptionalMemberAccess]
+            idx = np.argmin(np.abs(time_ns - y))
+            slice_curve.setData(wavenumbers_cont, i_t_wn[:, idx])
+            self.slice_plot.setTitle(f"Spectrum at t = {time_ns[idx]:.3f} ns")
+            self.slice_plot.setYRange(0, i_t_wn.max())
+
+        self._time_cursor.sigPositionChanged.connect(update_slice)
+        update_slice()
 
         self._lif_cbar = self.plot.addColorBar(
             self._lif_img_item, colorMap="magma", label="Intensity"
@@ -1541,7 +1583,7 @@ class AllSimulationsTab(QWidget):
         self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
+        self.plot_widget.setXRange(40000, 50000)
         main_layout.addWidget(self.plot_widget, stretch=1)
 
     def run_all_simulations(self):

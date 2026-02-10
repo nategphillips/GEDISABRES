@@ -83,7 +83,6 @@ from state import State
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from numpy.typing import NDArray
 
 DEFAULT_J_MAX = 40
 DEFAULT_RESOLUTION = int(1e4)
@@ -347,7 +346,7 @@ class MyTable(QAbstractTableModel):
             #       table view. If the table is exported, the underlying dataframe is used instead,
             #       which retains the full-precision values calculated by the simulation.
             if isinstance(value, float):
-                if "Intensity" in column_name:
+                if ("Abs. Coeff." in column_name) or ("Emi. Coeff." in column_name):
                     return f"{value:.4e}"
                 return f"{value:.4f}"
 
@@ -927,7 +926,6 @@ class CustomTab(QWidget):
         self.plot_widget.setAxisItems({"top": WavelengthAxis(orientation="top")})
         self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
         self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
         self.plot_widget.setLabel("right", "")
         self.plot_widget.setXRange(40000, 50000)
         plot_table_layout.addWidget(self.plot_widget, stretch=2)
@@ -1083,8 +1081,19 @@ class CustomTab(QWidget):
                 QMessageBox.StandardButton.Ok,
             )
 
+        if self.sim.sim_type == SimType.ABSORPTION:
+            self.plot_widget.setLabel("left", "Absorption Coefficient, α [m⁻¹]")
+            intensity_colname = "Abs. Coeff."
+        if self.sim.sim_type == SimType.EMISSION:
+            self.plot_widget.setLabel("left", "Emission Coefficient, j [W.m⁻³.sr⁻¹.cm]")
+            intensity_colname = "Emi. Coeff."
+
         # TODO: 25/08/18 - Might want to auto range if the bands are updated.
         if self.is_first_run:
+            # The `autoRange` function seems to break if the max intensity is above 1e6 for some
+            # reason, so manually adjust it then call `autoRange` for the x-axis.
+            y_max = max(line.intensity for line in self.sim.bands[0].lines)
+            self.plot_widget.setYRange(0, y_max)
             self.plot_widget.autoRange()
             self.is_first_run = False
 
@@ -1097,7 +1106,7 @@ class CustomTab(QWidget):
                     {
                         "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                         "Wavenumber": line.wavenumber,
-                        "Intensity": line.intensity,
+                        intensity_colname: line.intensity,
                         "J'": f"{line.j_qn_up:.1f}",
                         "J''": f"{line.j_qn_lo:.1f}",
                         "N'": f"{line.n_qn_up:.1f}",
@@ -1187,7 +1196,10 @@ class CustomTab(QWidget):
             QMessageBox.critical(self, "Error", "No 'intensity' column found.")
             return
 
-        plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
+        max_intensity = max(line.intensity for band in self.sim.bands for line in band.lines)
+        plot.plot_sample(
+            self.plot_widget, x_values, intensities, max_intensity, display_name, value_type
+        )
 
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
@@ -1447,13 +1459,13 @@ class LIFTab(QWidget):
 
         wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
 
-        # Intensity per upper number density.
+        # Emission coefficient per upper number density.
         intensities_cont = np.zeros_like(wavenumbers_cont)
 
         for band in emission_sim.bands:
             intensities_cont += band.intensities_cont(wavenumbers_cont)
 
-        # Intensity vs. time and wavelength.
+        # Emission coefficient vs. time and wavelength.
         i_t_wn = n2[None, :] * intensities_cont[:, None]
 
         time_ns = t_eval * 1e9
@@ -1517,7 +1529,7 @@ class LIFTab(QWidget):
         update_slice()
 
         self._lif_cbar = self.plot.addColorBar(
-            self._lif_img_item, colorMap="magma", label="Intensity"
+            self._lif_img_item, colorMap="magma", label="Emission Coefficient"
         )
 
         self.plot.autoRange()
@@ -1618,42 +1630,6 @@ class AllSimulationsTab(QWidget):
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
 
-        def max_intensity_line():
-            intensities_line = np.array([], dtype=np.float64)
-
-            for tab in custom_tabs:
-                _, ins = tab.sim.all_line_data()
-                intensities_line = np.concatenate((intensities_line, ins))
-
-            return intensities_line.max()
-
-        def max_intensity_cont_sep(granularity):
-            continuous_data: list[NDArray[np.float64]] = []
-            max_intensity = 0.0
-
-            for tab in custom_tabs:
-                for band in tab.sim.bands:
-                    intensities_cont = band.intensities_cont(
-                        band.wavenumbers_cont(granularity),
-                    )
-
-                    continuous_data.append(intensities_cont)
-
-                    max_intensity = max(max_intensity, intensities_cont.max())
-
-            return max_intensity
-
-        def max_intensity_cont_all():
-            intensities_cont = np.array([], dtype=np.float64)
-
-            for tab in custom_tabs:
-                _, ins = tab.sim.all_cont_data(
-                    self.resolution_spinbox.value(),
-                )
-                intensities_cont = np.concatenate((intensities_cont, ins))
-
-            return intensities_cont.max()
-
         # TODO: 25/08/01 - Adding all bands together needs to create a new wavenumber axis
         #       common to all simulations and then add the contributions of all simulations to the
         #       plot.
@@ -1669,7 +1645,6 @@ class AllSimulationsTab(QWidget):
                         tab.sim,
                         all_sim_colors,
                         resolution,
-                        max_intensity_cont_sep(resolution),
                         idx,
                     )
                 elif plot_function.__name__ == "plot_cont_all":
@@ -1678,13 +1653,10 @@ class AllSimulationsTab(QWidget):
                         tab.sim,
                         all_sim_colors,
                         self.resolution_spinbox.value(),
-                        max_intensity_cont_all(),
                         idx,
                     )
                 else:
-                    plot_function(
-                        self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
-                    )
+                    plot_function(self.plot_widget, tab.sim, all_sim_colors, idx)
 
         if self.is_first_run:
             self.plot_widget.autoRange()

@@ -1,7 +1,7 @@
-# module enums.py
+# module sim_props.py
 """Contains enums for defining simulation properties."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -45,10 +45,11 @@ class SimType(Enum):
 
     ABSORPTION = 1
     EMISSION = 2
+    LIF = 3
 
 
 class InversionSymmetry(Enum):
-    """Inversion parity through a centre of symmetry (g/u)."""
+    """Inversion parity through a center of symmetry (g/u)."""
 
     NONE = 1
     GERADE = 2

@@ -1,7 +1,7 @@
 # module script.py
 """This module demonstrates how to use the capabilities of GEDISABRES without using the GUI."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,27 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from typing import TYPE_CHECKING
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-import utils
+import data_path
 from atom import Atom
-from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from sim_params import BroadeningBools, InstrumentParams
+from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
-
-if TYPE_CHECKING:
-    from numpy.typing import NDArray
 
 
 def main() -> None:
     """Entry point."""
-    molecule: Molecule = Molecule(name="O2", atom_1=Atom("O"), atom_2=Atom("O"))
-    state_up: State = State(
+    molecule = Molecule(atom_1=Atom(16, "O"), atom_2=Atom(16, "O"))
+    state_up = State(
         molecule=molecule,
         letter="B",
         spin_multiplicity=3,
@@ -45,7 +40,7 @@ def main() -> None:
         reflection_symmetry=ReflectionSymmetry.MINUS,
         constants_type=ConstantsType.PERLEVEL,
     )
-    state_lo: State = State(
+    state_lo = State(
         molecule=molecule,
         letter="X",
         spin_multiplicity=3,
@@ -55,7 +50,7 @@ def main() -> None:
         constants_type=ConstantsType.PERLEVEL,
     )
 
-    bands: list[tuple[int, int]] = [(2, 0), (4, 1)]
+    bands = [(2, 0), (4, 1)]
 
     broad_bools = BroadeningBools(
         instrument=True, doppler=True, natural=True, collisional=True, predissociation=True
@@ -63,7 +58,7 @@ def main() -> None:
 
     inst_params = InstrumentParams(gauss_fwhm_wl=0.001, loren_fwhm_wl=0.001)
 
-    sim: Sim = Sim(
+    sim = Sim(
         sim_type=SimType.ABSORPTION,
         molecule=molecule,
         state_up=state_up,
@@ -75,41 +70,42 @@ def main() -> None:
         broad_bools=broad_bools,
     )
 
-    sample: NDArray[np.float64] = np.genfromtxt(
-        fname=utils.get_data_path("data", "samples", "harvard-o2-bx-20.csv"),
+    sample = np.genfromtxt(
+        fname=data_path.get_data_path("data", "samples", "harvard-o2-bx-20.csv"),
         delimiter=",",
         skip_header=1,
+        dtype=np.float64,
     )
-    wns_samp: NDArray[np.float64] = sample[:, 0]
-    ins_samp: NDArray[np.float64] = sample[:, 1] / sample[:, 1].max()
+    wns_samp = sample[:, 0]
+    ins_samp = sample[:, 1] / sample[:, 1].max()
 
     plt.plot(wns_samp, ins_samp, label="sample")
 
-    granularity: int = int(1e4)
+    granularity = int(1e4)
 
     # Find the max intensity in all the bands.
     max_intensity: float = max(
-        band.intensities_conv(band.wavenumbers_conv(granularity)).max() for band in sim.bands
+        band.intensities_cont(band.wavenumbers_cont(granularity)).max() for band in sim.bands
     )
 
     # Plot all bands normalized to one while conserving the relative intensities between bands.
     for band in sim.bands:
         plt.plot(
-            band.wavenumbers_conv(granularity),
-            band.intensities_conv(band.wavenumbers_conv(granularity)) / max_intensity,
+            band.wavenumbers_cont(granularity),
+            band.intensities_cont(band.wavenumbers_cont(granularity)) / max_intensity,
             label=f"band: {band.v_qn_up, band.v_qn_lo}",
         )
 
-    # Convolve all bands together and normalize to one.
-    wns, ins = sim.all_conv_data(granularity)
+    # Add all bands together and normalize.
+    wns, ins = sim.all_cont_data(granularity)
     ins /= ins.max()
 
-    plt.plot(wns, ins, label="all convolved")
+    plt.plot(wns, ins, label="all added")
 
     # Interpolate simulated data to have the same number of points as the experimental data and
     # compute the residual.
-    ins_inrp: NDArray[np.float64] = np.interp(sample[:, 0], wns, ins)
-    residual: NDArray[np.float64] = np.abs(ins_samp - ins_inrp)
+    ins_inrp = np.interp(sample[:, 0], wns, ins)
+    residual = np.abs(ins_samp - ins_inrp, dtype=np.float64)
 
     # Show residual below the main data for clarity.
     plt.plot(wns_samp, -residual, label="residual")

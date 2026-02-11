@@ -1,7 +1,7 @@
 # module main.py
-"""A simulation of the Schumann-Runge bands of molecular oxygen written in Python."""
+"""Contains code for the GUI."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,15 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import contextlib
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 import pyqtgraph as pg
 import qdarktheme
+from PySide6 import QtCore
 from PySide6.QtCore import (
     QAbstractTableModel,
     QModelIndex,
@@ -57,11 +58,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+import constants
+import data_path
+import lif
 import plot
 import utils
 from atom import Atom
 from colors import get_colors
-from enums import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from molecule import Molecule
 from sim import Sim
 from sim_params import (
@@ -74,23 +77,23 @@ from sim_params import (
     ShiftParams,
     TemperatureParams,
 )
+from sim_props import ConstantsType, InversionSymmetry, ReflectionSymmetry, SimType, TermSymbol
 from state import State
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from numpy.typing import NDArray
 
-DEFAULT_J_MAX: int = 40
-DEFAULT_RESOLUTION: int = int(1e4)
+DEFAULT_J_MAX = 40
+DEFAULT_RESOLUTION = int(1e4)
 
-DEFAULT_PRESSURE: float = 101325.0
-DEFAULT_BROADENING: float = 0.0
+DEFAULT_PRESSURE = 101325.0
+DEFAULT_BROADENING = 0.0
 
-DEFAULT_BANDS: str = "0-0"
+DEFAULT_BANDS = "0-0"
 
-DEFAULT_MOLECULE: Molecule = Molecule("O2", Atom("O"), Atom("O"))
-DEFAULT_STATE_UP: State = State(
+DEFAULT_MOLECULE = Molecule(Atom(16, "O"), Atom(16, "O"))
+DEFAULT_STATE_UP = State(
     DEFAULT_MOLECULE,
     "B",
     3,
@@ -99,7 +102,7 @@ DEFAULT_STATE_UP: State = State(
     ReflectionSymmetry.MINUS,
     ConstantsType.PERLEVEL,
 )
-DEFAULT_STATE_LO: State = State(
+DEFAULT_STATE_LO = State(
     DEFAULT_MOLECULE,
     "X",
     3,
@@ -108,7 +111,7 @@ DEFAULT_STATE_LO: State = State(
     ReflectionSymmetry.MINUS,
     ConstantsType.PERLEVEL,
 )
-DEFAULT_SIM: Sim = Sim(
+DEFAULT_SIM = Sim(
     sim_type=SimType.ABSORPTION,
     molecule=DEFAULT_MOLECULE,
     state_up=DEFAULT_STATE_UP,
@@ -118,12 +121,16 @@ DEFAULT_SIM: Sim = Sim(
     bands_input=[(0, 0)],
 )
 
+O2_MOLECULE = Molecule(Atom(16, "O"), Atom(16, "O"))
+NO_MOLECULE = Molecule(Atom(14, "N"), Atom(16, "O"))
+OH_MOLECULE = Molecule(Atom(16, "O"), Atom(1, "H"))
+
 MOLECULAR_PRESETS = [
     {
-        "name": "O2 B-X",
-        "molecule": Molecule("O2", Atom("O"), Atom("O")),
+        "name": "16O16O B-X",
+        "molecule": O2_MOLECULE,
         "state_up": State(
-            Molecule("O2", Atom("O"), Atom("O")),
+            O2_MOLECULE,
             "B",
             3,
             TermSymbol.SIGMA,
@@ -132,7 +139,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("O2", Atom("O"), Atom("O")),
+            O2_MOLECULE,
             "X",
             3,
             TermSymbol.SIGMA,
@@ -142,10 +149,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO A-X",
-        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "name": "14N16O A-X",
+        "molecule": NO_MOLECULE,
         "state_up": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "A",
             2,
             TermSymbol.SIGMA,
@@ -154,7 +161,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -164,10 +171,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "NO B-X",
-        "molecule": Molecule("NO", Atom("N"), Atom("O")),
+        "name": "14N16O B-X",
+        "molecule": NO_MOLECULE,
         "state_up": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "B",
             2,
             TermSymbol.PI,
@@ -176,7 +183,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.PERLEVEL,
         ),
         "state_lo": State(
-            Molecule("NO", Atom("N"), Atom("O")),
+            NO_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -186,10 +193,10 @@ MOLECULAR_PRESETS = [
         ),
     },
     {
-        "name": "OH A-X",
-        "molecule": Molecule("OH", Atom("O"), Atom("H")),
+        "name": "16O1H A-X",
+        "molecule": OH_MOLECULE,
         "state_up": State(
-            Molecule("OH", Atom("O"), Atom("H")),
+            OH_MOLECULE,
             "A",
             2,
             TermSymbol.SIGMA,
@@ -198,7 +205,7 @@ MOLECULAR_PRESETS = [
             ConstantsType.DUNHAM,
         ),
         "state_lo": State(
-            Molecule("OH", Atom("O"), Atom("H")),
+            OH_MOLECULE,
             "X",
             2,
             TermSymbol.PI,
@@ -234,10 +241,10 @@ class MyDoubleSpinBox(QDoubleSpinBox):
         """Reads text from the input field and converts it to a float.
 
         Args:
-            text (str): Input text.
+            text: Input text.
 
         Returns:
-            float: Converted value.
+            Converted value.
         """
         try:
             return float(text)
@@ -248,10 +255,10 @@ class MyDoubleSpinBox(QDoubleSpinBox):
         """Displays the input parameter using f-strings.
 
         Args:
-            value (float): Input float.
+            value: Input float.
 
         Returns:
-            str: Displayed text.
+            Displayed text.
         """
         return f"{value:g}"
 
@@ -259,14 +266,15 @@ class MyDoubleSpinBox(QDoubleSpinBox):
         """Checks user input and returns the correct state.
 
         Args:
-            text (str): Input text.
-            pos (int): Position in the string.
+            text: Input text.
+            pos: Position in the string.
 
         Returns:
-            tuple[QValidator.State, str, int]: The current state, input text, and string position.
+            The current state, input text, and string position.
         """
         if text == "":
             return (QValidator.State.Intermediate, text, pos)
+
         try:
             float(text)
             return (QValidator.State.Acceptable, text, pos)
@@ -274,10 +282,12 @@ class MyDoubleSpinBox(QDoubleSpinBox):
             # If the string cannot immediately be converted to a float, first check for scientific
             # notation and return an intermediate state if found.
             if "e" in text.lower():
-                parts: list[str] = text.lower().split("e")
-                num_parts: int = 2
+                parts = text.lower().split("e")
+                num_parts = 2
+
                 if len(parts) == num_parts and (parts[1] == "" or parts[1] in ["-", "+"]):
                     return (QValidator.State.Intermediate, text, pos)
+
             return (QValidator.State.Invalid, text, pos)
 
 
@@ -288,19 +298,19 @@ class MyTable(QAbstractTableModel):
         """Initialize class variables.
 
         Args:
-            df (pl.DataFrame): A Polars `DataFrame`.
+            df: A Polars `DataFrame`.
         """
         super().__init__()
-        self.df: pl.DataFrame = df
+        self.df = df
 
     def rowCount(self, _: QModelIndex = QModelIndex()) -> int:  # noqa: N802
         """Get the height of the table.
 
         Args:
-            _ (QModelIndex, optional): Parent class used to locate data. Defaults to QModelIndex().
+            _: Parent class used to locate data. Defaults to QModelIndex().
 
         Returns:
-            int: Table height.
+            Table height.
         """
         return self.df.height
 
@@ -308,10 +318,10 @@ class MyTable(QAbstractTableModel):
         """Get the width of the table.
 
         Args:
-            _ (QModelIndex, optional): Parent class used to locate data. Defaults to QModelIndex().
+            _: Parent class used to locate data. Defaults to QModelIndex().
 
         Returns:
-            int: Table width.
+            Table width.
         """
         return self.df.width
 
@@ -319,23 +329,24 @@ class MyTable(QAbstractTableModel):
         """Validates and formats data displayed in the table.
 
         Args:
-            index (QModelIndex): Parent class used to locate data.
-            role (int, optional): Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
+            index: Parent class used to locate data.
+            role: Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
 
         Returns:
-            str | None: The formatted text.
+            The formatted text.
         """
         if not index.isValid():
             return None
+
         if role == Qt.ItemDataRole.DisplayRole:
             value: int | float | str = self.df[index.row(), index.column()]
-            column_name: str = self.df.columns[index.column()]
+            column_name = self.df.columns[index.column()]
 
             # NOTE: 25/04/10 - This only changes the values displayed to the user using the built-in
             #       table view. If the table is exported, the underlying dataframe is used instead,
             #       which retains the full-precision values calculated by the simulation.
             if isinstance(value, float):
-                if "Intensity" in column_name:
+                if ("Abs. Coeff." in column_name) or ("Emi. Coeff." in column_name):
                     return f"{value:.4e}"
                 return f"{value:.4f}"
 
@@ -348,13 +359,13 @@ class MyTable(QAbstractTableModel):
         """Sets data for the given role and section in the header with the specified orientation.
 
         Args:
-            section (int): For horizontal headers, the section number corresponds to the column
-                number. For vertical headers, the section number corresponds to the row number.
-            orientation (Qt.Orientation): The header orientation.
-            role (int, optional): Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
+            section: For horizontal headers, the section number corresponds to the column number.
+                For vertical headers, the section number corresponds to the row number.
+            orientation: The header orientation.
+            role: Data rendered as text. Defaults to Qt.ItemDataRole.DisplayRole.
 
         Returns:
-            str | None: Header data.
+            Header data.
         """
         if role != Qt.ItemDataRole.DisplayRole:
             return None
@@ -369,21 +380,22 @@ def create_dataframe_tab(df: pl.DataFrame, _: str) -> QWidget:
     """Create a QWidget containing a QTableView to display the DataFrame.
 
     Args:
-        df (pl.DataFrame): Data to be displayed in the tab.
-        _ (str): The tab label.
+        df: Data to be displayed in the tab.
+        _: The tab label.
 
     Returns:
-        QWidget: A QWidget containing a QTableView to display the DataFrame.
+        A QWidget containing a QTableView to display the DataFrame.
     """
-    widget: QWidget = QWidget()
-    layout: QVBoxLayout = QVBoxLayout(widget)
-    table_view: QTableView = QTableView()
-    model: MyTable = MyTable(df)
+    widget = QWidget()
+    layout = QVBoxLayout(widget)
+    table_view = QTableView()
+    model = MyTable(df)
     table_view.setModel(model)
 
     # TODO: 25/04/10 - Enabling column resizing dramatically increases the time it takes to render
     #       tables with even a moderate number of bands. Keeping this disabled unless there's a
     #       faster way to achieve the same thing.
+
     # table_view.resizeColumnsToContents()
 
     layout.addWidget(table_view)
@@ -425,19 +437,36 @@ class ParametersDialog(QDialog):
     def __init__(self, tab, context_name=""):
         super().__init__(tab)
         self.setWindowTitle(f"{context_name} Parameters")
+
         # Prevent modification of the main window while the dialog box is open.
         self.setModal(True)
         self.resize(600, 400)
         self.tab = tab
 
-        self.name = QLineEdit()
-        self.atom_1 = QLineEdit()
-        self.atom_2 = QLineEdit()
+        self.atom_1_mass = QSpinBox()
+        self.atom_1_mass.setRange(0, 400)
+        self.atom_1_symbol = QLineEdit()
+
+        atom1_row = QWidget()
+        atom1_layout = QHBoxLayout(atom1_row)
+        atom1_layout.setContentsMargins(0, 0, 0, 0)
+        atom1_layout.addWidget(self.atom_1_mass)
+        atom1_layout.addWidget(self.atom_1_symbol)
+
+        self.atom_2_mass = QSpinBox()
+        self.atom_2_mass.setRange(0, 400)
+        self.atom_2_symbol = QLineEdit()
+
+        atom2_row = QWidget()
+        atom2_layout = QHBoxLayout(atom2_row)
+        atom2_layout.setContentsMargins(0, 0, 0, 0)
+        atom2_layout.addWidget(self.atom_2_mass)
+        atom2_layout.addWidget(self.atom_2_symbol)
 
         molecule_form = QFormLayout()
-        molecule_form.addRow("Molecule Name:", self.name)
-        molecule_form.addRow("Atom 1:", self.atom_1)
-        molecule_form.addRow("Atom 2:", self.atom_2)
+        molecule_form.addRow(QLabel(f"<b>Molecule: {tab.molecule.name}</b>"))
+        molecule_form.addRow("Atom 1 (A, symbol):", atom1_row)
+        molecule_form.addRow("Atom 2 (A, symbol):", atom2_row)
 
         self.letter_up = QLineEdit()
         self.spin_multiplicity_up = QLineEdit()
@@ -520,9 +549,10 @@ class ParametersDialog(QDialog):
         main_layout.addWidget(buttons)
 
         # Set values from the parent tab.
-        self.name.setText(tab.molecule.name)
-        self.atom_1.setText(tab.molecule.atom_1.name)
-        self.atom_2.setText(tab.molecule.atom_2.name)
+        self.atom_1_symbol.setText(tab.molecule.atom_1.chemical_symbol)
+        self.atom_2_symbol.setText(tab.molecule.atom_2.chemical_symbol)
+        self.atom_1_mass.setValue(tab.molecule.atom_1.atomic_mass_number)
+        self.atom_2_mass.setValue(tab.molecule.atom_2.atomic_mass_number)
         self.letter_up.setText(tab.state_up.letter)
         self.letter_lo.setText(tab.state_lo.letter)
         self.spin_multiplicity_up.setText(str(tab.state_up.spin_multiplicity))
@@ -544,7 +574,8 @@ class ParametersDialog(QDialog):
 
     def accept(self):
         self.tab.molecule = Molecule(
-            self.name.text(), Atom(self.atom_1.text()), Atom(self.atom_2.text())
+            Atom(self.atom_1_mass.value(), self.atom_1_symbol.text()),
+            Atom(self.atom_2_mass.value(), self.atom_2_symbol.text()),
         )
 
         self.tab.state_up = State(
@@ -615,14 +646,14 @@ class CustomTab(QWidget):
         self.btn_params.clicked.connect(self.open_parameters_dialog)
         main_layout.addWidget(self.btn_params)
 
-        group_bands: QGroupBox = QGroupBox("Bands")
+        group_bands = QGroupBox("Bands")
         group_bands.setFixedWidth(300)
-        bands_layout: QVBoxLayout = QVBoxLayout(group_bands)
+        bands_layout = QVBoxLayout(group_bands)
 
-        band_selection_layout: QHBoxLayout = QHBoxLayout()
-        self.radio_specific_bands: QRadioButton = QRadioButton("Specific Bands")
+        band_selection_layout = QHBoxLayout()
+        self.radio_specific_bands = QRadioButton("Specific Bands")
         self.radio_specific_bands.setChecked(True)
-        self.radio_band_ranges: QRadioButton = QRadioButton("Band Ranges")
+        self.radio_band_ranges = QRadioButton("Band Ranges")
         band_selection_layout.addWidget(self.radio_specific_bands)
         band_selection_layout.addWidget(self.radio_band_ranges)
         bands_layout.addLayout(band_selection_layout)
@@ -631,44 +662,44 @@ class CustomTab(QWidget):
         self.radio_specific_bands.toggled.connect(self.update_sim_objects)
         self.radio_band_ranges.toggled.connect(self.update_sim_objects)
 
-        self.specific_bands_container: QWidget = QWidget()
+        self.specific_bands_container = QWidget()
         self.specific_bands_container.setFixedHeight(60)
-        specific_bands_layout: QVBoxLayout = QVBoxLayout(self.specific_bands_container)
+        specific_bands_layout = QVBoxLayout(self.specific_bands_container)
         specific_bands_layout.setContentsMargins(0, 0, 0, 0)
 
-        band_layout: QHBoxLayout = QHBoxLayout()
-        band_label: QLabel = QLabel("Bands:")
-        self.band_line_edit: QLineEdit = QLineEdit(DEFAULT_BANDS)
+        band_layout = QHBoxLayout()
+        band_label = QLabel("Bands:")
+        self.band_line_edit = QLineEdit(DEFAULT_BANDS)
         self.band_line_edit.textChanged.connect(self.update_sim_objects)
         band_layout.addWidget(band_label)
         band_layout.addWidget(self.band_line_edit)
         specific_bands_layout.addLayout(band_layout)
 
-        self.band_ranges_container: QWidget = QWidget()
+        self.band_ranges_container = QWidget()
         self.band_ranges_container.setFixedHeight(60)
-        band_ranges_layout: QGridLayout = QGridLayout(self.band_ranges_container)
+        band_ranges_layout = QGridLayout(self.band_ranges_container)
         band_ranges_layout.setContentsMargins(0, 0, 0, 0)
 
-        v_up_min_label: QLabel = QLabel("v' min:")
-        self.v_up_min_spinbox: QSpinBox = QSpinBox()
+        v_up_min_label = QLabel("v' min:")
+        self.v_up_min_spinbox = QSpinBox()
         self.v_up_min_spinbox.setRange(0, 99)
         self.v_up_min_spinbox.setValue(0)
         self.v_up_min_spinbox.valueChanged.connect(self.update_sim_objects)
 
-        v_up_max_label: QLabel = QLabel("v' max:")
-        self.v_up_max_spinbox: QSpinBox = QSpinBox()
+        v_up_max_label = QLabel("v' max:")
+        self.v_up_max_spinbox = QSpinBox()
         self.v_up_max_spinbox.setRange(0, 99)
         self.v_up_max_spinbox.setValue(5)
         self.v_up_max_spinbox.valueChanged.connect(self.update_sim_objects)
 
-        v_lo_min_label: QLabel = QLabel("v'' min:")
-        self.v_lo_min_spinbox: QSpinBox = QSpinBox()
+        v_lo_min_label = QLabel("v'' min:")
+        self.v_lo_min_spinbox = QSpinBox()
         self.v_lo_min_spinbox.setRange(0, 99)
         self.v_lo_min_spinbox.setValue(5)
         self.v_lo_min_spinbox.valueChanged.connect(self.update_sim_objects)
 
-        v_lo_max_label: QLabel = QLabel("v'' max:")
-        self.v_lo_max_spinbox: QSpinBox = QSpinBox()
+        v_lo_max_label = QLabel("v'' max:")
+        self.v_lo_max_spinbox = QSpinBox()
         self.v_lo_max_spinbox.setRange(0, 99)
         self.v_lo_max_spinbox.setValue(5)
         self.v_lo_max_spinbox.valueChanged.connect(self.update_sim_objects)
@@ -689,27 +720,29 @@ class CustomTab(QWidget):
         bands_layout.addWidget(self.band_ranges_container)
         controls_layout.addWidget(group_bands)
 
-        group_maxj: QGroupBox = QGroupBox("Max J'")
-        maxj_layout: QHBoxLayout = QHBoxLayout(group_maxj)
-        self.maxj_spinbox: QSpinBox = QSpinBox()
+        group_maxj = QGroupBox("Max J'")
+        maxj_layout = QHBoxLayout(group_maxj)
+        self.maxj_spinbox = QSpinBox()
         self.maxj_spinbox.setMaximum(10000)
         self.maxj_spinbox.setValue(DEFAULT_J_MAX)
         self.maxj_spinbox.valueChanged.connect(self.update_sim_objects)
         maxj_layout.addWidget(self.maxj_spinbox)
         controls_layout.addWidget(group_maxj)
 
-        group_resolution: QGroupBox = QGroupBox("Resolution")
-        resolution_layout: QHBoxLayout = QHBoxLayout(group_resolution)
-        self.resolution_spinbox: QSpinBox = QSpinBox()
+        group_resolution = QGroupBox("Resolution")
+        resolution_layout = QHBoxLayout(group_resolution)
+        self.resolution_spinbox = QSpinBox()
         self.resolution_spinbox.setMaximum(10000000)
         self.resolution_spinbox.setValue(DEFAULT_RESOLUTION)
         resolution_layout.addWidget(self.resolution_spinbox)
         controls_layout.addWidget(group_resolution)
 
-        group_plot_type: QGroupBox = QGroupBox("Plot Type")
-        plot_type_layout: QHBoxLayout = QHBoxLayout(group_plot_type)
-        self.plot_type_combo: QComboBox = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        group_plot_type = QGroupBox("Plot Type")
+        plot_type_layout = QHBoxLayout(group_plot_type)
+        self.plot_type_combo = QComboBox()
+        self.plot_type_combo.addItems(
+            ["Line", "Line Info", "Continuous Separate", "Continuous All"]
+        )
         plot_type_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(group_plot_type)
 
@@ -784,9 +817,9 @@ class CustomTab(QWidget):
         shift_layout.addLayout(shift_checkbox_layout)
         controls_layout.addWidget(group_shift)
 
-        group_broadening: QGroupBox = QGroupBox("Broadening")
-        broadening_layout: QVBoxLayout = QVBoxLayout(group_broadening)
-        broadening_params_layout: QHBoxLayout = QHBoxLayout()
+        group_broadening = QGroupBox("Broadening")
+        broadening_layout = QVBoxLayout(group_broadening)
+        broadening_params_layout = QHBoxLayout()
 
         inst_broad_gauss_layout = QVBoxLayout()
         inst_broad_gauss_layout.addWidget(QLabel("Gauss. FWHM"))
@@ -864,15 +897,15 @@ class CustomTab(QWidget):
 
         actions_group = QGroupBox("Actions")
         actions_layout = QVBoxLayout(actions_group)
-        self.run_button: QPushButton = QPushButton("Run Simulation")
+        self.run_button = QPushButton("Run Simulation")
         self.run_button.clicked.connect(self.run_simulation)
         actions_layout.addWidget(self.run_button)
 
-        self.open_sample_button: QPushButton = QPushButton("Open Sample")
+        self.open_sample_button = QPushButton("Open Sample")
         self.open_sample_button.clicked.connect(self.open_sample)
         actions_layout.addWidget(self.open_sample_button)
 
-        self.export_button: QPushButton = QPushButton("Export Table")
+        self.export_button = QPushButton("Export Table")
         self.export_button.clicked.connect(self.export_current_table)
         actions_layout.addWidget(self.export_button)
 
@@ -890,12 +923,11 @@ class CustomTab(QWidget):
 
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
-        self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
+        self.plot_widget.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
+        self.plot_widget.setLabel("right", "")
+        self.plot_widget.setXRange(40000, 50000)
         plot_table_layout.addWidget(self.plot_widget, stretch=2)
 
         main_layout.addWidget(plot_table_widget, stretch=1)
@@ -921,7 +953,7 @@ class CustomTab(QWidget):
         return self.generate_band_ranges()
 
     def parse_specific_bands(self) -> list[tuple[int, int]]:
-        band_ranges_str: str = self.band_line_edit.text()
+        band_ranges_str = self.band_line_edit.text()
         bands: list[tuple[int, int]] = []
 
         for range_str in band_ranges_str.split(","):
@@ -936,10 +968,10 @@ class CustomTab(QWidget):
         return bands if bands else [(0, 0)]
 
     def generate_band_ranges(self) -> list[tuple[int, int]]:
-        v_up_min: int = self.v_up_min_spinbox.value()
-        v_up_max: int = self.v_up_max_spinbox.value()
-        v_lo_min: int = self.v_lo_min_spinbox.value()
-        v_lo_max: int = self.v_lo_max_spinbox.value()
+        v_up_min = self.v_up_min_spinbox.value()
+        v_up_max = self.v_up_max_spinbox.value()
+        v_lo_min = self.v_lo_min_spinbox.value()
+        v_lo_max = self.v_lo_max_spinbox.value()
 
         if v_up_min > v_up_max or v_lo_min > v_lo_max:
             return [(0, 0)]
@@ -1018,21 +1050,21 @@ class CustomTab(QWidget):
     def run_simulation(self) -> None:
         """Run a simulation instance for this specific tab."""
         bands = self.get_current_bands()
-        colors: list[str] = get_colors(bands)
+        colors = get_colors(len(bands))
 
         self.plot_widget.clear()
 
         map_functions: dict[str, Callable] = {
             "Line": plot.plot_line,
             "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
+            "Continuous Separate": plot.plot_cont_sep,
+            "Continuous All": plot.plot_cont_all,
         }
-        plot_type: str = self.plot_type_combo.currentText()
+        plot_type = self.plot_type_combo.currentText()
         plot_function: Callable | None = map_functions.get(plot_type)
 
         if plot_function is not None:
-            if plot_function.__name__ in ("plot_conv_sep", "plot_conv_all"):
+            if plot_function.__name__ in ("plot_cont_sep", "plot_cont_all"):
                 plot_function(
                     self.plot_widget,
                     self.sim,
@@ -1049,8 +1081,19 @@ class CustomTab(QWidget):
                 QMessageBox.StandardButton.Ok,
             )
 
+        if self.sim.sim_type == SimType.ABSORPTION:
+            self.plot_widget.setLabel("left", "Absorption Coefficient, α [m⁻¹]")
+            intensity_colname = "Abs. Coeff."
+        if self.sim.sim_type == SimType.EMISSION:
+            self.plot_widget.setLabel("left", "Emission Coefficient, j [W.m⁻³.sr⁻¹.cm]")
+            intensity_colname = "Emi. Coeff."
+
         # TODO: 25/08/18 - Might want to auto range if the bands are updated.
         if self.is_first_run:
+            # The `autoRange` function seems to break if the max intensity is above 1e6 for some
+            # reason, so manually adjust it then call `autoRange` for the x-axis.
+            y_max = max(line.intensity for line in self.sim.bands[0].lines)
+            self.plot_widget.setYRange(0, y_max)
             self.plot_widget.autoRange()
             self.is_first_run = False
 
@@ -1058,12 +1101,12 @@ class CustomTab(QWidget):
             self.table_tab_widget.removeTab(0)
 
         for i, band in enumerate(bands):
-            df: pl.DataFrame = pl.DataFrame(
+            df = pl.DataFrame(
                 [
                     {
                         "Wavelength": utils.wavenum_to_wavelen(line.wavenumber),
                         "Wavenumber": line.wavenumber,
-                        "Intensity": line.intensity,
+                        intensity_colname: line.intensity,
                         "J'": f"{line.j_qn_up:.1f}",
                         "J''": f"{line.j_qn_lo:.1f}",
                         "N'": f"{line.n_qn_up:.1f}",
@@ -1075,13 +1118,13 @@ class CustomTab(QWidget):
                 ]
             )
 
-            tab_name: str = f"{band[0]}-{band[1]}"
-            new_tab: QWidget = create_dataframe_tab(df, tab_name)
+            tab_name = f"{band[0]}-{band[1]}"
+            new_tab = create_dataframe_tab(df, tab_name)
             self.table_tab_widget.addTab(new_tab, tab_name)
 
     def export_current_table(self) -> None:
         """Export the currently displayed table to a CSV file."""
-        current_widget: QWidget = self.table_tab_widget.currentWidget()
+        current_widget = self.table_tab_widget.currentWidget()
 
         table_view = current_widget.findChild(QTableView)
 
@@ -1104,7 +1147,7 @@ class CustomTab(QWidget):
             )
             return
 
-        df: pl.DataFrame = model.df
+        df = model.df
 
         filename, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
         if filename:
@@ -1120,21 +1163,21 @@ class CustomTab(QWidget):
         filename, _ = QFileDialog.getOpenFileName(
             parent=self,
             caption="Open Sample File",
-            dir=str(utils.get_data_path("data", "samples")),
+            dir=str(data_path.get_data_path("data", "samples")),
             filter="CSV Files (*.csv);;All Files (*)",
         )
         if filename:
             try:
-                df: pl.DataFrame = pl.read_csv(filename)
+                df = pl.read_csv(filename)
             except ValueError:
                 QMessageBox.critical(self, "Error", "Data is improperly formatted.")
                 return
         else:
             return
 
-        display_name: str = Path(filename).name
+        display_name = Path(filename).name
 
-        new_table_tab: QWidget = create_dataframe_tab(df, display_name)
+        new_table_tab = create_dataframe_tab(df, display_name)
         self.table_tab_widget.addTab(new_table_tab, display_name)
 
         if "wavenumber" in df.columns:
@@ -1149,11 +1192,14 @@ class CustomTab(QWidget):
 
         try:
             intensities = df["intensity"].to_numpy()
-        except pl.ColumnNotFoundError:
+        except pl.exceptions.ColumnNotFoundError:
             QMessageBox.critical(self, "Error", "No 'intensity' column found.")
             return
 
-        plot.plot_sample(self.plot_widget, x_values, intensities, display_name, value_type)
+        max_intensity = max(line.intensity for band in self.sim.bands for line in band.lines)
+        plot.plot_sample(
+            self.plot_widget, x_values, intensities, max_intensity, display_name, value_type
+        )
 
     def open_parameters_dialog(self):
         dialog = ParametersDialog(self, context_name=self.molecule.name)
@@ -1162,11 +1208,353 @@ class CustomTab(QWidget):
             self.update_tab_name()
 
 
+class LIFTab(QWidget):
+    def __init__(self, parent_tab_widget: QTabWidget):
+        super().__init__()
+        self.parent_tab_widget = parent_tab_widget
+
+        layout = QVBoxLayout(self)
+
+        sim_group = QGroupBox("Parent Simulation")
+        sim_layout = QHBoxLayout(sim_group)
+        self.sim_selector = QComboBox()
+        sim_layout.addWidget(QLabel("Use tab:"))
+        sim_layout.addWidget(self.sim_selector)
+        layout.addWidget(sim_group)
+
+        line_group = QGroupBox("Line Selection")
+        line_layout = QHBoxLayout(line_group)
+        self.branch_name_j = QComboBox()
+        self.branch_name_j.addItems(["P", "Q", "R"])
+        self.branch_idx_lo = QSpinBox()
+        self.branch_idx_lo.setRange(1, 3)
+        self.n_qn_lo = QSpinBox()
+        self.n_qn_lo.setRange(0, 200)
+
+        line_layout.addWidget(QLabel("Branch (ΔJ):"))
+        line_layout.addWidget(self.branch_name_j)
+        line_layout.addWidget(QLabel("Branch index:"))
+        line_layout.addWidget(self.branch_idx_lo)
+        line_layout.addWidget(QLabel("N'':"))
+        line_layout.addWidget(self.n_qn_lo)
+        layout.addWidget(line_group)
+
+        laser_group = QGroupBox("Laser Pulse Parameters")
+        laser_layout = QHBoxLayout(laser_group)
+
+        self.pulse_center = MyDoubleSpinBox()
+        self.pulse_center.setSuffix(" [ns]")
+        self.pulse_width = MyDoubleSpinBox()
+        self.pulse_width.setSuffix(" [ns]")
+        self.fluence = MyDoubleSpinBox()
+        self.fluence.setSuffix(" [J/cm²]")
+
+        self.pulse_center.setValue(30.0)
+        self.pulse_width.setValue(20.0)
+        self.fluence.setValue(25e-3)
+
+        self.max_time = MyDoubleSpinBox()
+        self.max_time.setSuffix(" [ns]")
+        self.n_points = QSpinBox()
+        self.n_points.setMaximum(1000000)
+
+        self.max_time.setValue(60.0)
+        self.n_points.setValue(1000)
+
+        laser_layout.addWidget(QLabel("Center:"))
+        laser_layout.addWidget(self.pulse_center)
+        laser_layout.addWidget(QLabel("Width (FWHM):"))
+        laser_layout.addWidget(self.pulse_width)
+        laser_layout.addWidget(QLabel("Fluence:"))
+        laser_layout.addWidget(self.fluence)
+        laser_layout.addWidget(QLabel("Max time:"))
+        laser_layout.addWidget(self.max_time)
+        laser_layout.addWidget(QLabel("Points:"))
+        laser_layout.addWidget(self.n_points)
+        layout.addWidget(laser_group)
+
+        button_group = QGroupBox()
+        button_layout = QHBoxLayout(button_group)
+        self.lifspec_btn = QPushButton("Populations vs. Time")
+        self.lifspec_btn.clicked.connect(self.populations_vs_time)
+        button_layout.addWidget(self.lifspec_btn)
+
+        self.lifspec_btn = QPushButton("LIF Spectra vs. Time")
+        self.lifspec_btn.clicked.connect(self.lif_spectra_vs_time)
+        button_layout.addWidget(self.lifspec_btn)
+        layout.addWidget(button_group)
+
+        self.plot = pg.PlotWidget()
+        self.slice_plot = pg.PlotWidget()
+        self.slice_plot.hide()
+
+        self._lif_img_item = None
+        self._lif_cbar = None
+
+        self._time_cursor = None
+
+        layout.addWidget(self.slice_plot, stretch=0)
+        layout.addWidget(self.plot, stretch=1)
+
+        self.refresh_parent_tabs()
+
+    def refresh_parent_tabs(self):
+        self.sim_selector.clear()
+        for idx in range(self.parent_tab_widget.count()):
+            tab = self.parent_tab_widget.widget(idx)
+            if hasattr(tab, "sim"):
+                self.sim_selector.addItem(self.parent_tab_widget.tabText(idx), userData=idx)
+
+    def get_parent_tab(self):
+        idx = self.sim_selector.currentData()
+        if idx is None:
+            return None
+        return self.parent_tab_widget.widget(idx)
+
+    def get_parent_sim(self):
+        idx = self.sim_selector.currentData()
+        if idx is None:
+            return None
+        tab = self.parent_tab_widget.widget(idx)
+        return getattr(tab, "sim", None)
+
+    def setup_lif(self):
+        pumped_sim = self.get_parent_sim()
+
+        if pumped_sim is None:
+            raise ValueError("No pumped simulation.")
+
+        branch_name_j = self.branch_name_j.currentText()
+        branch_idx_lo = int(self.branch_idx_lo.value())
+        n_qn_lo = int(self.n_qn_lo.value())
+
+        # TODO: 26/02/02 - Actually add dialog boxes here to tell the user what's happened.
+        try:
+            pumped_line = lif.find_line(pumped_sim, branch_name_j, branch_idx_lo, n_qn_lo)
+        except ValueError as e:
+            print(str(e))
+
+        # For a given v', get the maximum value of v'' (account for 0-indexing).
+        v_qn_lo_max = lif.get_v_qn_lo_max(pumped_sim)
+        band_range = [(pumped_sim.bands[0].v_qn_up, v_qn_lo) for v_qn_lo in range(v_qn_lo_max + 1)]
+
+        # The LIF emission simulation is exactly the same as the absorption line simulation except
+        # for the simulation type and bands simulated.
+        emission_sim = Sim(
+            sim_type=SimType.LIF,
+            molecule=pumped_sim.molecule,
+            state_up=pumped_sim.state_up,
+            state_lo=pumped_sim.state_lo,
+            j_qn_up_max=pumped_sim.j_qn_up_max,
+            pressure=pumped_sim.pressure,
+            bands_input=band_range,
+            temp_params=pumped_sim.temp_params,
+            laser_params=pumped_sim.laser_params,
+            inst_params=pumped_sim.inst_params,
+            shift_params=pumped_sim.shift_params,
+            shift_bools=pumped_sim.shift_bools,
+            broad_bools=pumped_sim.broad_bools,
+            plot_bools=pumped_sim.plot_bools,
+            plot_params=pumped_sim.plot_params,
+            pumped_line=pumped_line,
+        )
+
+        # Spinbox inputs are in [ns], so convert back to [s].
+        laser_params = lif.LIFLaserParams(
+            self.pulse_center.value() * 1e-9,
+            self.pulse_width.value() * 1e-9,
+            self.fluence.value(),
+        )
+
+        # Max time also has to be converted from [ns] to [s].
+        t_eval = np.linspace(0.0, self.max_time.value() * 1e-9, self.n_points.value())
+
+        return emission_sim, pumped_sim, pumped_line, laser_params, t_eval
+
+    def populations_vs_time(self):
+        if self.slice_plot is not None:
+            self.slice_plot.hide()
+
+        emission_sim, pumped_sim, pumped_line, laser_params, t_eval = self.setup_lif()
+
+        rate_params = lif.time_independent_rates(emission_sim, pumped_sim, pumped_line)
+        n1_hat, n2_hat, n3_hat = lif.simulate(rate_params, laser_params, pumped_line, t_eval)
+
+        # Normalize the signal with respect to N2.
+        sf = lif.get_signal(t_eval, n2_hat, rate_params)
+        sf /= n2_hat.max()
+
+        # Normalize the laser with respect to itself.
+        il = lif.laser_intensity(t_eval, laser_params)
+        il /= il.max()
+
+        colors = get_colors(5)
+
+        # Show time in [ns].
+        time_ns = t_eval * 1e9
+
+        self.plot.clear()
+        self._clear_lif_extras()
+
+        # Reset the top axis since the spectrum plot will mess this up otherwise.
+        self.plot.setAxisItems({"top": pg.AxisItem(orientation="top")})
+        self.plot.setLabel("top", "")
+        self.plot.setLabel("bottom", "Time, t [ns]")
+        self.plot.setLabel("left", "N_1, N_3, I_l (Normalized)")
+        self.plot.setLabel("right", "N_2, S_f (Normalized)")
+        self.plot.addLegend(offset=(0, 1))
+
+        # Left axis.
+        self.plot.plot(time_ns, n1_hat, name="N1", pen=pg.mkPen(colors[0], width=1))
+        self.plot.plot(time_ns, n3_hat, name="N3", pen=pg.mkPen(colors[1], width=1))
+        self.plot.plot(time_ns, il, name="I_l", pen=pg.mkPen(colors[2], width=1))
+
+        # Right axis.
+        self.plot.plot(
+            time_ns,
+            n2_hat,
+            name="N2",
+            pen=pg.mkPen(colors[3], style=pg.QtCore.Qt.PenStyle.DashLine, width=1),
+        )
+        self.plot.plot(
+            time_ns,
+            sf,
+            name="S_f",
+            pen=pg.mkPen(colors[4], style=pg.QtCore.Qt.PenStyle.DashLine, width=1),
+        )
+        self.plot.autoRange()
+
+    def lif_spectra_vs_time(self):
+        emission_sim, pumped_sim, pumped_line, laser_params, t_eval = self.setup_lif()
+
+        parent_tab = self.get_parent_tab()
+        if parent_tab is not None and hasattr(parent_tab, "resolution_spinbox"):
+            granularity = int(parent_tab.resolution_spinbox.value())  # pyright: ignore[reportAttributeAccessIssue]
+        else:
+            granularity = DEFAULT_RESOLUTION
+
+        total_number_density = pumped_sim.pressure / (
+            constants.BOLTZ * pumped_sim.temp_params.translational
+        )
+
+        # N_{1, 0}, the lower state number density of the pumped line.
+        number_density_lo = (
+            total_number_density
+            * pumped_sim.elc_boltz_frac[1]
+            * pumped_line.band.vib_boltz_frac[1]
+            * pumped_line.rot_boltz_frac[1]
+        )
+
+        rate_params = lif.time_independent_rates(emission_sim, pumped_sim, pumped_line)
+        _, n2_hat, _ = lif.simulate(rate_params, laser_params, pumped_line, t_eval)
+
+        n2 = n2_hat * number_density_lo
+
+        wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in emission_sim.bands])
+        inst_broadening = max(emission_sim.bands[0].lines[0].fwhm_instrument())
+        padding = 10.0 * max(inst_broadening, 2.0)
+
+        grid_min = wavenumbers_line.min() - padding
+        grid_max = wavenumbers_line.max() + padding
+
+        wavenumbers_cont = np.linspace(grid_min, grid_max, granularity, dtype=np.float64)
+
+        # Emission coefficient per upper number density.
+        intensities_cont = np.zeros_like(wavenumbers_cont)
+
+        for band in emission_sim.bands:
+            intensities_cont += band.intensities_cont(wavenumbers_cont)
+
+        # Emission coefficient vs. time and wavelength.
+        i_t_wn = n2[None, :] * intensities_cont[:, None]
+
+        time_ns = t_eval * 1e9
+
+        self.slice_plot.show()
+        self.slice_plot.clear()
+        self.slice_plot.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.slice_plot.setLabel("top", "Wavelength, λ [nm]")
+        self.slice_plot.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
+        self.slice_plot.setLabel("left", "Intensity, I [a.u.]")
+        self.slice_plot.setLabel("right", "")
+
+        if self._time_cursor is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._time_cursor)
+
+        self.plot.clear()
+        self._clear_lif_extras()
+
+        # NOTE: 26/02/10 - The grid used to create the intensities at each point is linearly spaced
+        #       in wavenumber coordinates. Any pixel-based image created using this data will have
+        #       one pixel per wavenumber spacing, and therefore cannot easily be transformed into
+        #       wavelength coordinates for plotting without squashing/stretching individual pixels.
+        #       To avoid this, just plot the spectrum in wavenumber coordinates and create a second
+        #       axis for wavelength on top.
+        self.plot.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot.setLabel("top", "Wavelength, λ [nm]")
+        self.plot.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
+        self.plot.setLabel("left", "Time, t [ns]")
+        self.plot.setLabel("right", "")
+
+        self._lif_img_item = pg.ImageItem()
+        self._lif_img_item.setImage(i_t_wn, autoLevels=False)
+        self._lif_img_item.setLevels([i_t_wn.min(), i_t_wn.max()])
+
+        x0, x1 = float(wavenumbers_cont.min()), float(wavenumbers_cont.max())
+        y0, y1 = float(time_ns.min()), float(time_ns.max())
+        self._lif_img_item.setRect(QtCore.QRectF(x0, y0, x1 - x0, y1 - y0))
+
+        self.plot.addItem(self._lif_img_item)
+
+        self._time_cursor = pg.InfiniteLine(
+            pos=float(time_ns[len(time_ns) // 2]),
+            angle=0,
+            movable=True,
+            pen=pg.mkPen("w", width=2),
+        )
+        self.plot.addItem(self._time_cursor)
+
+        # Plot an empty set of data that can be updated later.
+        slice_curve = self.slice_plot.plot([], [], pen=pg.mkPen("w", width=1))
+
+        def update_slice():
+            y = self._time_cursor.value()  # pyright: ignore[reportOptionalMemberAccess]
+            idx = np.argmin(np.abs(time_ns - y))
+            slice_curve.setData(wavenumbers_cont, i_t_wn[:, idx])
+            self.slice_plot.setTitle(f"Spectrum at t = {time_ns[idx]:.3f} ns")
+            self.slice_plot.setYRange(0, i_t_wn.max())
+
+        self._time_cursor.sigPositionChanged.connect(update_slice)
+        update_slice()
+
+        self._lif_cbar = self.plot.addColorBar(
+            self._lif_img_item, colorMap="magma", label="Emission Coefficient"
+        )
+
+        self.plot.autoRange()
+
+    def _clear_lif_extras(self):
+        if self._lif_cbar is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._lif_cbar)
+            with contextlib.suppress(Exception):
+                self._lif_cbar.setParentItem(None)
+            with contextlib.suppress(Exception):
+                self._lif_cbar.hide()
+            self._lif_cbar = None
+
+        if self._lif_img_item is not None:
+            with contextlib.suppress(Exception):
+                self.plot.removeItem(self._lif_img_item)
+            self._lif_img_item = None
+
+
 class AllSimulationsTab(QWidget):
     def __init__(self, parent_tab_widget=None):
         super().__init__()
 
-        self.is_first_run: bool = True
+        self.is_first_run = True
 
         self.parent_tab_widget = parent_tab_widget
 
@@ -1186,7 +1574,9 @@ class AllSimulationsTab(QWidget):
         plot_group = QGroupBox("Plot Type")
         plot_layout = QHBoxLayout(plot_group)
         self.plot_type_combo = QComboBox()
-        self.plot_type_combo.addItems(["Line", "Line Info", "Convolve Separate", "Convolve All"])
+        self.plot_type_combo.addItems(
+            ["Line", "Line Info", "Continuous Separate", "Continuous All"]
+        )
         plot_layout.addWidget(self.plot_type_combo)
         controls_layout.addWidget(plot_group)
 
@@ -1201,12 +1591,12 @@ class AllSimulationsTab(QWidget):
 
         self.plot_widget = pg.PlotWidget()
         self.plot_widget.addLegend(offset=(0, 1))
-        self.plot_widget.setAxisItems({"top": WavenumberAxis(orientation="top")})
-        self.plot_widget.setLabel("top", "Wavenumber, ν [cm⁻¹]")
-        self.plot_widget.setLabel("bottom", "Wavelength, λ [nm]")
+        self.plot_widget.setAxisItems({"top": WavelengthAxis(orientation="top")})
+        self.plot_widget.setLabel("top", "Wavelength, λ [nm]")
+        self.plot_widget.setLabel("bottom", "Wavenumber, ν [cm⁻¹]")
         self.plot_widget.setLabel("left", "Intensity, I [a.u.]")
-        self.plot_widget.setLabel("right", "Intensity, I [a.u.]")
-        self.plot_widget.setXRange(100, 200)
+        self.plot_widget.setLabel("right", "")
+        self.plot_widget.setXRange(40000, 50000)
         main_layout.addWidget(self.plot_widget, stretch=1)
 
     def run_all_simulations(self):
@@ -1216,6 +1606,7 @@ class AllSimulationsTab(QWidget):
         self.plot_widget.clear()
 
         custom_tabs: list[CustomTab] = []
+
         for idx in range(self.parent_tab_widget.count()):
             tab = self.parent_tab_widget.widget(idx)
             if isinstance(tab, CustomTab):
@@ -1233,80 +1624,39 @@ class AllSimulationsTab(QWidget):
         map_functions = {
             "Line": plot.plot_line,
             "Line Info": plot.plot_line_info,
-            "Convolve Separate": plot.plot_conv_sep,
-            "Convolve All": plot.plot_conv_all,
+            "Continuous Separate": plot.plot_cont_sep,
+            "Continuous All": plot.plot_cont_all,
         }
         plot_type = self.plot_type_combo.currentText()
         plot_function = map_functions.get(plot_type)
 
-        def max_intensity_line():
-            intensities_line: NDArray[np.float64] = np.array([])
-
-            for tab in custom_tabs:
-                _, ins = tab.sim.all_line_data()
-                intensities_line = np.concatenate((intensities_line, ins))
-
-            return intensities_line.max()
-
-        def max_intensity_conv_sep(granularity):
-            convolved_data: list[NDArray[np.float64]] = []
-            max_intensity: float = 0.0
-
-            for tab in custom_tabs:
-                for band in tab.sim.bands:
-                    intensities_conv = band.intensities_conv(
-                        band.wavenumbers_conv(granularity),
-                    )
-
-                    convolved_data.append(intensities_conv)
-
-                    max_intensity = max(max_intensity, intensities_conv.max())
-
-            return max_intensity
-
-        def max_intensity_conv_all():
-            intensities_conv: NDArray[np.float64] = np.array([])
-
-            for tab in custom_tabs:
-                _, ins = tab.sim.all_conv_data(
-                    self.resolution_spinbox.value(),
-                )
-                intensities_conv = np.concatenate((intensities_conv, ins))
-
-            return intensities_conv.max()
-
-        # TODO: 25/08/01 - Convolving all bands together needs to create a new wavenumber axis
+        # TODO: 25/08/01 - Adding all bands together needs to create a new wavenumber axis
         #       common to all simulations and then add the contributions of all simulations to the
         #       plot.
 
-        num_tabs = len(custom_tabs)
-        all_sim_colors = plt.rcParams["axes.prop_cycle"].by_key()["color"][:num_tabs]
+        all_sim_colors = get_colors(len(custom_tabs))
 
         for idx, tab in enumerate(custom_tabs):
             if plot_function is not None:
-                if plot_function.__name__ == "plot_conv_sep":
+                if plot_function.__name__ == "plot_cont_sep":
                     resolution = self.resolution_spinbox.value()
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
                         resolution,
-                        max_intensity_conv_sep(resolution),
                         idx,
                     )
-                elif plot_function.__name__ == "plot_conv_all":
+                elif plot_function.__name__ == "plot_cont_all":
                     plot_function(
                         self.plot_widget,
                         tab.sim,
                         all_sim_colors,
                         self.resolution_spinbox.value(),
-                        max_intensity_conv_all(),
                         idx,
                     )
                 else:
-                    plot_function(
-                        self.plot_widget, tab.sim, all_sim_colors, max_intensity_line(), idx
-                    )
+                    plot_function(self.plot_widget, tab.sim, all_sim_colors, idx)
 
         if self.is_first_run:
             self.plot_widget.autoRange()
@@ -1340,7 +1690,7 @@ class GUI(QMainWindow):
 
         main_layout.addWidget(toolbar_widget)
 
-        tab_panel: QWidget = self.create_tab_panel()
+        tab_panel = self.create_tab_panel()
         main_layout.addWidget(tab_panel)
 
     def create_tab_panel(self):
@@ -1349,6 +1699,11 @@ class GUI(QMainWindow):
         all_sims_tab = AllSimulationsTab(parent_tab_widget=self.molecule_tab_widget)
         self.molecule_tab_widget.addTab(all_sims_tab, "All Simulations")
         self.molecule_tab_widget.tabBar().setTabButton(0, QTabBar.ButtonPosition.RightSide, None)
+
+        self.lif_tab = LIFTab(parent_tab_widget=self.molecule_tab_widget)
+        self.molecule_tab_widget.addTab(self.lif_tab, "LIF")
+        self.molecule_tab_widget.tabBar().setTabButton(1, QTabBar.ButtonPosition.RightSide, None)
+
         self.molecule_tab_widget.tabBar().setMovable(False)
 
         for preset in MOLECULAR_PRESETS[:1]:
@@ -1362,21 +1717,16 @@ class GUI(QMainWindow):
             tab.update_tab_name()
             tab.run_simulation()
 
-        self.molecule_tab_widget.setCurrentIndex(1)
+        self.molecule_tab_widget.setCurrentIndex(2)
         self.molecule_tab_widget.tabCloseRequested.connect(self.close_tab)
+
+        self.lif_tab.refresh_parent_tabs()
 
         return self.molecule_tab_widget
 
     def close_tab(self, index):
-        if self.molecule_tab_widget.count() > 2:
-            self.molecule_tab_widget.removeTab(index)
-        else:
-            QMessageBox.information(
-                self,
-                "Cannot Close Tab",
-                "At least one simulation tab must remain open.",
-                QMessageBox.StandardButton.Ok,
-            )
+        self.molecule_tab_widget.removeTab(index)
+        self.lif_tab.refresh_parent_tabs()
 
     def add_tab(self):
         dialog = PresetSelectionDialog(self)
@@ -1396,29 +1746,31 @@ class GUI(QMainWindow):
             self.molecule_tab_widget.setCurrentIndex(tab_count)
             tab.run_simulation()
 
+            self.lif_tab.refresh_parent_tabs()
 
-class WavenumberAxis(pg.AxisItem):
-    """A custom x-axis displaying wavenumbers."""
+
+class WavelengthAxis(pg.AxisItem):
+    """A custom x-axis displaying wavelengths."""
 
     def __init__(self, *args, **kwargs) -> None:
         """Initialize class variables."""
         super().__init__(*args, **kwargs)
 
-    def tickStrings(self, wavelengths: list[float], *_) -> list[str]:  # noqa: N802
-        """Return the wavenumber strings that are placed next to ticks.
+    def tickStrings(self, wavenumbers: list[float], *_) -> list[str]:  # noqa: N802
+        """Return the wavelength strings that are placed next to ticks.
 
         Args:
-            wavelengths (list[float]): List of wavelength values.
+            wavenumbers: List of wavenumber values.
 
         Returns:
-            list[str]: List of wavenumber values placed next to ticks.
+            List of wavelength values placed next to ticks.
         """
         strings: list[str] = []
 
-        for wavelength in wavelengths:
-            if wavelength != 0:
-                wavenumber: float = utils.wavenum_to_wavelen(wavelength)
-                strings.append(f"{wavenumber:.1f}")
+        for wavenumber in wavenumbers:
+            if wavenumber != 0:
+                wavelength = utils.wavenum_to_wavelen(wavenumber)
+                strings.append(f"{wavelength:.1f}")
             else:
                 strings.append("∞")
 
@@ -1427,13 +1779,13 @@ class WavenumberAxis(pg.AxisItem):
 
 def main() -> None:
     """Entry point."""
-    app: QApplication = QApplication(sys.argv)
+    app = QApplication(sys.argv)
     qdarktheme.setup_theme()
 
-    app_icon: QIcon = QIcon(str(utils.get_data_path("img", "icon.ico")))
+    app_icon = QIcon(str(data_path.get_data_path("img", "icon.ico")))
     app.setWindowIcon(app_icon)
 
-    gui: GUI = GUI()
+    gui = GUI()
     gui.show()
 
     sys.exit(app.exec())

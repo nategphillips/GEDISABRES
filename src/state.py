@@ -1,7 +1,7 @@
 # module state.py
 """Contains the implementation of the State class."""
 
-# Copyright (C) 2023-2025 Nathan G. Phillips
+# Copyright (C) 2023-2026 Nathan G. Phillips
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,9 +23,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import polars as pl
 
-import utils
+import data_path
 from constants import INVERSION_SYMMETRY_MAP, REFLECTION_SYMMETRY_MAP, TERM_SYMBOL_MAP
-from enums import (
+from sim_props import (
     ConstantsType,
     InversionSymmetry,
     NuclearStatistics,
@@ -33,10 +33,11 @@ from enums import (
     Sign,
     TermSymbol,
 )
-from molecule import Molecule
 
 if TYPE_CHECKING:
     from numpy.typing import NDArray
+
+    from molecule import Molecule
 
 
 def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
@@ -45,11 +46,11 @@ def homonuclear_degeneracy(nuclear_spin: Fraction, sign: Sign) -> Fraction:
     Equation (5.16) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
     Args:
-        nuclear_spin (float): Nuclear spin of either atom.
-        sign (Sign): Which sign to use in the computation.
+        nuclear_spin: Nuclear spin of either atom.
+        sign: Which sign to use in the computation.
 
     Returns:
-        float: Homonuclear degeneracy.
+        The homonuclear degeneracy.
     """
     if sign == Sign.PLUS:
         return Fraction(1, 2) * ((2 * nuclear_spin + 1) ** 2 + (2 * nuclear_spin + 1))
@@ -73,24 +74,22 @@ class State:
         """Initialize class variables.
 
         Args:
-            molecule (Molecule): Parent molecule.
-            letter (str): Letter corresponding to the electronic state, e.g., A, B, X, etc.
-            spin_multiplicity (int): Spin multiplicity.
-            term_symbol (TermSymbol): Term symbol associated with the electronic state.
-            inversion_symmetry (InversionSymmetry, optional): Symmetry w.r.t. inversion (g/u).
-                Defaults to None.
-            reflection_symmetry (ReflectionSymmetry, optional): Symmetry w.r.t. reflection (+/-).
-                Defaults to None.
-            constants_type (ConstantsType, optional): Whether to use the Dunham expansion for
-                molecular parameters or to specify them per vibrational level. Defaults to Dunham.
+            molecule: Parent molecule.
+            letter: Letter corresponding to the electronic state, e.g., A, B, X, etc.
+            spin_multiplicity: Spin multiplicity.
+            term_symbol: Term symbol associated with the electronic state.
+            inversion_symmetry: Symmetry w.r.t. inversion (g/u). Defaults to None.
+            reflection_symmetry: Symmetry w.r.t. reflection (+/-). Defaults to None.
+            constants_type: Whether to use the Dunham expansion for molecular parameters or to
+                specify them per vibrational level. Defaults to Dunham.
         """
-        self.molecule: Molecule = molecule
-        self.letter: str = letter
-        self.spin_multiplicity: int = spin_multiplicity
-        self.term_symbol: TermSymbol = term_symbol
-        self.inversion_symmetry: InversionSymmetry = inversion_symmetry
-        self.reflection_symmetry: ReflectionSymmetry = reflection_symmetry
-        self.constants_type: ConstantsType = constants_type
+        self.molecule = molecule
+        self.letter = letter
+        self.spin_multiplicity = spin_multiplicity
+        self.term_symbol = term_symbol
+        self.inversion_symmetry = inversion_symmetry
+        self.reflection_symmetry = reflection_symmetry
+        self.constants_type = constants_type
 
     @cached_property
     def name(self) -> str:
@@ -99,7 +98,7 @@ class State:
         Example: X 3 SIGMA GERADE MINUS -> X3Sg-.
 
         Returns:
-            str: A string representation of the full molecular term symbol, e.g., X3Sg-.
+            A string representation of the full molecular term symbol, e.g., X3Sg-.
         """
         return (
             self.letter
@@ -114,7 +113,7 @@ class State:
         """Return all constants (either Dunham or per-level) for the given state.
 
         Returns:
-            pl.DataFrame: DataFrame of all constants.
+            A Polars `DataFrame` containing all constants.
         """
         match self.constants_type:
             case ConstantsType.PERLEVEL:
@@ -123,7 +122,7 @@ class State:
                 pathname = "dunham"
 
         return pl.read_csv(
-            utils.get_data_path("data", self.molecule.name, pathname, f"{self.name}.csv")
+            data_path.get_data_path("data", self.molecule.name, pathname, f"{self.name}.csv")
         )
 
     def constants_vqn(self, v_qn: int) -> dict[str, float]:
@@ -135,10 +134,10 @@ class State:
         functions of v, then return the row of constants.
 
         Args:
-            v_qn (int): Vibrational quantum number v.
+            v_qn: Vibrational quantum number v.
 
         Returns:
-            dict[str, float]: All available constants for the desired vibrational level.
+            A dictionary of all available constants for the desired vibrational level.
         """
         if self.constants_type == ConstantsType.PERLEVEL:
             return self.all_constants.row(v_qn, named=True)
@@ -207,7 +206,7 @@ class State:
         #                   = [T_e' + G'(v')] - [T_e'' + G''(0)] - [G''(v'') - G''(0)]
         #                   = [T_e' + G'(v')] - [T_e'' + G''(v'')]
 
-        v_plus_half: float = v_qn + 0.5
+        v_plus_half = v_qn + 0.5
         coeffs: NDArray[np.float64] = self.all_constants.to_numpy()
 
         # The maximum number of rows for the entire bundle of constants. Some rows will have more or
@@ -243,12 +242,12 @@ class State:
         return row_vals
 
     def nuclear_partition_fn(self) -> Fraction:
-        """Computes the nuclear partition function.
+        """Computes the nuclear partition function Q_n.
 
         Equation (5.9) in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
         Returns:
-            float: Nuclear partition function.
+            The nuclear partition function Q_n.
         """
         return (2 * self.molecule.atom_1.nuclear_spin + 1) * (
             2 * self.molecule.atom_2.nuclear_spin + 1
@@ -261,7 +260,7 @@ class State:
         Based on Table 5.2 in "Spectroscopy and Optical Diagnostics for Gases" by Hanson, et al.
 
         Returns:
-            tuple[int, int]: Degeneracy scaling factors corresponding to even N and odd N.
+            Degeneracy scaling factors corresponding to even N and odd N.
         """
         atom_1 = self.molecule.atom_1
         atom_2 = self.molecule.atom_2
@@ -325,9 +324,7 @@ class State:
                         atom_1.nuclear_spin, Sign.MINUS
                     ), homonuclear_degeneracy(atom_1.nuclear_spin, Sign.PLUS)
 
-        heteronuclear_degeneracy: Fraction = (2 * atom_1.nuclear_spin + 1) * (
-            2 * atom_2.nuclear_spin + 1
-        )
+        heteronuclear_degeneracy = (2 * atom_1.nuclear_spin + 1) * (2 * atom_2.nuclear_spin + 1)
 
         # Nuclear degeneracies for heteronuclear diatomics are not dependent on even or odd N.
         return heteronuclear_degeneracy, heteronuclear_degeneracy

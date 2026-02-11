@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from state import State
 
 
-def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
+def fill_consts_from_dict(table: dict[str, float]) -> hconsts.Constants:
     """Create filled constant classes for use with Hamilterm.
 
     Args:
@@ -53,7 +53,7 @@ def fill_consts_from_dict(table: dict[str, float]) -> hconsts.ConstantsNum:
     Returns:
         A `NumericConstants` object for use with Hamilterm.
     """
-    numeric_consts = hconsts.ConstantsNum()
+    numeric_consts = hconsts.Constants()
 
     for field in dataclasses.fields(numeric_consts):
         # Load all constant classes contained in NumericConstants (rotational, spin-orbit,
@@ -440,10 +440,10 @@ class Band:
         consts_up = fill_consts_from_dict(table_up)
         consts_lo = fill_consts_from_dict(table_lo)
 
-        s_qn_up, lambda_qn_up = hutils.parse_term_symbol_num(term_symbol_up)
-        basis_fns_up = hutils.generate_basis_fns_num(s_qn_up, lambda_qn_up)
-        s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol_num(term_symbol_lo)
-        basis_fns_lo = hutils.generate_basis_fns_num(s_qn_lo, lambda_qn_lo)
+        s_qn_up, lambda_qn_up = hutils.parse_term_symbol(term_symbol_up)
+        basis_fns_up = hutils.generate_basis_fns(s_qn_up, lambda_qn_up)
+        s_qn_lo, lambda_qn_lo = hutils.parse_term_symbol(term_symbol_lo)
+        basis_fns_lo = hutils.generate_basis_fns(s_qn_lo, lambda_qn_lo)
 
         lambda_basis_up = np.array([lamda for (lamda, _, _) in basis_fns_up])
         lambda_basis_lo = np.array([lamda for (lamda, _, _) in basis_fns_lo])

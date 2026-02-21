@@ -112,14 +112,10 @@ class Sim:
         Returns:
             Rotational lines for all vibrational bands simulated.
         """
-        wavenumbers_line = np.array([], dtype=np.float64)
-        intensities_line = np.array([], dtype=np.float64)
+        wavenumbers_line = [band.wavenumbers_line() for band in self.bands]
+        intensities_line = [band.intensities_line() for band in self.bands]
 
-        for band in self.bands:
-            wavenumbers_line = np.concatenate((wavenumbers_line, band.wavenumbers_line()))
-            intensities_line = np.concatenate((intensities_line, band.intensities_line()))
-
-        return wavenumbers_line, intensities_line
+        return np.concatenate(wavenumbers_line), np.concatenate(intensities_line)
 
     def all_cont_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the continuous data of all vibrational bands.

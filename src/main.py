@@ -1450,7 +1450,7 @@ class LIFTab(QWidget):
 
         n2 = n2_hat * number_density_lo
 
-        wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in emission_sim.bands])
+        wavenumbers_line = np.array([band.wavenumbers_line() for band in emission_sim.bands])
         inst_broadening = max(emission_sim.bands[0].lines[0].fwhm_instrument())
         padding = 10.0 * max(inst_broadening, 2.0)
 

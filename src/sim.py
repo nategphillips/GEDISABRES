@@ -115,7 +115,7 @@ class Sim:
         wavenumbers_line = [band.wavenumbers_line() for band in self.bands]
         intensities_line = [band.intensities_line() for band in self.bands]
 
-        return np.concatenate(wavenumbers_line), np.concatenate(intensities_line)
+        return np.array(wavenumbers_line), np.array(intensities_line)
 
     def all_cont_data(self, granularity: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Create common axes for superimposing the continuous data of all vibrational bands.
@@ -135,7 +135,7 @@ class Sim:
             grid_min = utils.wavenum_to_wavelen(self.plot_params.limit_min)
             grid_max = utils.wavenum_to_wavelen(self.plot_params.limit_max)
         else:
-            wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in self.bands])
+            wavenumbers_line = np.array([band.wavenumbers_line() for band in self.bands])
             # A qualitative amount of padding added to either side of the x-axis limits. Ensures
             # that spectral features at either extreme are not clipped when the FWHM parameters are
             # large. The first line's Doppler FWHM is chosen as an arbitrary reference to keep

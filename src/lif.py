@@ -642,7 +642,7 @@ def lif_spectra_vs_time(
 
     n2_gate = gated_n2_integral(t_eval, n2, gate_start, gate_stop)
 
-    wavenumbers_line = np.concatenate([band.wavenumbers_line() for band in emission_sim.bands])
+    wavenumbers_line = np.array([band.wavenumbers_line() for band in emission_sim.bands])
     inst_broadening = max(emission_sim.bands[0].lines[0].fwhm_instrument())
     padding = 10.0 * max(inst_broadening, 2.0)
 

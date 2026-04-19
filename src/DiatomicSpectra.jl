@@ -23,6 +23,15 @@ A package for simulating the rovibronic spectra of diatomic molecules.
 """
 module DiatomicSpectra
 
+# TODO:
+#   × Look into using Runic.jl for formatting
+#   × Add package tests and benchmarks
+#   × Ensure type stability with JET.jl / Cthulhu.jl / DispatchDoctor.jl
+#   × Add automated checks using Aqua.jl
+#   × Write docstrings
+#   × Dimensionalize variables using Unitful.jl
+#   × Use values from PhysicalConstants.jl where possible
+
 greet() = print("Hello World!")
 
 end # module DiatomicSpectra

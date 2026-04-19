@@ -1,0 +1,7 @@
+name = "DiatomicSpectra"
+uuid = "d3697c9e-9564-4897-8acc-89cdba8c339c"
+authors = ["Nathan G. Phillips"]
+version = "0.1.0"
+
+[compat]
+julia = "1.12"

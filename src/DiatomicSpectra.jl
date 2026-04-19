@@ -1,5 +1,5 @@
-# module data_path.py
-"""Ensure the correct data path is returned for during development and for PyInstaller."""
+# DiatomicSpectra.jl
+"""A package for simulating the rovibronic spectra of diatomic molecules."""
 
 # Copyright (C) 2023-2026 Nathan G. Phillips
 
@@ -16,19 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import sys
-from pathlib import Path
+"""
+    DiatomicSpectra 
 
+A package for simulating the rovibronic spectra of diatomic molecules.
+"""
+module DiatomicSpectra
 
-def get_data_path(*relative_path_parts) -> Path:
-    """Get the correct data path, accounting for PyInstaller executable.
+greet() = print("Hello World!")
 
-    Returns:
-        A relative path if developing, the absolute path to the bundle folder if using PyInstaller.
-    """
-    if getattr(sys, "frozen", False):
-        base_path = Path(sys._MEIPASS)  # pyright: ignore[reportAttributeAccessIssue]
-    else:
-        base_path = Path(__file__).resolve().parent.parent
-
-    return base_path.joinpath(*relative_path_parts)
+end # module DiatomicSpectra

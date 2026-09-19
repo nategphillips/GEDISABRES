@@ -35,13 +35,14 @@ def get_colors(num_items: int) -> list[str]:
     Returns:
         A list of colors in hex format.
     """
-    colors_small: list[str] = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    palette_small = plt.rcParams["axes.prop_cycle"].by_key()["color"]
+    colors_small = [to_hex(color) for color in palette_small]
 
     if num_items <= len(colors_small):
         return colors_small[:num_items]
 
-    palette = color_sequences["tab20c"]
-    colors_medium = [to_hex(color) for color in palette]
+    palette_medium = color_sequences["tab20c"]
+    colors_medium = [to_hex(color) for color in palette_medium]
 
     if num_items <= len(colors_medium):
         return colors_medium[:num_items]
